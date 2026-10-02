@@ -7,8 +7,10 @@ import '../../categories/providers/category_providers.dart';
 import '../../categories/screens/category_products_screen.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../cart/screens/cart_screen.dart';
+import '../../favorites/screens/favorites_screen.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/widgets/products_section.dart';
+import '../../search/presentation/screens/search_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, required this.userName});
@@ -42,19 +44,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openMenuPage(_MenuOption option) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _MenuPage(option: option),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => _MenuPage(option: option)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final cartItemCount = ref.watch(cartControllerProvider.select((cart) => cart.itemCount));
+    final cartItemCount = ref.watch(
+      cartControllerProvider.select((cart) => cart.itemCount),
+    );
     final pages = [
       _HomeTab(userName: widget.userName, onRefresh: _refresh),
-      const _SearchTab(),
+      const SearchScreen(),
       const CartScreen(),
       _ProfileTab(
         userName: widget.userName,
@@ -63,10 +65,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return Scaffold(
-      drawer: _AppDrawer(
-        userName: widget.userName,
-        onSelected: _openMenuPage,
-      ),
+      drawer: _AppDrawer(userName: widget.userName, onSelected: _openMenuPage),
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -74,14 +73,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFFE5EFFA),
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          const NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
+          const NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
           NavigationDestination(
             icon: _CartNavIcon(count: cartItemCount),
             selectedIcon: _CartNavIcon(count: cartItemCount, selected: true),
             label: 'Cart',
           ),
-          const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -96,7 +106,10 @@ class _CartNavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = Icon(selected ? Icons.shopping_cart : Icons.shopping_cart_outlined, size: 24);
+    final icon = Icon(
+      selected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+      size: 24,
+    );
     if (count <= 0) return icon;
 
     return Stack(
@@ -116,7 +129,11 @@ class _CartNavIcon extends StatelessWidget {
             child: Text(
               count > 99 ? '99+' : '$count',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -149,11 +166,18 @@ class _HomeTab extends ConsumerWidget {
                     onPressed: () => Scaffold.of(context).openDrawer(),
                   ),
                 ),
-                Text('ShopSwift', style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: const Color(0xFF064B95), fontWeight: FontWeight.w800,
-                )),
+                Text(
+                  'ShopSwift',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF064B95),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const Spacer(),
-                IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none),
+                  onPressed: () {},
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -161,10 +185,16 @@ class _HomeTab extends ConsumerWidget {
               decoration: InputDecoration(
                 hintText: 'Search premium tech & furniture',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(icon: const Icon(Icons.tune), onPressed: () {}),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.tune),
+                  onPressed: () {},
+                ),
                 filled: true,
                 fillColor: const Color(0xFFF3F1F2),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -176,7 +206,11 @@ class _HomeTab extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Popular Products', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Popular Products',
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   TextButton(onPressed: () {}, child: const Text('View All')),
                 ],
               ),
@@ -191,7 +225,11 @@ class _HomeTab extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('New Arrivals', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'New Arrivals',
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   TextButton(onPressed: () {}, child: const Text('Just In')),
                 ],
               ),
@@ -249,9 +287,16 @@ class _AppDrawer extends StatelessWidget {
                     'Olá, $userName',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const Text('ShopSwift', style: TextStyle(color: Colors.white70)),
+                  const Text(
+                    'ShopSwift',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
@@ -279,6 +324,8 @@ class _MenuPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (option == _MenuOption.favorites) return const FavoritesScreen();
+
     return Scaffold(
       appBar: AppBar(title: Text(option.title)),
       body: Center(
@@ -289,7 +336,10 @@ class _MenuPage extends StatelessWidget {
             children: [
               Icon(option.icon, size: 64, color: const Color(0xFF064B95)),
               const SizedBox(height: 20),
-              Text(option.title, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                option.title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 8),
               Text(
                 _menuDescription(option),
@@ -327,24 +377,41 @@ class _SaleBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(32, 22, 18, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(colors: [Color(0xFF0B4B8E), Color(0xFFB6C4C9)], begin: Alignment.centerLeft, end: Alignment.centerRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B4B8E), Color(0xFFB6C4C9)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(20)), child: const Text('Summer Sale', style: TextStyle(fontSize: 12))),
-        const Spacer(),
-        const Text('Summer\nElectronics Sale', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        const Text('Up to 45% Off Premium Brands', style: TextStyle(color: Colors.white70)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text('Summer Sale', style: TextStyle(fontSize: 12)),
+          ),
+          const Spacer(),
+          const Text(
+            'Summer\nElectronics Sale',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Up to 45% Off Premium Brands',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
     );
   }
-}
-
-class _SearchTab extends StatelessWidget {
-  const _SearchTab();
-
-  @override
-  Widget build(BuildContext context) => const _PlaceholderTab(icon: Icons.search, title: 'Search', message: 'Find your next favorite product.');
 }
 
 class _ProfileTab extends StatelessWidget {
@@ -355,37 +422,25 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SizedBox(height: 32),
-            const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
-            const SizedBox(height: 16),
-            Text(userName, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 28),
-            ListTile(leading: const Icon(Icons.logout), title: const Text('Terminar sessão'), onTap: onLogout),
-          ]),
-        ),
-      );
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.icon, required this.title, required this.message});
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-        child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, size: 56, color: const Color(0xFF064B95)),
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 32),
+          const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
           const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(message),
-        ])),
-      );
+          Text(userName, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 28),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Terminar sessão'),
+            onTap: onLogout,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _CategoriesRow extends ConsumerWidget {
@@ -400,7 +455,10 @@ class _CategoriesRow extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text('Categorias', style: Theme.of(context).textTheme.titleLarge),
+          child: Text(
+            'Categorias',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ),
         SizedBox(
           height: 48,
@@ -428,7 +486,8 @@ class _CategoriesRow extends ConsumerWidget {
                   label: Text(category.name),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CategoryProductsScreen(category: category),
+                      builder: (_) =>
+                          CategoryProductsScreen(category: category),
                     ),
                   ),
                 );

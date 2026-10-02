@@ -44,6 +44,12 @@ class ApiException implements Exception {
               type: ApiErrorType.validation,
               statusCode: status,
             );
+          case 409:
+            return ApiException(
+              message: serverMessage ?? 'Stock insuficiente para um ou mais produtos.',
+              type: ApiErrorType.validation,
+              statusCode: status,
+            );
           case 401:
             return ApiException(
               message: serverMessage ?? 'Sessão expirada. Inicia sessão novamente.',

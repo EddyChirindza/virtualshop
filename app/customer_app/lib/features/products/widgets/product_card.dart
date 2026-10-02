@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/format.dart';
 import '../../cart/providers/cart_provider.dart';
+import '../../favorites/providers/favorites_provider.dart';
+import '../../auth/screens/login_screen.dart';
 import '../models/product.dart';
 import 'product_image.dart';
 
@@ -23,6 +25,15 @@ class ProductCard extends ConsumerWidget {
     final inCart = item != null;
     final quantity = item?.quantity ?? 0;
     final canAdd = product.inStock && (quantity < product.stock);
+    final isFavorite = ref.watch(
+      favoritesProvider.select(
+        (state) =>
+            state.valueOrNull?.any(
+              (favorite) => favorite.product.id == product.id,
+            ) ??
+            false,
+      ),
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -32,7 +43,57 @@ class ProductCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: ProductImage(url: product.imageUrl)),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ProductImage(url: product.imageUrl),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: isFavorite
+                            ? 'Remover dos favoritos'
+                            : 'Adicionar aos favoritos',
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                        ),
+                        color: isFavorite ? Colors.red : null,
+                        onPressed: () async {
+                          final controller = ref.read(
+                            favoritesProvider.notifier,
+                          );
+                          if (!controller.isAuthenticated) {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                            return;
+                          }
+                          final changed = await controller.toggleFavorite(
+                            product,
+                          );
+                          if (!changed && context.mounted) {
+                            final error = ref.read(favoritesProvider).error;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  error?.toString() ?? 'Não foi possível atualizar os favoritos.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -48,10 +109,16 @@ class ProductCard extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 16,
+                        color: Colors.amber,
+                      ),
                       const SizedBox(width: 2),
-                      Text(product.rating.toStringAsFixed(1),
-                          style: theme.textTheme.labelSmall),
+                      Text(
+                        product.rating.toStringAsFixed(1),
+                        style: theme.textTheme.labelSmall,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -65,20 +132,27 @@ class ProductCard extends ConsumerWidget {
                   if (!product.inStock)
                     Text(
                       'Esgotado',
-                      style: theme.textTheme.labelSmall?.copyWith(color: scheme.error),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.error,
+                      ),
                     )
                   else if (inCart)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFECF7ED),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           'No carrinho: $quantity',
-                          style: theme.textTheme.labelSmall?.copyWith(color: const Color(0xFF1E7A4B)),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: const Color(0xFF1E7A4B),
+                          ),
                         ),
                       ),
                     ),
@@ -88,28 +162,51 @@ class ProductCard extends ConsumerWidget {
                       Row(
                         children: [
                           IconButton.filledTonal(
-                            onPressed: () => ref.read(cartControllerProvider.notifier).updateQuantity(product.id, quantity - 1),
+                            onPressed: () => ref
+                                .read(cartControllerProvider.notifier)
+                                .updateQuantity(product.id, quantity - 1),
                             icon: const Icon(Icons.remove),
-                            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                            constraints: const BoxConstraints.tightFor(
+                              width: 30,
+                              height: 30,
+                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text('$quantity', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              '$quantity',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           IconButton.filledTonal(
-                            onPressed: canAdd ? () => ref.read(cartControllerProvider.notifier).addProduct(product) : null,
+                            onPressed: canAdd
+                                ? () => ref
+                                      .read(cartControllerProvider.notifier)
+                                      .addProduct(product)
+                                : null,
                             icon: const Icon(Icons.add),
-                            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                            constraints: const BoxConstraints.tightFor(
+                              width: 30,
+                              height: 30,
+                            ),
                           ),
                         ],
                       )
                     else
                       FilledButton.icon(
                         onPressed: () {
-                          final added = ref.read(cartControllerProvider.notifier).addProduct(product);
+                          final added = ref
+                              .read(cartControllerProvider.notifier)
+                              .addProduct(product);
                           if (!added) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Limite de stock atingido para este produto.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Limite de stock atingido para este produto.',
+                                ),
+                              ),
                             );
                           }
                         },

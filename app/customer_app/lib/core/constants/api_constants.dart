@@ -41,6 +41,14 @@ class ApiConstants {
   static const String popularProducts = '/products/popular';
   static const String newArrivals = '/products/new-arrivals';
 
+  // Cart and orders
+  static const String cart = '/cart';
+  static const String cartItems = '/cart/items';
+  static const String orders = '/orders';
+  static const String favorites = '/favorites';
+
+  static String favorite(int productId) => '$favorites/$productId';
+
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 10);
 }

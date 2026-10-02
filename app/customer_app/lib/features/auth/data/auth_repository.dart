@@ -28,6 +28,7 @@ class AuthRepository {
         'password': password,
         'phone': phone,
       });
+      // ignore: unawaited_return_in_try_block
       return _saveSession(unwrapMap(response));
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -40,6 +41,7 @@ class AuthRepository {
         'identifier': identifier,
         'password': password,
       });
+      // ignore: unawaited_return_in_try_block
       return _saveSession(unwrapMap(response));
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

@@ -12,6 +12,12 @@ class CartScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
 
+    ref.listen(cartControllerProvider, (previous, next) {
+      if (next.errorMessage != null && next.errorMessage != previous?.errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.errorMessage!)));
+      }
+    });
+
     if (cart.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Carrinho')),
@@ -49,7 +55,7 @@ class CartScreen extends ConsumerWidget {
         title: const Text('Carrinho'),
         actions: [
           TextButton(
-            onPressed: () => ref.read(cartControllerProvider.notifier).clearCart(),
+            onPressed: cart.isUpdating ? null : () => ref.read(cartControllerProvider.notifier).clearCart(),
             child: const Text('Limpar'),
           ),
         ],
@@ -99,7 +105,7 @@ class CartScreen extends ConsumerWidget {
                                 Row(
                                   children: [
                                     IconButton.filledTonal(
-                                      onPressed: () => controller.updateQuantity(item.productId, item.quantity - 1),
+                                      onPressed: cart.isUpdating ? null : () => controller.updateQuantity(item.productId, item.quantity - 1),
                                       icon: const Icon(Icons.remove),
                                       constraints: const BoxConstraints.tightFor(width: 32, height: 32),
                                     ),
@@ -111,13 +117,13 @@ class CartScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     IconButton.filledTonal(
-                                      onPressed: () => controller.updateQuantity(item.productId, item.quantity + 1),
+                                      onPressed: cart.isUpdating ? null : () => controller.updateQuantity(item.productId, item.quantity + 1),
                                       icon: const Icon(Icons.add),
                                       constraints: const BoxConstraints.tightFor(width: 32, height: 32),
                                     ),
                                     const Spacer(),
                                     IconButton(
-                                      onPressed: () => controller.removeProduct(item.productId),
+                                      onPressed: cart.isUpdating ? null : () => controller.removeProduct(item.productId),
                                       icon: const Icon(Icons.delete_outline),
                                       color: Colors.red,
                                     ),
@@ -160,12 +166,20 @@ class CartScreen extends ConsumerWidget {
                   _SummaryLine(label: 'Total', value: formatMoney(cart.total), isTotal: true),
                   const SizedBox(height: 16),
                   FilledButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Checkout ainda não está integrado no backend.')),
-                      );
-                    },
-                    child: const Text('Continuar para Checkout'),
+                    onPressed: cart.isUpdating
+                        ? null
+                        : () async {
+                            final success = await ref.read(cartControllerProvider.notifier).checkout();
+                            if (!context.mounted) return;
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Pedido criado com sucesso.')),
+                              );
+                            }
+                          },
+                    child: cart.isUpdating
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Finalizar pedido'),
                   ),
                 ],
               ),

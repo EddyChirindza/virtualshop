@@ -5,6 +5,8 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../cart/providers/cart_provider.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../favorites/providers/favorites_provider.dart';
 import '../models/product.dart';
 import '../providers/product_providers.dart';
 import '../widgets/product_image.dart';
@@ -24,13 +26,27 @@ class ProductDetailScreen extends ConsumerWidget {
       data: (p) => p.inStock && (quantity < p.stock),
       orElse: () => false,
     );
+    final isFavorite = product.maybeWhen(
+      data: (value) => ref.watch(
+        favoritesProvider.select(
+          (state) =>
+              state.valueOrNull?.any(
+                (favorite) => favorite.product.id == value.id,
+              ) ??
+              false,
+        ),
+      ),
+      orElse: () => false,
+    );
 
     return Scaffold(
       appBar: AppBar(),
       body: product.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorRetry(
-          message: error is ApiException ? error.message : 'Não foi possível carregar o produto.',
+          message: error is ApiException
+              ? error.message
+              : 'Não foi possível carregar o produto.',
           onRetry: () => ref.invalidate(productDetailProvider(productId)),
         ),
         data: (p) => _ProductDetailBody(
@@ -38,15 +54,43 @@ class ProductDetailScreen extends ConsumerWidget {
           quantity: quantity,
           addAllowed: addAllowed,
           onAdd: () {
-            final added = ref.read(cartControllerProvider.notifier).addProduct(p);
+            final added = ref
+                .read(cartControllerProvider.notifier)
+                .addProduct(p);
             if (!added) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Limite de stock atingido para este produto.')),
+                const SnackBar(
+                  content: Text('Limite de stock atingido para este produto.'),
+                ),
               );
             }
           },
-          onIncrement: () => ref.read(cartControllerProvider.notifier).addProduct(p),
-          onDecrement: () => ref.read(cartControllerProvider.notifier).updateQuantity(p.id, quantity - 1),
+          onIncrement: () =>
+              ref.read(cartControllerProvider.notifier).addProduct(p),
+          onDecrement: () => ref
+              .read(cartControllerProvider.notifier)
+              .updateQuantity(p.id, quantity - 1),
+          isFavorite: isFavorite,
+          onToggleFavorite: () async {
+            final controller = ref.read(favoritesProvider.notifier);
+            if (!controller.isAuthenticated) {
+              await Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+              return;
+            }
+            final changed = await controller.toggleFavorite(p);
+            if (!changed && context.mounted) {
+              final error = ref.read(favoritesProvider).error;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    error?.toString() ??
+                        'Não foi possível atualizar os favoritos.',
+                  ),
+                ),
+              );
+            }
+          },
         ),
       ),
     );
@@ -61,6 +105,8 @@ class _ProductDetailBody extends StatelessWidget {
     required this.onAdd,
     required this.onIncrement,
     required this.onDecrement,
+    required this.isFavorite,
+    required this.onToggleFavorite,
   });
 
   final Product product;
@@ -69,6 +115,8 @@ class _ProductDetailBody extends StatelessWidget {
   final VoidCallback onAdd;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -90,16 +138,40 @@ class _ProductDetailBody extends StatelessWidget {
               if (product.categoryName != null)
                 Text(
                   product.categoryName!,
-                  style: theme.textTheme.labelLarge?.copyWith(color: scheme.primary),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.primary,
+                  ),
                 ),
               const SizedBox(height: 4),
-              Text(product.name, style: theme.textTheme.headlineSmall),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      product.name,
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: isFavorite
+                        ? 'Remover dos favoritos'
+                        : 'Adicionar aos favoritos',
+                    onPressed: onToggleFavorite,
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                    ),
+                    color: isFavorite ? Colors.red : null,
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   const Icon(Icons.star_rounded, size: 20, color: Colors.amber),
                   const SizedBox(width: 4),
-                  Text(product.rating.toStringAsFixed(1), style: theme.textTheme.bodyMedium),
+                  Text(
+                    product.rating.toStringAsFixed(1),
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -112,9 +184,13 @@ class _ProductDetailBody extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                product.inStock ? 'Em stock (${product.stock} disponíveis)' : 'Esgotado',
+                product.inStock
+                    ? 'Em stock (${product.stock} disponíveis)'
+                    : 'Esgotado',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: product.inStock ? scheme.onSurfaceVariant : scheme.error,
+                  color: product.inStock
+                      ? scheme.onSurfaceVariant
+                      : scheme.error,
                 ),
               ),
               if (inCart) ...[
@@ -127,20 +203,36 @@ class _ProductDetailBody extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Text('No carrinho: $quantity', style: theme.textTheme.titleSmall?.copyWith(color: const Color(0xFF1E7A4B))),
+                      Text(
+                        'No carrinho: $quantity',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: const Color(0xFF1E7A4B),
+                        ),
+                      ),
                       const Spacer(),
                       IconButton.filledTonal(
                         onPressed: quantity > 0 ? onDecrement : null,
                         icon: const Icon(Icons.remove),
-                        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 36,
+                          height: 36,
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      Text('$quantity', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        '$quantity',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       IconButton.filledTonal(
                         onPressed: addAllowed ? onIncrement : null,
                         icon: const Icon(Icons.add),
-                        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 36,
+                          height: 36,
+                        ),
                       ),
                     ],
                   ),
@@ -151,7 +243,9 @@ class _ProductDetailBody extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: inCart ? null : onAdd,
                   icon: const Icon(Icons.add_shopping_cart),
-                  label: Text(inCart ? 'Adicionado ao carrinho' : 'Adicionar ao carrinho'),
+                  label: Text(
+                    inCart ? 'Adicionado ao carrinho' : 'Adicionar ao carrinho',
+                  ),
                 )
               else
                 FilledButton.icon(

@@ -44,6 +44,9 @@ dependencies:
   # Secure token storage (Keystore / Keychain)
   flutter_secure_storage: ^9.2.2
 
+  # Non-sensitive local preferences (recent searches)
+  shared_preferences: ^2.3.2
+
   # Immutable models + safe JSON parsing
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0

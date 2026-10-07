@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/app_text.dart';
 import '../../../categories/models/category.dart';
 import '../../../categories/providers/category_providers.dart';
 import '../../domain/models/search_filters.dart';
@@ -64,12 +65,16 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Filtros',
+                      appText(context, 'Filtros', 'Filters'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Fechar filtros',
+                    tooltip: appText(
+                      context,
+                      'Fechar filtros',
+                      'Close filters',
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
                   ),
@@ -78,14 +83,14 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
                 initialValue: selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Categoria',
+                decoration: InputDecoration(
+                  labelText: appText(context, 'Categoria', 'Category'),
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem<int?>(
+                  DropdownMenuItem<int?>(
                     value: null,
-                    child: Text('Todas'),
+                    child: Text(appText(context, 'Todas', 'All')),
                   ),
                   for (final category in options)
                     DropdownMenuItem<int?>(
@@ -97,7 +102,7 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Intervalo de preço',
+                appText(context, 'Intervalo de preço', 'Price range'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -109,8 +114,8 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
-                        labelText: 'Mínimo',
+                      decoration: InputDecoration(
+                        labelText: appText(context, 'Mínimo', 'Minimum'),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -122,8 +127,8 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
-                        labelText: 'Máximo',
+                      decoration: InputDecoration(
+                        labelText: appText(context, 'Máximo', 'Maximum'),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -133,13 +138,18 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               const SizedBox(height: 16),
               DropdownButtonFormField<SearchSort>(
                 initialValue: _sort,
-                decoration: const InputDecoration(
-                  labelText: 'Ordenar por',
+                decoration: InputDecoration(
+                  labelText: appText(context, 'Ordenar por', 'Sort by'),
                   border: OutlineInputBorder(),
                 ),
                 items: [
                   for (final sort in SearchSort.values)
-                    DropdownMenuItem(value: sort, child: Text(sort.label)),
+                    DropdownMenuItem(
+                      value: sort,
+                      child: Text(
+                        appText(context, sort.label, sort.englishLabel),
+                      ),
+                    ),
                 ],
                 onChanged: (value) {
                   if (value != null) setState(() => _sort = value);
@@ -148,9 +158,15 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  TextButton(onPressed: _clear, child: const Text('Limpar')),
+                  TextButton(
+                    onPressed: _clear,
+                    child: Text(appText(context, 'Limpar', 'Clear')),
+                  ),
                   const Spacer(),
-                  FilledButton(onPressed: _apply, child: const Text('Aplicar')),
+                  FilledButton(
+                    onPressed: _apply,
+                    child: Text(appText(context, 'Aplicar', 'Apply')),
+                  ),
                 ],
               ),
             ],
@@ -183,16 +199,28 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
     if ((minimumText.isNotEmpty && (minimum == null || minimum < 0)) ||
         (maximumText.isNotEmpty && (maximum == null || maximum < 0))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Introduz preços válidos e não negativos.'),
+        SnackBar(
+          content: Text(
+            appText(
+              context,
+              'Introduz preços válidos e não negativos.',
+              'Enter valid, non-negative prices.',
+            ),
+          ),
         ),
       );
       return;
     }
     if (minimum != null && maximum != null && minimum > maximum) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('O preço mínimo não pode exceder o máximo.'),
+        SnackBar(
+          content: Text(
+            appText(
+              context,
+              'O preço mínimo não pode exceder o máximo.',
+              'The minimum price cannot exceed the maximum.',
+            ),
+          ),
         ),
       );
       return;

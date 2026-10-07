@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
+import '../../../core/app_navigation.dart';
 import '../../../core/errors/api_exception.dart';
-import '../../auth/providers/auth_providers.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../categories/screens/category_products_screen.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../cart/screens/cart_screen.dart';
-import '../../favorites/screens/favorites_screen.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/widgets/products_section.dart';
+import '../../profile/presentation/screens/profile_screen.dart';
+import '../../search/presentation/providers/search_providers.dart';
 import '../../search/presentation/screens/search_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, required this.userName});
@@ -23,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
+  int _searchScreenKey = 0;
 
   Future<void> _refresh() async {
     ref.invalidate(categoryTreeProvider);
@@ -40,10 +44,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _selectTab(int index) {
-    setState(() => _selectedIndex = index);
+    final shouldResetSearch =
+        index == 1 &&
+        ref.read(searchControllerProvider).filters.categoryId != null;
+    if (shouldResetSearch) {
+      ref.read(searchControllerProvider.notifier).reset();
+    }
+    setState(() {
+      _selectedIndex = index;
+      if (shouldResetSearch) _searchScreenKey++;
+    });
   }
 
   void _openMenuPage(_MenuOption option) {
+    if (option == _MenuOption.settings) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+      return;
+    }
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => _MenuPage(option: option)));
@@ -51,17 +70,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(homeTabRequestProvider, (previous, next) {
+      if (next == null) return;
+      _selectTab(next);
+      ref.read(homeTabRequestProvider.notifier).state = null;
+    });
+
     final cartItemCount = ref.watch(
       cartControllerProvider.select((cart) => cart.itemCount),
     );
     final pages = [
       _HomeTab(userName: widget.userName, onRefresh: _refresh),
-      const SearchScreen(),
+      SearchScreen(key: ValueKey(_searchScreenKey)),
       const CartScreen(),
-      _ProfileTab(
-        userName: widget.userName,
-        onLogout: () => ref.read(authControllerProvider.notifier).logout(),
-      ),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -70,27 +92,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectTab,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE5EFFA),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        indicatorColor: Theme.of(context).colorScheme.secondaryContainer,
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: appText(context, 'Início', 'Home'),
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.search),
-            label: 'Search',
+          NavigationDestination(
+            icon: const Icon(Icons.search),
+            label: appText(context, 'Pesquisa', 'Search'),
           ),
           NavigationDestination(
             icon: _CartNavIcon(count: cartItemCount),
             selectedIcon: _CartNavIcon(count: cartItemCount, selected: true),
-            label: 'Cart',
+            label: appText(context, 'Carrinho', 'Cart'),
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: appText(context, 'Perfil', 'Profile'),
           ),
         ],
       ),
@@ -161,7 +183,7 @@ class _HomeTab extends ConsumerWidget {
               children: [
                 Builder(
                   builder: (context) => IconButton(
-                    tooltip: 'Abrir menu',
+                    tooltip: appText(context, 'Abrir menu', 'Open menu'),
                     icon: const Icon(Icons.menu),
                     onPressed: () => Scaffold.of(context).openDrawer(),
                   ),
@@ -183,14 +205,16 @@ class _HomeTab extends ConsumerWidget {
             const SizedBox(height: 8),
             TextField(
               decoration: InputDecoration(
-                hintText: 'Search premium tech & furniture',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.tune),
-                  onPressed: () {},
+                hintText: appText(
+                  context,
+                  'Pesquisar tecnologia e móveis',
+                  'Search tech and furniture',
                 ),
+                prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: const Color(0xFFF3F1F2),
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -207,11 +231,14 @@ class _HomeTab extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Popular Products',
+                    appText(context, 'Produtos populares', 'Popular products'),
                     style: Theme.of(context).textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  TextButton(onPressed: () {}, child: const Text('View All')),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(appText(context, 'Ver todos', 'View all')),
+                  ),
                 ],
               ),
             ),
@@ -226,11 +253,14 @@ class _HomeTab extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'New Arrivals',
+                    appText(context, 'Novidades', 'New arrivals'),
                     style: Theme.of(context).textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  TextButton(onPressed: () {}, child: const Text('Just In')),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(appText(context, 'Ver novidades', 'Just in')),
+                  ),
                 ],
               ),
             ),
@@ -247,15 +277,19 @@ class _HomeTab extends ConsumerWidget {
 }
 
 enum _MenuOption {
-  favorites('Favoritos', Icons.favorite_border),
-  chat('Chat', Icons.chat_bubble_outline),
-  settings('Definições', Icons.settings_outlined),
-  about('Sobre nós', Icons.info_outline),
-  terms('Termos e condições', Icons.description_outlined);
+  chat('Atendimento', 'Support', Icons.chat_bubble_outline),
+  settings('Definições', 'Settings', Icons.settings_outlined),
+  about('Sobre nós', 'About us', Icons.info_outline),
+  terms(
+    'Termos e condições',
+    'Terms and conditions',
+    Icons.description_outlined,
+  );
 
-  const _MenuOption(this.title, this.icon);
+  const _MenuOption(this.title, this.englishTitle, this.icon);
 
   final String title;
+  final String englishTitle;
   final IconData icon;
 }
 
@@ -284,7 +318,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Olá, $userName',
+                    appText(context, 'Olá, $userName', 'Hello, $userName'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -303,7 +337,9 @@ class _AppDrawer extends StatelessWidget {
             for (final option in _MenuOption.values)
               ListTile(
                 leading: Icon(option.icon),
-                title: Text(option.title),
+                title: Text(
+                  appText(context, option.title, option.englishTitle),
+                ),
                 trailing: const Icon(Icons.chevron_right, size: 20),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -324,10 +360,10 @@ class _MenuPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (option == _MenuOption.favorites) return const FavoritesScreen();
-
     return Scaffold(
-      appBar: AppBar(title: Text(option.title)),
+      appBar: AppBar(
+        title: Text(appText(context, option.title, option.englishTitle)),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -337,12 +373,12 @@ class _MenuPage extends StatelessWidget {
               Icon(option.icon, size: 64, color: const Color(0xFF064B95)),
               const SizedBox(height: 20),
               Text(
-                option.title,
+                appText(context, option.title, option.englishTitle),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                _menuDescription(option),
+                _menuDescription(context, option),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
@@ -353,18 +389,32 @@ class _MenuPage extends StatelessWidget {
     );
   }
 
-  String _menuDescription(_MenuOption option) {
+  String _menuDescription(BuildContext context, _MenuOption option) {
     switch (option) {
-      case _MenuOption.favorites:
-        return 'Os teus produtos favoritos aparecerão aqui.';
       case _MenuOption.chat:
-        return 'Fala connosco e tira as tuas dúvidas.';
+        return appText(
+          context,
+          'Fala connosco e tira as tuas dúvidas.',
+          'Contact us if you have any questions.',
+        );
       case _MenuOption.settings:
-        return 'Personaliza as definições da tua conta.';
+        return appText(
+          context,
+          'Personaliza as definições da tua conta.',
+          'Customize your account settings.',
+        );
       case _MenuOption.about:
-        return 'Conhece melhor a ShopSwift.';
+        return appText(
+          context,
+          'Conhece melhor a ShopSwift.',
+          'Learn more about ShopSwift.',
+        );
       case _MenuOption.terms:
-        return 'Consulta os termos e condições da aplicação.';
+        return appText(
+          context,
+          'Consulta os termos e condições da aplicação.',
+          'Review the app terms and conditions.',
+        );
     }
   }
 }
@@ -392,11 +442,18 @@ class _SaleBanner extends StatelessWidget {
               color: Colors.orange,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text('Summer Sale', style: TextStyle(fontSize: 12)),
+            child: Text(
+              appText(context, 'Promoção de verão', 'Summer sale'),
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
           const Spacer(),
-          const Text(
-            'Summer\nElectronics Sale',
+          Text(
+            appText(
+              context,
+              'Descontos de verão\nem eletrónicos',
+              'Summer electronics\nsale',
+            ),
             style: TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -404,43 +461,14 @@ class _SaleBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Up to 45% Off Premium Brands',
+          Text(
+            appText(context, 'Até 45% de desconto', 'Up to 45% off'),
             style: TextStyle(color: Colors.white70),
           ),
         ],
       ),
     );
   }
-}
-
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab({required this.userName, required this.onLogout});
-
-  final String userName;
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 32),
-          const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
-          const SizedBox(height: 16),
-          Text(userName, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 28),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Terminar sessão'),
-            onTap: onLogout,
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _CategoriesRow extends ConsumerWidget {
@@ -471,7 +499,11 @@ class _CategoriesRow extends ConsumerWidget {
                 label: Text(
                   error is ApiException
                       ? '${error.message} Toca para tentar de novo.'
-                      : 'Erro ao carregar categorias. Toca para tentar de novo.',
+                      : appText(
+                          context,
+                          'Erro ao carregar categorias. Toca para tentar de novo.',
+                          'Could not load categories. Tap to try again.',
+                        ),
                 ),
               ),
             ),

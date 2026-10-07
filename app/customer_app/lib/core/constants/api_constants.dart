@@ -47,7 +47,13 @@ class ApiConstants {
   static const String orders = '/orders';
   static const String favorites = '/favorites';
 
+  // User profile and addresses
+  static const String userProfile = '/users/me';
+  static const String userStats = '/users/me/stats';
+  static const String userAddresses = '/users/me/addresses';
+
   static String favorite(int productId) => '$favorites/$productId';
+  static String userAddress(Object id) => '$userAddresses/$id';
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 10);

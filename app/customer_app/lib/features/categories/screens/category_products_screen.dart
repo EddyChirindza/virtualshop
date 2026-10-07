@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../products/providers/product_providers.dart';
@@ -16,10 +17,12 @@ class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
 
   @override
-  ConsumerState<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
+  ConsumerState<CategoryProductsScreen> createState() =>
+      _CategoryProductsScreenState();
 }
 
-class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen> {
+class _CategoryProductsScreenState
+    extends ConsumerState<CategoryProductsScreen> {
   late int _selectedId = widget.category.id;
 
   @override
@@ -36,10 +39,14 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               height: 56,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 children: [
-                  _chip('Tudo', category.id),
-                  for (final child in category.children) _chip(child.name, child.id),
+                  _chip(appText(context, 'Tudo', 'All'), category.id),
+                  for (final child in category.children)
+                    _chip(child.name, child.id),
                 ],
               ),
             ),
@@ -47,12 +54,23 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             child: products.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => ErrorRetry(
-                message: error is ApiException ? error.message : 'Não foi possível carregar os produtos.',
-                onRetry: () => ref.invalidate(productsByCategoryProvider(_selectedId)),
+                message: error is ApiException
+                    ? error.message
+                    : 'Não foi possível carregar os produtos.',
+                onRetry: () =>
+                    ref.invalidate(productsByCategoryProvider(_selectedId)),
               ),
               data: (items) {
                 if (items.isEmpty) {
-                  return const Center(child: Text('Sem produtos nesta categoria.'));
+                  return Center(
+                    child: Text(
+                      appText(
+                        context,
+                        'Sem produtos nesta categoria.',
+                        'No products in this category.',
+                      ),
+                    ),
+                  );
                 }
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
@@ -69,7 +87,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       product: product,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(productId: product.id),
+                          builder: (_) =>
+                              ProductDetailScreen(productId: product.id),
                         ),
                       ),
                     );

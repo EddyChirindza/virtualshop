@@ -19,6 +19,11 @@ class SearchController extends StateNotifier<SearchState> {
   CancelToken? _activeCancelToken;
   int _requestGeneration = 0;
 
+  void reset() {
+    _cancelActiveRequest();
+    state = const SearchState();
+  }
+
   void updateQuery(String query) {
     if (query == state.query) return;
     _cancelActiveRequest();

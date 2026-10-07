@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../models/product.dart';
@@ -38,12 +39,26 @@ class ProductsSection extends StatelessWidget {
           child: products.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => ErrorRetry(
-              message: error is ApiException ? error.message : 'Não foi possível carregar.',
+              message: error is ApiException
+                  ? error.message
+                  : appText(
+                      context,
+                      'Não foi possível carregar.',
+                      'Could not load products.',
+                    ),
               onRetry: onRetry,
             ),
             data: (items) {
               if (items.isEmpty) {
-                return const Center(child: Text('Ainda não há produtos aqui.'));
+                return Center(
+                  child: Text(
+                    appText(
+                      context,
+                      'Ainda não há produtos aqui.',
+                      'There are no products here yet.',
+                    ),
+                  ),
+                );
               }
               return ListView.separated(
                 scrollDirection: Axis.horizontal,
@@ -58,7 +73,8 @@ class ProductsSection extends StatelessWidget {
                       product: product,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(productId: product.id),
+                          builder: (_) =>
+                              ProductDetailScreen(productId: product.id),
                         ),
                       ),
                     ),

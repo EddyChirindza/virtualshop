@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../providers/auth_providers.dart';
 import 'register_screen.dart';
@@ -32,7 +33,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authControllerProvider.notifier).login(
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(
             identifier: _emailController.text.trim(),
             password: _passwordController.text,
           );
@@ -41,7 +44,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Erro ao iniciar sessão.');
+      if (mounted) {
+        _showError(
+          appText(context, 'Erro ao iniciar sessão.', 'Could not sign in.'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -49,7 +56,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -71,13 +79,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     'VirtualShop',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Inicia sessão para continuar',
+                    appText(
+                      context,
+                      'Inicia sessão para continuar',
+                      'Sign in to continue',
+                    ),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -86,16 +97,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
+                    decoration: InputDecoration(
+                      labelText: appText(context, 'E-mail', 'Email'),
                       prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Indica o teu email';
+                        return appText(
+                          context,
+                          'Indica o teu e-mail',
+                          'Enter your email',
+                        );
                       }
-                      if (!value.contains('@')) return 'Email inválido';
+                      if (!value.contains('@'))
+                        return appText(
+                          context,
+                          'E-mail inválido',
+                          'Invalid email',
+                        );
                       return null;
                     },
                   ),
@@ -105,20 +125,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     obscureText: _obscurePassword,
                     autofillHints: const [AutofillHints.password],
                     decoration: InputDecoration(
-                      labelText: 'Palavra-passe',
+                      labelText: appText(context, 'Palavra-passe', 'Password'),
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Indica a tua palavra-passe';
+                        return appText(
+                          context,
+                          'Indica a tua palavra-passe',
+                          'Enter your password',
+                        );
                       }
                       return null;
                     },
@@ -127,23 +154,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: isLoading ? null : _submit,
-                    style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
                     child: isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Entrar'),
+                        : Text(appText(context, 'Entrar', 'Sign in')),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: isLoading
                         ? null
                         : () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
                             ),
-                    child: const Text('Não tens conta? Regista-te'),
+                          ),
+                    child: Text(
+                      appText(
+                        context,
+                        'Não tens conta? Regista-te',
+                        'Don’t have an account? Sign up',
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -36,13 +36,14 @@ class SearchFilters {
 }
 
 enum SearchSort {
-  relevance('relevance', 'Relevância'),
-  priceAscending('price_asc', 'Preço crescente'),
-  priceDescending('price_desc', 'Preço decrescente'),
-  newest('newest', 'Mais recentes');
+  relevance('relevance', 'Relevância', 'Relevance'),
+  priceAscending('price_asc', 'Preço crescente', 'Price: low to high'),
+  priceDescending('price_desc', 'Preço decrescente', 'Price: high to low'),
+  newest('newest', 'Mais recentes', 'Newest');
 
-  const SearchSort(this.apiValue, this.label);
+  const SearchSort(this.apiValue, this.label, this.englishLabel);
 
   final String apiValue;
   final String label;
+  final String englishLabel;
 }

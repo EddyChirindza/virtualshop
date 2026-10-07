@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../cart/providers/cart_provider.dart';
+import '../../cart/screens/cart_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../models/product.dart';
@@ -46,7 +48,11 @@ class ProductDetailScreen extends ConsumerWidget {
         error: (error, _) => ErrorRetry(
           message: error is ApiException
               ? error.message
-              : 'Não foi possível carregar o produto.',
+              : appText(
+                  context,
+                  'Não foi possível carregar o produto.',
+                  'Could not load product.',
+                ),
           onRetry: () => ref.invalidate(productDetailProvider(productId)),
         ),
         data: (p) => _ProductDetailBody(
@@ -59,11 +65,45 @@ class ProductDetailScreen extends ConsumerWidget {
                 .addProduct(p);
             if (!added) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Limite de stock atingido para este produto.'),
+                SnackBar(
+                  content: Text(
+                    appText(
+                      context,
+                      'Limite de stock atingido para este produto.',
+                      'Stock limit reached for this product.',
+                    ),
+                  ),
                 ),
               );
             }
+          },
+          onBuyNow: () {
+            if (quantity == 0) {
+              final added = ref
+                  .read(cartControllerProvider.notifier)
+                  .addProduct(p);
+              if (!added) {
+                final errorMessage = ref
+                    .read(cartControllerProvider)
+                    .errorMessage;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      errorMessage ??
+                          appText(
+                            context,
+                            'Não foi possível adicionar este produto ao carrinho.',
+                            'Could not add this product to the cart.',
+                          ),
+                    ),
+                  ),
+                );
+                return;
+              }
+            }
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const CartScreen()));
           },
           onIncrement: () =>
               ref.read(cartControllerProvider.notifier).addProduct(p),
@@ -85,7 +125,11 @@ class ProductDetailScreen extends ConsumerWidget {
                 SnackBar(
                   content: Text(
                     error?.toString() ??
-                        'Não foi possível atualizar os favoritos.',
+                        appText(
+                          context,
+                          'Não foi possível atualizar os favoritos.',
+                          'Could not update favorites.',
+                        ),
                   ),
                 ),
               );
@@ -103,6 +147,7 @@ class _ProductDetailBody extends StatelessWidget {
     required this.quantity,
     required this.addAllowed,
     required this.onAdd,
+    required this.onBuyNow,
     required this.onIncrement,
     required this.onDecrement,
     required this.isFavorite,
@@ -113,6 +158,7 @@ class _ProductDetailBody extends StatelessWidget {
   final int quantity;
   final bool addAllowed;
   final VoidCallback onAdd;
+  final VoidCallback onBuyNow;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final bool isFavorite;
@@ -153,8 +199,16 @@ class _ProductDetailBody extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: isFavorite
-                        ? 'Remover dos favoritos'
-                        : 'Adicionar aos favoritos',
+                        ? appText(
+                            context,
+                            'Remover dos favoritos',
+                            'Remove from favorites',
+                          )
+                        : appText(
+                            context,
+                            'Adicionar aos favoritos',
+                            'Add to favorites',
+                          ),
                     onPressed: onToggleFavorite,
                     icon: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -185,8 +239,12 @@ class _ProductDetailBody extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 product.inStock
-                    ? 'Em stock (${product.stock} disponíveis)'
-                    : 'Esgotado',
+                    ? appText(
+                        context,
+                        'Em stock (${product.stock} disponíveis)',
+                        'In stock (${product.stock} available)',
+                      )
+                    : appText(context, 'Esgotado', 'Out of stock'),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: product.inStock
                       ? scheme.onSurfaceVariant
@@ -204,7 +262,11 @@ class _ProductDetailBody extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'No carrinho: $quantity',
+                        appText(
+                          context,
+                          'No carrinho: $quantity',
+                          'In cart: $quantity',
+                        ),
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: const Color(0xFF1E7A4B),
                         ),
@@ -240,22 +302,52 @@ class _ProductDetailBody extends StatelessWidget {
               ],
               const SizedBox(height: 20),
               if (product.inStock)
-                FilledButton.icon(
-                  onPressed: inCart ? null : onAdd,
-                  icon: const Icon(Icons.add_shopping_cart),
-                  label: Text(
-                    inCart ? 'Adicionado ao carrinho' : 'Adicionar ao carrinho',
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: inCart ? null : onAdd,
+                      icon: const Icon(Icons.add_shopping_cart),
+                      label: Text(
+                        inCart
+                            ? appText(
+                                context,
+                                'Adicionado ao carrinho',
+                                'Added to cart',
+                              )
+                            : appText(
+                                context,
+                                'Adicionar ao carrinho',
+                                'Add to cart',
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: onBuyNow,
+                      icon: const Icon(Icons.bolt),
+                      label: Text(appText(context, 'Comprar agora', 'Buy now')),
+                    ),
+                  ],
                 )
               else
                 FilledButton.icon(
                   onPressed: null,
                   icon: const Icon(Icons.remove_shopping_cart_outlined),
-                  label: const Text('Produto indisponível'),
+                  label: Text(
+                    appText(
+                      context,
+                      'Produto indisponível',
+                      'Product unavailable',
+                    ),
+                  ),
                 ),
               if ((product.description ?? '').isNotEmpty) ...[
                 const SizedBox(height: 24),
-                Text('Descrição', style: theme.textTheme.titleMedium),
+                Text(
+                  appText(context, 'Descrição', 'Description'),
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Text(product.description!, style: theme.textTheme.bodyLarge),
               ],

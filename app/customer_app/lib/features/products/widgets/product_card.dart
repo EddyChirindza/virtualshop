@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/utils/format.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
@@ -52,12 +53,20 @@ class ProductCard extends ConsumerWidget {
                     top: 4,
                     right: 4,
                     child: Material(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: theme.colorScheme.surface.withValues(alpha: 0.9),
                       shape: const CircleBorder(),
                       child: IconButton(
                         tooltip: isFavorite
-                            ? 'Remover dos favoritos'
-                            : 'Adicionar aos favoritos',
+                            ? appText(
+                                context,
+                                'Remover dos favoritos',
+                                'Remove from favorites',
+                              )
+                            : appText(
+                                context,
+                                'Adicionar aos favoritos',
+                                'Add to favorites',
+                              ),
                         icon: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
                         ),
@@ -131,7 +140,7 @@ class ProductCard extends ConsumerWidget {
                   ),
                   if (!product.inStock)
                     Text(
-                      'Esgotado',
+                      appText(context, 'Esgotado', 'Out of stock'),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: scheme.error,
                       ),
@@ -149,7 +158,11 @@ class ProductCard extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          'No carrinho: $quantity',
+                          appText(
+                            context,
+                            'No carrinho: $quantity',
+                            'In cart: $quantity',
+                          ),
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: const Color(0xFF1E7A4B),
                           ),
@@ -202,22 +215,28 @@ class ProductCard extends ConsumerWidget {
                               .addProduct(product);
                           if (!added) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text(
-                                  'Limite de stock atingido para este produto.',
+                                  appText(
+                                    context,
+                                    'Limite de stock atingido para este produto.',
+                                    'Stock limit reached for this product.',
+                                  ),
                                 ),
                               ),
                             );
                           }
                         },
                         icon: const Icon(Icons.add_shopping_cart_outlined),
-                        label: const Text('Adicionar'),
+                        label: Text(appText(context, 'Adicionar', 'Add')),
                       )
                   else
                     FilledButton.icon(
                       onPressed: null,
                       icon: const Icon(Icons.remove_shopping_cart_outlined),
-                      label: const Text('Indisponível'),
+                      label: Text(
+                        appText(context, 'Indisponível', 'Unavailable'),
+                      ),
                     ),
                 ],
               ),

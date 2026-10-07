@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_navigation.dart';
+import '../../../core/app_text.dart';
 import '../../../core/utils/format.dart';
 import '../../products/widgets/product_image.dart';
 import '../providers/cart_provider.dart';
@@ -13,8 +15,10 @@ class CartScreen extends ConsumerWidget {
     final cart = ref.watch(cartControllerProvider);
 
     ref.listen(cartControllerProvider, (previous, next) {
-      if (next.errorMessage != null && next.errorMessage != previous?.errorMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.errorMessage!)));
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.errorMessage!)));
       }
     });
 
@@ -28,19 +32,40 @@ class CartScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 72, color: Color(0xFF064B95)),
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 72,
+                    color: Color(0xFF064B95),
+                  ),
                   const SizedBox(height: 20),
                   Text(
-                    'Seu carrinho está vazio',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                    appText(
+                      context,
+                      'O teu carrinho está vazio',
+                      'Your cart is empty',
+                    ),
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Adicione produtos para começar a sua compra.', textAlign: TextAlign.center),
+                  Text(
+                    appText(
+                      context,
+                      'Adiciona produtos para começar a comprar.',
+                      'Add products to start shopping.',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: () {
+                      ref.read(homeTabRequestProvider.notifier).state = 0;
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
                     icon: const Icon(Icons.storefront_outlined),
-                    label: const Text('Explorar produtos'),
+                    label: Text(
+                      appText(context, 'Explorar produtos', 'Browse products'),
+                    ),
                   ),
                 ],
               ),
@@ -55,8 +80,10 @@ class CartScreen extends ConsumerWidget {
         title: const Text('Carrinho'),
         actions: [
           TextButton(
-            onPressed: cart.isUpdating ? null : () => ref.read(cartControllerProvider.notifier).clearCart(),
-            child: const Text('Limpar'),
+            onPressed: cart.isUpdating
+                ? null
+                : () => ref.read(cartControllerProvider.notifier).clearCart(),
+            child: Text(appText(context, 'Limpar', 'Clear')),
           ),
         ],
       ),
@@ -67,14 +94,15 @@ class CartScreen extends ConsumerWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 itemCount: cart.sortedItems.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final item = cart.sortedItems[index];
                   final controller = ref.read(cartControllerProvider.notifier);
 
                   return Card(
                     elevation: 0,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
@@ -85,7 +113,10 @@ class CartScreen extends ConsumerWidget {
                             child: SizedBox(
                               width: 82,
                               height: 82,
-                              child: ProductImage(url: item.product.imageUrl, fit: BoxFit.cover),
+                              child: ProductImage(
+                                url: item.product.imageUrl,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -97,33 +128,66 @@ class CartScreen extends ConsumerWidget {
                                   item.product.name,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(item.unitPriceLabel, style: Theme.of(context).textTheme.bodyMedium),
+                                Text(
+                                  item.unitPriceLabel,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
                                     IconButton.filledTonal(
-                                      onPressed: cart.isUpdating ? null : () => controller.updateQuantity(item.productId, item.quantity - 1),
+                                      onPressed: cart.isUpdating
+                                          ? null
+                                          : () => controller.updateQuantity(
+                                              item.productId,
+                                              item.quantity - 1,
+                                            ),
                                       icon: const Icon(Icons.remove),
-                                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 32,
+                                            height: 32,
+                                          ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
                                       child: Text(
                                         '${item.quantity}',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                       ),
                                     ),
                                     IconButton.filledTonal(
-                                      onPressed: cart.isUpdating ? null : () => controller.updateQuantity(item.productId, item.quantity + 1),
+                                      onPressed: cart.isUpdating
+                                          ? null
+                                          : () => controller.updateQuantity(
+                                              item.productId,
+                                              item.quantity + 1,
+                                            ),
                                       icon: const Icon(Icons.add),
-                                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 32,
+                                            height: 32,
+                                          ),
                                     ),
                                     const Spacer(),
                                     IconButton(
-                                      onPressed: cart.isUpdating ? null : () => controller.removeProduct(item.productId),
+                                      onPressed: cart.isUpdating
+                                          ? null
+                                          : () => controller.removeProduct(
+                                              item.productId,
+                                            ),
                                       icon: const Icon(Icons.delete_outline),
                                       color: Colors.red,
                                     ),
@@ -133,8 +197,11 @@ class CartScreen extends ConsumerWidget {
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: Text(
-                                    'Subtotal: ${item.subtotalLabel}',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                    '${appText(context, 'Subtotal', 'Subtotal')}: ${item.subtotalLabel}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
@@ -151,35 +218,68 @@ class CartScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Resumo da compra', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                    appText(context, 'Resumo da compra', 'Order summary'),
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 12),
-                  _SummaryLine(label: 'Subtotal', value: formatMoney(cart.subtotal)),
-                  _SummaryLine(label: 'Desconto', value: formatMoney(cart.discount)),
-                  _SummaryLine(label: 'Taxa de entrega', value: formatMoney(cart.deliveryFee)),
+                  _SummaryLine(
+                    label: 'Subtotal',
+                    value: formatMoney(cart.subtotal),
+                  ),
+                  _SummaryLine(
+                    label: appText(context, 'Desconto', 'Discount'),
+                    value: formatMoney(cart.discount),
+                  ),
+                  _SummaryLine(
+                    label: appText(context, 'Taxa de entrega', 'Delivery fee'),
+                    value: formatMoney(cart.deliveryFee),
+                  ),
                   const Divider(height: 20),
-                  _SummaryLine(label: 'Total', value: formatMoney(cart.total), isTotal: true),
+                  _SummaryLine(
+                    label: 'Total',
+                    value: formatMoney(cart.total),
+                    isTotal: true,
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: cart.isUpdating
                         ? null
                         : () async {
-                            final success = await ref.read(cartControllerProvider.notifier).checkout();
+                            final success = await ref
+                                .read(cartControllerProvider.notifier)
+                                .checkout();
                             if (!context.mounted) return;
                             if (success) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Pedido criado com sucesso.')),
+                                SnackBar(
+                                  content: Text(
+                                    appText(
+                                      context,
+                                      'Pedido criado com sucesso.',
+                                      'Order placed successfully.',
+                                    ),
+                                  ),
+                                ),
                               );
                             }
                           },
                     child: cart.isUpdating
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Finalizar pedido'),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            appText(context, 'Finalizar pedido', 'Place order'),
+                          ),
                   ),
                 ],
               ),
@@ -192,7 +292,11 @@ class CartScreen extends ConsumerWidget {
 }
 
 class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({required this.label, required this.value, this.isTotal = false});
+  const _SummaryLine({
+    required this.label,
+    required this.value,
+    this.isTotal = false,
+  });
 
   final String label;
   final String value;
@@ -204,9 +308,21 @@ class _SummaryLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(label, style: isTotal ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700) : null),
+          Text(
+            label,
+            style: isTotal
+                ? Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)
+                : null,
+          ),
           const Spacer(),
-          Text(value, style: isTotal ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700) : null),
+          Text(
+            value,
+            style: isTotal
+                ? Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)
+                : null,
+          ),
         ],
       ),
     );

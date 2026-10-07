@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/app_text.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../products/screens/product_detail_screen.dart';
 import '../../../products/widgets/product_card.dart';
@@ -66,12 +67,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     onChanged: _onQueryChanged,
                     onSubmitted: (_) => _runSearchNow(),
                     decoration: InputDecoration(
-                      hintText: 'Pesquisar produtos',
+                      hintText: appText(
+                        context,
+                        'Pesquisar produtos',
+                        'Search products',
+                      ),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _textController.text.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: 'Limpar pesquisa',
+                              tooltip: appText(
+                                context,
+                                'Limpar pesquisa',
+                                'Clear search',
+                              ),
                               onPressed: _clearQuery,
                               icon: const Icon(Icons.close),
                             ),
@@ -105,7 +114,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (state.error != null) {
       final message = state.error is ApiException
           ? (state.error! as ApiException).message
-          : 'Não foi possível pesquisar produtos.';
+          : appText(
+              context,
+              'Não foi possível pesquisar produtos.',
+              'Could not search products.',
+            );
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -117,7 +130,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               FilledButton.icon(
                 onPressed: _runSearchNow,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Tentar novamente'),
+                label: Text(appText(context, 'Tentar novamente', 'Try again')),
               ),
             ],
           ),
@@ -131,8 +144,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           padding: const EdgeInsets.all(24),
           child: Text(
             query.isEmpty
-                ? 'Nenhum produto encontrado com estes filtros.'
-                : 'Nenhum produto encontrado para \'$query\'.',
+                ? appText(
+                    context,
+                    'Nenhum produto encontrado com estes filtros.',
+                    'No products found with these filters.',
+                  )
+                : appText(
+                    context,
+                    'Nenhum produto encontrado para \'$query\'.',
+                    'No products found for \'$query\'.',
+                  ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -140,8 +161,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
     if (state.products.isNotEmpty) return _buildProductGrid(state);
     if (state.query.trim().length == 1) {
-      return const Center(
-        child: Text('Escreve pelo menos 2 caracteres para pesquisar.'),
+      return Center(
+        child: Text(
+          appText(
+            context,
+            'Escreve pelo menos 2 caracteres para pesquisar.',
+            'Enter at least 2 characters to search.',
+          ),
+        ),
       );
     }
     return _buildDiscoveryContent();
@@ -202,13 +229,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Pesquisas recentes',
+                            appText(
+                              context,
+                              'Pesquisas recentes',
+                              'Recent searches',
+                            ),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
                         TextButton(
                           onPressed: _clearRecentSearches,
-                          child: const Text('Apagar todas'),
+                          child: Text(
+                            appText(context, 'Apagar todas', 'Clear all'),
+                          ),
                         ),
                       ],
                     ),
@@ -218,7 +251,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         leading: const Icon(Icons.history),
                         title: Text(query),
                         trailing: IconButton(
-                          tooltip: 'Apagar pesquisa',
+                          tooltip: appText(
+                            context,
+                            'Apagar pesquisa',
+                            'Remove search',
+                          ),
                           onPressed: () => _removeRecentSearch(query),
                           icon: const Icon(Icons.close),
                         ),
@@ -229,7 +266,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
         ),
         Text(
-          'Explorar categorias',
+          appText(context, 'Explorar categorias', 'Browse categories'),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
@@ -241,18 +278,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           error: (error, stackTrace) => TextButton.icon(
             onPressed: () => ref.invalidate(categoryTreeProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text(
-              'Não foi possível carregar categorias. Tentar novamente',
+            label: Text(
+              appText(
+                context,
+                'Não foi possível carregar categorias. Tentar novamente',
+                'Could not load categories. Try again',
+              ),
             ),
           ),
-          data: (items) => Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          data: (items) => Column(
             children: [
               for (final category in items)
-                ActionChip(
-                  label: Text(category.name),
-                  onPressed: () => _selectCategory(category),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.category_outlined),
+                  title: Text(category.name),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectCategory(category),
                 ),
             ],
           ),
@@ -353,7 +395,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton.filledTonal(
-      tooltip: 'Filtros e ordenação',
+      tooltip: appText(context, 'Filtros e ordenação', 'Filters and sorting'),
       onPressed: onPressed,
       icon: Badge(
         isLabelVisible: count > 0,

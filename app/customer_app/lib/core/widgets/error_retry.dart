@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_text.dart';
+
 /// Mensagem de erro + botão "Tentar novamente". Usado por qualquer ecrã
 /// ou secção que carregue dados da API.
 class ErrorRetry extends StatelessWidget {
@@ -16,15 +18,18 @@ class ErrorRetry extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_outlined,
-                size: 40, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 40,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Tentar novamente'),
+              label: Text(appText(context, 'Tentar novamente', 'Try again')),
             ),
           ],
         ),

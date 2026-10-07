@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../products/screens/product_detail_screen.dart';
@@ -20,16 +21,24 @@ class FavoritesScreen extends ConsumerWidget {
         error: (error, _) => ErrorRetry(
           message: error is ApiException
               ? error.message
-              : 'Não foi possível carregar os favoritos.',
+              : appText(
+                  context,
+                  'Não foi possível carregar os favoritos.',
+                  'Could not load favorites.',
+                ),
           onRetry: () => ref.read(favoritesProvider.notifier).reload(),
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Ainda não tens produtos favoritos.',
+                  appText(
+                    context,
+                    'Ainda não tens produtos favoritos.',
+                    'You do not have any favorite products yet.',
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../providers/auth_providers.dart';
 
@@ -37,7 +38,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authControllerProvider.notifier).register(
+      await ref
+          .read(authControllerProvider.notifier)
+          .register(
             name: _nameController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
@@ -49,7 +52,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Erro ao criar conta.');
+      if (mounted) {
+        _showError(
+          appText(context, 'Erro ao criar conta.', 'Could not create account.'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -57,7 +64,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -65,7 +73,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final isLoading = _isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
+      appBar: AppBar(
+        title: Text(appText(context, 'Criar conta', 'Create account')),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -76,26 +86,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome completo',
+                  decoration: InputDecoration(
+                    labelText: appText(context, 'Nome completo', 'Full name'),
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Indica o teu nome' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? appText(context, 'Indica o teu nome', 'Enter your name')
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
+                  decoration: InputDecoration(
+                    labelText: appText(context, 'E-mail', 'Email'),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Indica o teu email';
-                    if (!v.contains('@')) return 'Email inválido';
+                    if (v == null || v.trim().isEmpty)
+                      return appText(
+                        context,
+                        'Indica o teu e-mail',
+                        'Enter your email',
+                      );
+                    if (!v.contains('@'))
+                      return appText(
+                        context,
+                        'E-mail inválido',
+                        'Invalid email',
+                      );
                     return null;
                   },
                 ),
@@ -103,16 +124,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Telemóvel',
+                  decoration: InputDecoration(
+                    labelText: appText(context, 'Telemóvel', 'Phone number'),
                     hintText: '84 123 4567',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (v) {
                     final phone = (v ?? '').replaceAll(' ', '');
                     if (!RegExp(r'^\+?[0-9]{9,15}$').hasMatch(phone)) {
-                      return 'Telemóvel inválido (9 a 15 dígitos)';
+                      return appText(
+                        context,
+                        'Telemóvel inválido (9 a 15 dígitos)',
+                        'Invalid phone number (9 to 15 digits)',
+                      );
                     }
                     return null;
                   },
@@ -122,23 +147,45 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    labelText: 'Palavra-passe',
+                    labelText: appText(context, 'Palavra-passe', 'Password'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (v) {
                     final value = v ?? '';
-                    if (value.length < 8) return 'Mínimo de 8 caracteres';
-                    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Falta uma letra maiúscula';
-                    if (!RegExp(r'[a-z]').hasMatch(value)) return 'Falta uma letra minúscula';
-                    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Falta um número';
+                    if (value.length < 8)
+                      return appText(
+                        context,
+                        'Mínimo de 8 caracteres',
+                        'At least 8 characters',
+                      );
+                    if (!RegExp(r'[A-Z]').hasMatch(value))
+                      return appText(
+                        context,
+                        'Falta uma letra maiúscula',
+                        'Add an uppercase letter',
+                      );
+                    if (!RegExp(r'[a-z]').hasMatch(value))
+                      return appText(
+                        context,
+                        'Falta uma letra minúscula',
+                        'Add a lowercase letter',
+                      );
+                    if (!RegExp(r'[0-9]').hasMatch(value))
+                      return appText(
+                        context,
+                        'Falta um número',
+                        'Add a number',
+                      );
                     return null;
                   },
                 ),
@@ -146,14 +193,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _confirmController,
                   obscureText: _obscurePassword,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirmar palavra-passe',
+                  decoration: InputDecoration(
+                    labelText: appText(
+                      context,
+                      'Confirmar palavra-passe',
+                      'Confirm password',
+                    ),
                     prefixIcon: Icon(Icons.lock_outline),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) {
                     if (v != _passwordController.text) {
-                      return 'As palavras-passe não coincidem';
+                      return appText(
+                        context,
+                        'As palavras-passe não coincidem',
+                        'Passwords do not match',
+                      );
                     }
                     return null;
                   },
@@ -162,14 +217,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: isLoading ? null : _submit,
-                  style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.all(16),
+                  ),
                   child: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Criar conta'),
+                      : Text(appText(context, 'Criar conta', 'Create account')),
                 ),
               ],
             ),

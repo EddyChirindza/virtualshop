@@ -4,6 +4,8 @@
 // ─────────────────────────────────────────────
 require('dotenv').config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+
 function required(name) {
   const value = process.env[name];
   if (!value) {
@@ -13,7 +15,8 @@ function required(name) {
 }
 
 const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
+  host: process.env.HOST || (nodeEnv === 'development' ? '0.0.0.0' : '127.0.0.1'),
   port: parseInt(process.env.PORT || '3000', 10),
 
   db: {

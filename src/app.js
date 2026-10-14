@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const env = require('./config/env');
+const { pool } = require('./config/db');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
 
 const authRoutes = require('./modules/auth/auth.routes');
@@ -45,6 +46,10 @@ app.use(
           return callback(null, true);
         }
 
+        if (env.corsOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
         return rejectOrigin(`Origem não permitida: ${origin}`);
       }
 
@@ -65,7 +70,16 @@ app.use(express.json({ limit: '1mb' }));
 
 // ── Healthcheck ───────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'VirtualShop API operacional.' });
+  res.json({ success: true, status: 'ok', message: 'VirtualShop API operacional.' });
+});
+
+app.get('/api/health/ready', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ success: true, status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ success: false, status: 'not_ready' });
+  }
 });
 
 // ── Rotas ──────────────────────────────────────

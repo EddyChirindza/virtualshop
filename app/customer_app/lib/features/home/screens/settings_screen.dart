@@ -17,55 +17,113 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            appText(context, 'Idioma', 'Language'),
-            style: Theme.of(context).textTheme.titleMedium,
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.translate),
+            title: Text(appText(context, 'Idioma', 'Language')),
+            subtitle: Text(
+              preferences.language == AppLanguage.portuguese
+                  ? 'Português'
+                  : 'English',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (dialogContext) => SimpleDialog(
+                title: Text(appText(context, 'Idioma', 'Language')),
+                children: [
+                  _PreferenceOption(
+                    label: 'Português',
+                    selected: preferences.language == AppLanguage.portuguese,
+                    onPressed: () {
+                      controller.setLanguage(AppLanguage.portuguese);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                  _PreferenceOption(
+                    label: 'English',
+                    selected: preferences.language == AppLanguage.english,
+                    onPressed: () {
+                      controller.setLanguage(AppLanguage.english);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          SegmentedButton<AppLanguage>(
-            segments: [
-              ButtonSegment(
-                value: AppLanguage.portuguese,
-                label: const Text('Português'),
-                icon: const Icon(Icons.translate),
+          const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              preferences.themeMode == ThemeMode.dark
+                  ? Icons.dark_mode_outlined
+                  : Icons.light_mode_outlined,
+            ),
+            title: Text(appText(context, 'Tema do aplicativo', 'App theme')),
+            subtitle: Text(
+              preferences.themeMode == ThemeMode.dark
+                  ? appText(context, 'Escuro', 'Dark')
+                  : appText(context, 'Claro', 'Light'),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (dialogContext) => SimpleDialog(
+                title: Text(
+                  appText(context, 'Tema do aplicativo', 'App theme'),
+                ),
+                children: [
+                  _PreferenceOption(
+                    label: appText(context, 'Claro', 'Light'),
+                    icon: Icons.light_mode_outlined,
+                    selected: preferences.themeMode == ThemeMode.light,
+                    onPressed: () {
+                      controller.setThemeMode(ThemeMode.light);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                  _PreferenceOption(
+                    label: appText(context, 'Escuro', 'Dark'),
+                    icon: Icons.dark_mode_outlined,
+                    selected: preferences.themeMode == ThemeMode.dark,
+                    onPressed: () {
+                      controller.setThemeMode(ThemeMode.dark);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                ],
               ),
-              const ButtonSegment(
-                value: AppLanguage.english,
-                label: Text('English'),
-                icon: Icon(Icons.translate),
-              ),
-            ],
-            selected: {preferences.language},
-            onSelectionChanged: (selection) {
-              controller.setLanguage(selection.first);
-            },
-          ),
-          const SizedBox(height: 28),
-          Text(
-            appText(context, 'Tema do aplicativo', 'App theme'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text(appText(context, 'Claro', 'Light')),
-                icon: const Icon(Icons.light_mode_outlined),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                label: Text(appText(context, 'Escuro', 'Dark')),
-                icon: const Icon(Icons.dark_mode_outlined),
-              ),
-            ],
-            selected: {preferences.themeMode},
-            onSelectionChanged: (selection) {
-              controller.setThemeMode(selection.first);
-            },
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+class _PreferenceOption extends StatelessWidget {
+  const _PreferenceOption({
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => SimpleDialogOption(
+    onPressed: onPressed,
+    child: Row(
+      children: [
+        if (icon != null) ...[Icon(icon), const SizedBox(width: 12)],
+        Expanded(child: Text(label)),
+        if (selected) const Icon(Icons.check, size: 20),
+      ],
+    ),
+  );
 }

@@ -49,6 +49,7 @@ class ApiConstants {
 
   // User profile and addresses
   static const String userProfile = '/users/me';
+  static const String userPassword = '/users/me/password';
   static const String userStats = '/users/me/stats';
   static const String userAddresses = '/users/me/addresses';
 

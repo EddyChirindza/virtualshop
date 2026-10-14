@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
 import '../../../core/utils/format.dart';
+import '../../../theme/app_theme.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../../auth/screens/login_screen.dart';
@@ -19,12 +20,8 @@ class ProductCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final cart = ref.watch(cartControllerProvider);
-    final item = cart.getItemByProductId(product.id);
-    final inCart = item != null;
-    final quantity = item?.quantity ?? 0;
+    final quantity = cart.getItemByProductId(product.id)?.quantity ?? 0;
     final canAdd = product.inStock && (quantity < product.stock);
     final isFavorite = ref.watch(
       favoritesProvider.select(
@@ -36,212 +33,212 @@ class ProductCard extends ConsumerWidget {
       ),
     );
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ProductImage(url: product.imageUrl),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Material(
-                      color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        tooltip: isFavorite
-                            ? appText(
-                                context,
-                                'Remover dos favoritos',
-                                'Remove from favorites',
-                              )
-                            : appText(
-                                context,
-                                'Adicionar aos favoritos',
-                                'Add to favorites',
-                              ),
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                        ),
-                        color: isFavorite ? Colors.red : null,
-                        onPressed: () async {
-                          final controller = ref.read(
-                            favoritesProvider.notifier,
-                          );
-                          if (!controller.isAuthenticated) {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
-                              ),
-                            );
-                            return;
-                          }
-                          final changed = await controller.toggleFavorite(
-                            product,
-                          );
-                          if (!changed && context.mounted) {
-                            final error = ref.read(favoritesProvider).error;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  error?.toString() ?? 'Não foi possível atualizar os favoritos.',
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadows.product,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 120,
+                  width: double.infinity,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.image),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ProductImage(url: product.imageUrl),
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Material(
+                            color: AppColors.surface,
+                            shape: const CircleBorder(),
+                            child: SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                tooltip: isFavorite
+                                    ? appText(
+                                        context,
+                                        'Remover dos favoritos',
+                                        'Remove from favorites',
+                                      )
+                                    : appText(
+                                        context,
+                                        'Adicionar aos favoritos',
+                                        'Add to favorites',
+                                      ),
+                                onPressed: () async {
+                                  final controller = ref.read(
+                                    favoritesProvider.notifier,
+                                  );
+                                  if (!controller.isAuthenticated) {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const LoginScreen(),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  final changed = await controller
+                                      .toggleFavorite(product);
+                                  if (!changed && context.mounted) {
+                                    final error = ref
+                                        .read(favoritesProvider)
+                                        .error;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          error?.toString() ?? 'Não foi possível atualizar os favoritos.',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: Icon(
+                                  isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  size: 19,
+                                  color: isFavorite
+                                      ? const Color(0xFFB3261E)
+                                      : AppColors.ink,
                                 ),
                               ),
-                            );
-                          }
-                        },
-                      ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 16,
-                        color: Colors.amber,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  product.categoryName ??
+                      appText(context, 'Produto', 'Product'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        formatMoney(product.price),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppColors.brand,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                      const SizedBox(width: 2),
-                      Text(
-                        product.rating.toStringAsFixed(1),
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatMoney(product.price),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: scheme.primary,
                     ),
-                  ),
-                  if (!product.inStock)
-                    Text(
-                      appText(context, 'Esgotado', 'Out of stock'),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: scheme.error,
-                      ),
-                    )
-                  else if (inCart)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECF7ED),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          appText(
+                    if (quantity == 0)
+                      SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: IconButton.filled(
+                          tooltip: appText(
                             context,
-                            'No carrinho: $quantity',
-                            'In cart: $quantity',
+                            'Adicionar ao carrinho',
+                            'Add to cart',
                           ),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFF1E7A4B),
+                          padding: EdgeInsets.zero,
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.brand,
+                            foregroundColor: AppColors.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: !canAdd
+                              ? null
+                              : () => ref
+                                    .read(cartControllerProvider.notifier)
+                                    .addProduct(product),
+                          icon: Icon(
+                            product.inStock
+                                ? Icons.add_rounded
+                                : Icons.remove_rounded,
+                            size: 21,
                           ),
                         ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  if (product.inStock)
-                    if (inCart)
+                      )
+                    else
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton.filledTonal(
+                            tooltip: appText(
+                              context,
+                              'Diminuir quantidade',
+                              'Decrease quantity',
+                            ),
                             onPressed: () => ref
                                 .read(cartControllerProvider.notifier)
                                 .updateQuantity(product.id, quantity - 1),
-                            icon: const Icon(Icons.remove),
+                            icon: const Icon(Icons.remove_rounded),
                             constraints: const BoxConstraints.tightFor(
                               width: 30,
-                              height: 30,
+                              height: 34,
                             ),
+                            padding: EdgeInsets.zero,
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          SizedBox(
+                            width: 24,
                             child: Text(
                               '$quantity',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           IconButton.filledTonal(
+                            tooltip: appText(
+                              context,
+                              'Aumentar quantidade',
+                              'Increase quantity',
+                            ),
                             onPressed: canAdd
                                 ? () => ref
                                       .read(cartControllerProvider.notifier)
                                       .addProduct(product)
                                 : null,
-                            icon: const Icon(Icons.add),
+                            icon: const Icon(Icons.add_rounded),
                             constraints: const BoxConstraints.tightFor(
                               width: 30,
-                              height: 30,
+                              height: 34,
                             ),
+                            padding: EdgeInsets.zero,
                           ),
                         ],
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: () {
-                          final added = ref
-                              .read(cartControllerProvider.notifier)
-                              .addProduct(product);
-                          if (!added) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  appText(
-                                    context,
-                                    'Limite de stock atingido para este produto.',
-                                    'Stock limit reached for this product.',
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.add_shopping_cart_outlined),
-                        label: Text(appText(context, 'Adicionar', 'Add')),
-                      )
-                  else
-                    FilledButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.remove_shopping_cart_outlined),
-                      label: Text(
-                        appText(context, 'Indisponível', 'Unavailable'),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

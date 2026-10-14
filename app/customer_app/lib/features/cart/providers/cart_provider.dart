@@ -19,10 +19,12 @@ final remoteCartRepositoryProvider = Provider<RemoteCartRepository>((ref) {
   return RemoteCartRepository(dio: ref.watch(dioProvider));
 });
 
-final cartControllerProvider = NotifierProvider<CartController, CartState>(CartController.new);
+final cartControllerProvider = NotifierProvider<CartController, CartState>(
+  CartController.new,
+);
 
 class CartController extends Notifier<CartState> {
-  late final CartRepository _repository;
+  late CartRepository _repository;
   bool _isAuthenticated = false;
   bool _guestBlocked = false;
 
@@ -31,24 +33,38 @@ class CartController extends Notifier<CartState> {
     final authState = ref.watch(authControllerProvider);
     _isAuthenticated = authState.valueOrNull != null;
     _guestBlocked = authState.hasValue && !_isAuthenticated;
-    _repository = _isAuthenticated ? ref.read(remoteCartRepositoryProvider) : ref.read(localCartRepositoryProvider);
+    _repository = _isAuthenticated
+        ? ref.read(remoteCartRepositoryProvider)
+        : ref.read(localCartRepositoryProvider);
     _loadFromStorage();
-    return CartState(errorMessage: _guestBlocked ? 'Inicia sessão para usar o carrinho.' : null, isLoading: !_guestBlocked);
+    return CartState(
+      errorMessage: _guestBlocked
+          ? 'Inicia sessão para usar o carrinho.'
+          : null,
+      isLoading: !_guestBlocked,
+    );
   }
 
   Future<void> _loadFromStorage() async {
     if (_guestBlocked) return;
     try {
-      if (_repository is RemoteCartRepository) {
-        state = await _repository.loadState();
+      final repository = _repository;
+      if (repository is RemoteCartRepository) {
+        state = await repository.loadState();
       } else {
-        final items = await _repository.load();
+        final items = await repository.load();
         state = CartState(items: items);
       }
     } on ApiException catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: _messageFor(error));
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _messageFor(error),
+      );
     } catch (_) {
-      state = state.copyWith(isLoading: false, errorMessage: 'Não foi possível carregar o carrinho.');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Não foi possível carregar o carrinho.',
+      );
     }
   }
 
@@ -67,7 +83,9 @@ class CartController extends Notifier<CartState> {
 
   bool _canUseCart() {
     if (_guestBlocked) {
-      state = state.copyWith(errorMessage: 'Inicia sessão para usar o carrinho.');
+      state = state.copyWith(
+        errorMessage: 'Inicia sessão para usar o carrinho.',
+      );
       return false;
     }
     return true;
@@ -102,8 +120,19 @@ class CartController extends Notifier<CartState> {
     }
 
     final previous = state;
-    state = state.copyWith(items: items, isLoading: false, isUpdating: true, clearError: true);
-    unawaited(_syncAdd(previous: previous, item: items[index >= 0 ? index : items.length - 1], wasExisting: index >= 0));
+    state = state.copyWith(
+      items: items,
+      isLoading: false,
+      isUpdating: true,
+      clearError: true,
+    );
+    unawaited(
+      _syncAdd(
+        previous: previous,
+        item: items[index >= 0 ? index : items.length - 1],
+        wasExisting: index >= 0,
+      ),
+    );
     return true;
   }
 
@@ -127,7 +156,11 @@ class CartController extends Notifier<CartState> {
 
     if (product.stock > 0 && quantity > product.stock) return;
 
-    items[index] = item.copyWith(quantity: quantity, product: product, unitPrice: product.price);
+    items[index] = item.copyWith(
+      quantity: quantity,
+      product: product,
+      unitPrice: product.price,
+    );
     final previous = state;
     state = state.copyWith(items: items, isUpdating: true, clearError: true);
     unawaited(_syncUpdate(previous: previous, item: items[index]));
@@ -155,27 +188,42 @@ class CartController extends Notifier<CartState> {
 
   Future<bool> checkout() async {
     if (!_canUseCart() || state.isEmpty) return false;
-    if (_repository is! RemoteCartRepository) return false;
+    final repository = _repository;
+    if (repository is! RemoteCartRepository) return false;
 
     state = state.copyWith(isUpdating: true, clearError: true);
     try {
-      await _repository.checkout();
+      await repository.checkout();
       await ref.read(localCartRepositoryProvider).clear();
       state = const CartState();
       return true;
     } on ApiException catch (error) {
-      state = state.copyWith(isUpdating: false, errorMessage: _messageFor(error));
+      state = state.copyWith(
+        isUpdating: false,
+        errorMessage: _messageFor(error),
+      );
       return false;
     }
   }
 
-  Future<void> _syncAdd({required CartState previous, required CartItem item, required bool wasExisting}) async {
+  Future<void> _syncAdd({
+    required CartState previous,
+    required CartItem item,
+    required bool wasExisting,
+  }) async {
     try {
-      if (_repository is RemoteCartRepository) {
+      final repository = _repository;
+      if (repository is RemoteCartRepository) {
         if (wasExisting && item.id != null) {
-          await _repository.updateItem(itemId: item.id!, quantity: item.quantity);
+          await repository.updateItem(
+            itemId: item.id!,
+            quantity: item.quantity,
+          );
         } else {
-          await _repository.addProduct(productId: item.productId, quantity: wasExisting ? item.quantity : 1);
+          await repository.addProduct(
+            productId: item.productId,
+            quantity: wasExisting ? item.quantity : 1,
+          );
         }
       } else {
         await _persist();
@@ -187,11 +235,15 @@ class CartController extends Notifier<CartState> {
     }
   }
 
-  Future<void> _syncUpdate({required CartState previous, required CartItem item}) async {
+  Future<void> _syncUpdate({
+    required CartState previous,
+    required CartItem item,
+  }) async {
     try {
-      if (_repository is RemoteCartRepository) {
+      final repository = _repository;
+      if (repository is RemoteCartRepository) {
         if (item.id == null) throw StateError('Missing remote cart item id');
-        await _repository.updateItem(itemId: item.id!, quantity: item.quantity);
+        await repository.updateItem(itemId: item.id!, quantity: item.quantity);
       } else {
         await _persist();
         state = state.copyWith(isUpdating: false);
@@ -202,10 +254,14 @@ class CartController extends Notifier<CartState> {
     }
   }
 
-  Future<void> _syncRemove({required CartState previous, required CartItem item}) async {
+  Future<void> _syncRemove({
+    required CartState previous,
+    required CartItem item,
+  }) async {
     try {
-      if (_repository is RemoteCartRepository && item.id != null) {
-        await _repository.removeItem(itemId: item.id!);
+      final repository = _repository;
+      if (repository is RemoteCartRepository && item.id != null) {
+        await repository.removeItem(itemId: item.id!);
         await _reloadRemote();
       } else {
         await _persist();
@@ -226,21 +282,29 @@ class CartController extends Notifier<CartState> {
   }
 
   Future<void> _reloadRemote() async {
-    if (_repository is RemoteCartRepository) {
-      state = await _repository.loadState();
+    final repository = _repository;
+    if (repository is RemoteCartRepository) {
+      state = await repository.loadState();
     } else {
       state = state.copyWith(isUpdating: false);
     }
   }
 
   void _restoreAfterError(CartState previous, Object error) {
-    final message = error is ApiException ? _messageFor(error) : 'Não foi possível atualizar o carrinho.';
-    state = previous.copyWith(isLoading: false, isUpdating: false, errorMessage: message);
+    final message = error is ApiException
+        ? _messageFor(error)
+        : 'Não foi possível atualizar o carrinho.';
+    state = previous.copyWith(
+      isLoading: false,
+      isUpdating: false,
+      errorMessage: message,
+    );
   }
 
   String _messageFor(ApiException error) {
     if (error.statusCode == 409) return 'Stock insuficiente para este produto.';
-    if (error.statusCode == 401) return 'Sessão expirada. Inicia sessão novamente.';
+    if (error.statusCode == 401)
+      return 'Sessão expirada. Inicia sessão novamente.';
     return error.message;
   }
 }

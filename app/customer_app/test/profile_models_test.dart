@@ -24,6 +24,25 @@ void main() {
       expect(profile.photoUrl, 'https://example.com/avatar.png');
     });
 
+    test('maps camelCase profile response used by the profile API', () {
+      final profile = Profile.fromJson({
+        'id': 21,
+        'fullName': 'Carlos Mavume',
+        'email': 'carlos@example.com',
+        'phone': '+258841234567',
+        'birthDate': '1992-08-17',
+        'gender': 'male',
+        'avatarUrl': 'https://example.com/carlos.png',
+        'isVerified': true,
+      });
+
+      expect(profile.fullName, 'Carlos Mavume');
+      expect(profile.dateOfBirth, DateTime(1992, 8, 17));
+      expect(profile.gender, 'male');
+      expect(profile.photoUrl, 'https://example.com/carlos.png');
+      expect(profile.isVerified, isTrue);
+    });
+
     test('maps totals and preserves a missing average rating', () {
       final stats = ProfileStats.fromJson({
         'total_orders': '12',

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_theme.dart';
+
 /// Imagem de produto com placeholder quando não há URL, enquanto carrega,
 /// ou quando o download falha (ex: as URLs de exemplo do seed.sql).
 class ProductImage extends StatelessWidget {
@@ -10,11 +12,14 @@ class ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final placeholder = ColoredBox(
-      color: scheme.surfaceContainerHighest,
+      color: AppColors.imagePlaceholder,
       child: Center(
-        child: Icon(Icons.shopping_basket_outlined, size: 36, color: scheme.outline),
+        child: Icon(
+          Icons.shopping_basket_outlined,
+          size: 36,
+          color: AppColors.imagePlaceholderIcon,
+        ),
       ),
     );
 

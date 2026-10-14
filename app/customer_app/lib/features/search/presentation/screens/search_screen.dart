@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/app_text.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../theme/app_theme.dart';
+import '../../../../widgets/app_widgets.dart';
 import '../../../products/screens/product_detail_screen.dart';
 import '../../../products/widgets/product_card.dart';
 import '../../../categories/models/category.dart';
@@ -15,7 +17,9 @@ import '../state/search_state.dart';
 import '../widgets/search_filters_sheet.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.isActive = false});
+
+  final bool isActive;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -23,6 +27,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _textController = TextEditingController();
+  final _focusNode = FocusNode();
   final _scrollController = ScrollController();
   Timer? _debounce;
 
@@ -33,8 +38,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
+    _focusNode.dispose();
     _textController.dispose();
     _scrollController
       ..removeListener(_loadNextPageWhenNearEnd)
@@ -45,6 +61,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(searchControllerProvider);
+    final categories = ref.watch(categoryTreeProvider);
     ref.listen<SearchState>(searchControllerProvider, (previous, next) {
       if ((previous?.isLoading ?? false) &&
           !next.isLoading &&
@@ -57,50 +74,50 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    textInputAction: TextInputAction.search,
-                    onChanged: _onQueryChanged,
-                    onSubmitted: (_) => _runSearchNow(),
-                    decoration: InputDecoration(
-                      hintText: appText(
-                        context,
-                        'Pesquisar produtos',
-                        'Search products',
-                      ),
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _textController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: appText(
-                                context,
-                                'Limpar pesquisa',
-                                'Clear search',
-                              ),
-                              onPressed: _clearQuery,
-                              icon: const Icon(Icons.close),
-                            ),
-                      filled: true,
-                      fillColor: const Color(0xFFF3F1F2),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _FilterButton(
-                  count: _activeFilterCount(state.filters),
-                  onPressed: () => _openFilters(state),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: AppSearchField(
+              controller: _textController,
+              focusNode: _focusNode,
+              onChanged: _onQueryChanged,
+              onSubmitted: (_) => _runSearchNow(),
+              onClear: _clearQuery,
+              filterCount: _activeFilterCount(state.filters),
+              onFilter: () => _openFilters(state),
             ),
           ),
+          SizedBox(
+            height: 48,
+            child: categories.when(
+              loading: () => const SizedBox.shrink(),
+              error: (error, _) => const SizedBox.shrink(),
+              data: (items) => ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: items.length + 1,
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return CategoryChip(
+                      label: appText(context, 'Todos', 'All'),
+                      selected: state.filters.categoryId == null,
+                      onPressed: () => ref
+                          .read(searchControllerProvider.notifier)
+                          .applyFilters(
+                            state.filters.copyWith(clearCategory: true),
+                          ),
+                    );
+                  }
+                  final category = items[index - 1];
+                  return CategoryChip(
+                    label: category.name,
+                    selected: state.filters.categoryId == category.id,
+                    onPressed: () => _selectCategory(category),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Expanded(child: _buildContent(state)),
         ],
       ),
@@ -142,19 +159,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            query.isEmpty
-                ? appText(
-                    context,
-                    'Nenhum produto encontrado com estes filtros.',
-                    'No products found with these filters.',
-                  )
-                : appText(
-                    context,
-                    'Nenhum produto encontrado para \'$query\'.',
-                    'No products found for \'$query\'.',
-                  ),
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: 64,
+                color: AppColors.imagePlaceholderIcon,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                query.isEmpty
+                    ? appText(
+                        context,
+                        'Nenhum produto encontrado com estes filtros.',
+                        'No products found with these filters.',
+                      )
+                    : appText(
+                        context,
+                        'Nenhum produto encontrado para \'$query\'.',
+                        'No products found for \'$query\'.',
+                      ),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppColors.secondaryText),
+              ),
+            ],
           ),
         ),
       );
@@ -175,37 +205,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildProductGrid(SearchState state) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1100
-            ? 4
-            : constraints.maxWidth >= 720
-            ? 3
-            : 2;
-        return GridView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            childAspectRatio: 0.7,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+    return GridView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 104),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.68,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+      ),
+      itemCount: state.products.length + (state.isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= state.products.length) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final product = state.products[index];
+        return ProductCard(
+          product: product,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ProductDetailScreen(productId: product.id),
+            ),
           ),
-          itemCount: state.products.length + (state.isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= state.products.length) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final product = state.products[index];
-            return ProductCard(
-              product: product,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ProductDetailScreen(productId: product.id),
-                ),
-              ),
-            );
-          },
         );
       },
     );
@@ -213,7 +234,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _buildDiscoveryContent() {
     final recent = ref.watch(recentSearchesProvider);
-    final categories = ref.watch(categoryTreeProvider);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
@@ -264,40 +284,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     const SizedBox(height: 20),
                   ],
                 ),
-        ),
-        Text(
-          appText(context, 'Explorar categorias', 'Browse categories'),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        categories.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, stackTrace) => TextButton.icon(
-            onPressed: () => ref.invalidate(categoryTreeProvider),
-            icon: const Icon(Icons.refresh),
-            label: Text(
-              appText(
-                context,
-                'Não foi possível carregar categorias. Tentar novamente',
-                'Could not load categories. Try again',
-              ),
-            ),
-          ),
-          data: (items) => Column(
-            children: [
-              for (final category in items)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.category_outlined),
-                  title: Text(category.name),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _selectCategory(category),
-                ),
-            ],
-          ),
         ),
       ],
     );
@@ -384,24 +370,4 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       (filters.minPrice == null ? 0 : 1) +
       (filters.maxPrice == null ? 0 : 1) +
       (filters.sort == SearchSort.relevance ? 0 : 1);
-}
-
-class _FilterButton extends StatelessWidget {
-  const _FilterButton({required this.count, required this.onPressed});
-
-  final int count;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton.filledTonal(
-      tooltip: appText(context, 'Filtros e ordenação', 'Filters and sorting'),
-      onPressed: onPressed,
-      icon: Badge(
-        isLabelVisible: count > 0,
-        label: Text('$count'),
-        child: const Icon(Icons.tune),
-      ),
-    );
-  }
 }

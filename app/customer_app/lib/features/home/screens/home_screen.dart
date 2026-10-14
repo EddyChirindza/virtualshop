@@ -13,6 +13,8 @@ import '../../products/widgets/products_section.dart';
 import '../../profile/presentation/screens/profile_screen.dart';
 import '../../search/presentation/providers/search_providers.dart';
 import '../../search/presentation/screens/search_screen.dart';
+import '../../../theme/app_theme.dart';
+import '../../../widgets/app_widgets.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -79,87 +81,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final cartItemCount = ref.watch(
       cartControllerProvider.select((cart) => cart.itemCount),
     );
+    final titles = [
+      appText(context, 'ShopSwift', 'ShopSwift'),
+      appText(context, 'Pesquisar', 'Search'),
+      appText(context, 'Carrinho', 'Cart'),
+      appText(context, 'Perfil', 'Profile'),
+    ];
     final pages = [
       _HomeTab(userName: widget.userName, onRefresh: _refresh),
-      SearchScreen(key: ValueKey(_searchScreenKey)),
+      SearchScreen(
+        key: ValueKey(_searchScreenKey),
+        isActive: _selectedIndex == 1,
+      ),
       const CartScreen(),
       const ProfileScreen(),
     ];
 
     return Scaffold(
       drawer: _AppDrawer(userName: widget.userName, onSelected: _openMenuPage),
-      body: IndexedStack(index: _selectedIndex, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _selectTab,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        indicatorColor: Theme.of(context).colorScheme.secondaryContainer,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: appText(context, 'Início', 'Home'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.search),
-            label: appText(context, 'Pesquisa', 'Search'),
-          ),
-          NavigationDestination(
-            icon: _CartNavIcon(count: cartItemCount),
-            selectedIcon: _CartNavIcon(count: cartItemCount, selected: true),
-            label: appText(context, 'Carrinho', 'Cart'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: appText(context, 'Perfil', 'Profile'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CartNavIcon extends StatelessWidget {
-  const _CartNavIcon({required this.count, this.selected = false});
-
-  final int count;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = Icon(
-      selected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
-      size: 24,
-    );
-    if (count <= 0) return icon;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        icon,
-        Positioned(
-          right: -6,
-          top: -4,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF064B95),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              count > 99 ? '99+' : '$count',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Builder(
+                builder: (context) => AppPageHeader(
+                  userName: widget.userName,
+                  title: titles[_selectedIndex],
+                  isHome: _selectedIndex == 0,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: IndexedStack(index: _selectedIndex, children: pages),
+            ),
+          ],
         ),
-      ],
+      ),
+      bottomNavigationBar: FloatingBottomNav(
+        selectedIndex: _selectedIndex,
+        cartItemCount: cartItemCount,
+        onSelected: _selectTab,
+      ),
     );
   }
 }
@@ -177,93 +142,41 @@ class _HomeTab extends ConsumerWidget {
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 104),
           children: [
-            Row(
-              children: [
-                Builder(
-                  builder: (context) => IconButton(
-                    tooltip: appText(context, 'Abrir menu', 'Open menu'),
-                    icon: const Icon(Icons.menu),
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                  ),
-                ),
-                Text(
-                  'ShopSwift',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF064B95),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.notifications_none),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: appText(
-                  context,
-                  'Pesquisar tecnologia e móveis',
-                  'Search tech and furniture',
-                ),
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
+            AppSearchField(
+              hintText: appText(
+                context,
+                'Pesquisar produtos',
+                'Search products',
               ),
+              onFilter: () {
+                ref.read(homeTabRequestProvider.notifier).state = 1;
+              },
             ),
-            const SizedBox(height: 20),
-            _CategoriesRow(),
             const SizedBox(height: 18),
-            _SaleBanner(),
-            Padding(
-              padding: const EdgeInsets.only(top: 28, bottom: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    appText(context, 'Produtos populares', 'Popular products'),
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(appText(context, 'Ver todos', 'View all')),
-                  ),
-                ],
-              ),
+            _CategoriesRow(),
+            const SizedBox(height: 20),
+            const PromoBanner(),
+            const SizedBox(height: 24),
+            SectionHeader(
+              title: appText(context, 'Produtos populares', 'Popular products'),
+              actionLabel: appText(context, 'Ver tudo', 'View all'),
+              onAction: () {},
             ),
+            const SizedBox(height: 4),
             ProductsSection(
               title: '',
               products: ref.watch(popularProductsProvider),
               onRetry: () => ref.invalidate(popularProductsProvider),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 14, bottom: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    appText(context, 'Novidades', 'New arrivals'),
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(appText(context, 'Ver novidades', 'Just in')),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 24),
+            SectionHeader(
+              title: appText(context, 'Novidades', 'New arrivals'),
+              actionLabel: appText(context, 'Ver novidades', 'Just in'),
+              onAction: () {},
             ),
+            const SizedBox(height: 4),
             ProductsSection(
               title: '',
               products: ref.watch(newArrivalsProvider),
@@ -303,49 +216,114 @@ class _AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF064B95)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Color(0xFF064B95)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.brand, AppColors.brandLight],
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    appText(context, 'Olá, $userName', 'Hello, $userName'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ShopSwift',
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(color: AppColors.surface, fontSize: 22),
                     ),
-                  ),
-                  const Text(
-                    'ShopSwift',
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.surface,
+                          child: Icon(
+                            Icons.person_rounded,
+                            color: AppColors.brand,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(color: AppColors.surface),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  for (final option in _MenuOption.values)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        height: 52,
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppRadius.field),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.field,
+                            ),
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              onSelected(option);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(option.icon, color: AppColors.ink),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      appText(
+                                        context,
+                                        option.title,
+                                        option.englishTitle,
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            color: AppColors.ink,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: AppColors.secondaryText,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            for (final option in _MenuOption.values)
-              ListTile(
-                leading: Icon(option.icon),
-                title: Text(
-                  appText(context, option.title, option.englishTitle),
-                ),
-                trailing: const Icon(Icons.chevron_right, size: 20),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onSelected(option);
-                },
-              ),
           ],
         ),
       ),
@@ -419,58 +397,6 @@ class _MenuPage extends StatelessWidget {
   }
 }
 
-class _SaleBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      padding: const EdgeInsets.fromLTRB(32, 22, 18, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B4B8E), Color(0xFFB6C4C9)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              appText(context, 'Promoção de verão', 'Summer sale'),
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          const Spacer(),
-          Text(
-            appText(
-              context,
-              'Descontos de verão\nem eletrónicos',
-              'Summer electronics\nsale',
-            ),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            appText(context, 'Até 45% de desconto', 'Up to 45% off'),
-            style: TextStyle(color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CategoriesRow extends ConsumerWidget {
   const _CategoriesRow();
 
@@ -478,56 +404,49 @@ class _CategoriesRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoryTreeProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'Categorias',
-            style: Theme.of(context).textTheme.titleLarge,
+    return SizedBox(
+      height: 40,
+      child: categories.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: TextButton.icon(
+            onPressed: () => ref.invalidate(categoryTreeProvider),
+            icon: const Icon(Icons.refresh),
+            label: Text(
+              error is ApiException
+                  ? '${error.message} Toca para tentar de novo.'
+                  : appText(
+                      context,
+                      'Erro ao carregar categorias. Toca para tentar de novo.',
+                      'Could not load categories. Tap to try again.',
+                    ),
+            ),
           ),
         ),
-        SizedBox(
-          height: 48,
-          child: categories.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: TextButton.icon(
-                onPressed: () => ref.invalidate(categoryTreeProvider),
-                icon: const Icon(Icons.refresh),
-                label: Text(
-                  error is ApiException
-                      ? '${error.message} Toca para tentar de novo.'
-                      : appText(
-                          context,
-                          'Erro ao carregar categorias. Toca para tentar de novo.',
-                          'Could not load categories. Tap to try again.',
-                        ),
+        data: (items) => ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length + 1,
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return CategoryChip(
+                label: appText(context, 'Todos', 'All'),
+                selected: true,
+                onPressed: () {},
+              );
+            }
+            final category = items[index - 1];
+            return CategoryChip(
+              label: category.name,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CategoryProductsScreen(category: category),
                 ),
               ),
-            ),
-            data: (items) => ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: items.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final category = items[index];
-                return ActionChip(
-                  label: Text(category.name),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          CategoryProductsScreen(category: category),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 }

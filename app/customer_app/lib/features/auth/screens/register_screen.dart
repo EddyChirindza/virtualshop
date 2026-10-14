@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/phone_number_field.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -19,6 +20,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  String _phoneCountryCode = '+258';
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -42,9 +44,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           .read(authControllerProvider.notifier)
           .register(
             name: _nameController.text.trim(),
-            email: _emailController.text.trim(),
+            email: _emailController.text.trim().isEmpty
+                ? null
+                : _emailController.text.trim(),
             password: _passwordController.text,
-            phone: _phoneController.text.replaceAll(' ', ''),
+            phone: formatInternationalPhone(
+              _phoneCountryCode,
+              _phoneController.text,
+            ),
           );
       // Conta criada e sessão iniciada. Este ecrã foi empurrado por cima do
       // AuthGate, por isso tem de se fechar para deixar ver a Home.
@@ -100,17 +107,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: appText(context, 'E-mail', 'Email'),
+                    labelText: appText(
+                      context,
+                      'E-mail (opcional)',
+                      'Email (optional)',
+                    ),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty)
-                      return appText(
-                        context,
-                        'Indica o teu e-mail',
-                        'Enter your email',
-                      );
+                    if (v == null || v.trim().isEmpty) return null;
                     if (!v.contains('@'))
                       return appText(
                         context,
@@ -121,22 +127,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                PhoneNumberField(
                   controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: appText(context, 'Telemóvel', 'Phone number'),
-                    hintText: '84 123 4567',
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    final phone = (v ?? '').replaceAll(' ', '');
-                    if (!RegExp(r'^\+?[0-9]{9,15}$').hasMatch(phone)) {
+                  countryCode: _phoneCountryCode,
+                  onCountryCodeChanged: (value) =>
+                      setState(() => _phoneCountryCode = value),
+                  validator: (value) {
+                    if (!isValidInternationalPhone(
+                      _phoneCountryCode,
+                      value ?? '',
+                    )) {
                       return appText(
                         context,
-                        'Telemóvel inválido (9 a 15 dígitos)',
-                        'Invalid phone number (9 to 15 digits)',
+                        'Número de telefone inválido.',
+                        'Invalid phone number.',
                       );
                     }
                     return null;

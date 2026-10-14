@@ -52,6 +52,7 @@ dependencies:
   # Immutable models + safe JSON parsing
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0
+  google_fonts: ^9.0.0
 
 dev_dependencies:
   flutter_test:

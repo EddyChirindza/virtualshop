@@ -38,6 +38,20 @@ class ProfileRepository {
     }
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.patch(
+        ApiConstants.userPassword,
+        data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      );
+    } on DioException catch (error) {
+      throw ApiException.fromDioException(error);
+    }
+  }
+
   Future<ProfileStats> fetchStats() async {
     try {
       final data = unwrapMap(await _dio.get(ApiConstants.userStats));
@@ -63,7 +77,9 @@ class ProfileRepository {
       if (rawAddresses is! List) return const [];
       return rawAddresses
           .whereType<Map>()
-          .map((item) => ProfileAddress.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => ProfileAddress.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);

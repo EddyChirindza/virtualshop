@@ -41,21 +41,30 @@ class ProfileController extends AsyncNotifier<Profile> {
         .read(profileRepositoryProvider)
         .updateProfile(fields);
     final profile = current == null
-      ? responseProfile
-      : Profile(
-        id: responseProfile.id == 0 ? current.id : responseProfile.id,
-        fullName: responseProfile.fullName.isEmpty
-          ? fields['full_name'] as String? ?? current.fullName
-          : responseProfile.fullName,
-        email: responseProfile.email.isEmpty
-          ? current.email
-          : responseProfile.email,
-        phone: fields['phone'] as String? ?? responseProfile.phone ?? current.phone,
-        photoUrl: responseProfile.photoUrl ?? current.photoUrl,
-        isVerified: responseProfile.isVerified || current.isVerified,
-        dateOfBirth: responseProfile.dateOfBirth ?? current.dateOfBirth,
-        gender: fields['gender'] as String? ?? responseProfile.gender ?? current.gender,
-        );
+        ? responseProfile
+        : Profile(
+            id: responseProfile.id == 0 ? current.id : responseProfile.id,
+            fullName: responseProfile.fullName.isNotEmpty
+                ? responseProfile.fullName
+                : fields['fullName'] as String? ?? current.fullName,
+            email: responseProfile.email.isNotEmpty
+                ? responseProfile.email
+                : current.email,
+            phone:
+                responseProfile.phone ??
+                fields['phone'] as String? ??
+                current.phone,
+            photoUrl: responseProfile.photoUrl ?? current.photoUrl,
+            isVerified: responseProfile.isVerified || current.isVerified,
+            dateOfBirth: fields.containsKey('birthDate')
+                ? (fields['birthDate'] == null
+                      ? null
+                      : responseProfile.dateOfBirth ?? current.dateOfBirth)
+                : responseProfile.dateOfBirth ?? current.dateOfBirth,
+            gender: fields.containsKey('gender')
+                ? fields['gender'] as String?
+                : responseProfile.gender ?? current.gender,
+          );
     state = AsyncData(profile);
     return profile;
   }

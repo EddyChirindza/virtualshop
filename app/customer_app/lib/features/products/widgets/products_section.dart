@@ -22,23 +22,24 @@ class ProductsSection extends StatelessWidget {
   final AsyncValue<List<Product>> products;
   final VoidCallback onRetry;
 
-  static const double _height = 250;
-  static const double _cardWidth = 160;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-        ),
-        SizedBox(
-          height: _height,
-          child: products.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => ErrorRetry(
+        if (title.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          ),
+        products.when(
+          loading: () => const SizedBox(
+            height: 180,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: ErrorRetry(
               message: error is ApiException
                   ? error.message
                   : appText(
@@ -48,9 +49,12 @@ class ProductsSection extends StatelessWidget {
                     ),
               onRetry: onRetry,
             ),
-            data: (items) {
-              if (items.isEmpty) {
-                return Center(
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return SizedBox(
+                height: 100,
+                child: Center(
                   child: Text(
                     appText(
                       context,
@@ -58,31 +62,33 @@ class ProductsSection extends StatelessWidget {
                       'There are no products here yet.',
                     ),
                   ),
-                );
-              }
-              return ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: items.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final product = items[index];
-                  return SizedBox(
-                    width: _cardWidth,
-                    child: ProductCard(
-                      product: product,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ProductDetailScreen(productId: product.id),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                ),
               );
-            },
-          ),
+            }
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.68,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+              ),
+              itemBuilder: (context, index) {
+                final product = items[index];
+                return ProductCard(
+                  product: product,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ProductDetailScreen(productId: product.id),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/app_text.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/widgets/error_retry.dart';
+import '../../../../theme/app_theme.dart';
 import '../../../auth/providers/auth_providers.dart';
 import '../../../favorites/screens/favorites_screen.dart';
 import '../../domain/models/profile.dart';
@@ -11,6 +12,7 @@ import '../providers/profile_providers.dart';
 import '../widgets/profile_widgets.dart';
 import 'address_form_screen.dart';
 import 'addresses_screen.dart';
+import 'change_password_screen.dart';
 import 'edit_profile_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -96,7 +98,7 @@ class ProfileScreen extends ConsumerWidget {
       onRefresh: () => _refresh(ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 104),
         children: [
           Center(
             child: ConstrainedBox(
@@ -104,22 +106,14 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                    child: Text(
-                      appText(context, 'Meu Perfil', 'My profile'),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
                   _profileCard(context, ref),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
                   _statsCard(context, ref),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
                   _optionsCard(context, ref),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
                   _addressesCard(context, ref),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
                   _paymentCard(context),
                   const SizedBox(height: 20),
                   OutlinedButton.icon(
@@ -232,7 +226,11 @@ class ProfileScreen extends ConsumerWidget {
             'Palavra-passe, autenticação, dispositivos',
             'Password, authentication, devices',
           ),
-          onTap: () => _showComingSoon(context),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ChangePasswordScreen(),
+            ),
+          ),
         ),
         _OptionTile(
           icon: Icons.notifications_none,
@@ -392,11 +390,24 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
+    minVerticalPadding: 10,
     onTap: onTap,
-    leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-    title: Text(title),
+    leading: Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.imagePlaceholder,
+        borderRadius: BorderRadius.circular(AppRadius.iconButton),
+      ),
+      child: Icon(icon, color: AppColors.brand),
+    ),
+    title: Text(
+      title,
+      style: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(fontWeight: FontWeight.w600),
+    ),
     subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-    trailing: const Icon(Icons.chevron_right),
+    trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
   );
 }
 

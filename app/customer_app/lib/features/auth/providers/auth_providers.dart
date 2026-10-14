@@ -49,7 +49,10 @@ class AuthController extends AsyncNotifier<User?> {
   }
 
   /// Lança [ApiException] se falhar.
-  Future<void> login({required String identifier, required String password}) async {
+  Future<void> login({
+    required String identifier,
+    required String password,
+  }) async {
     final user = await ref
         .read(authRepositoryProvider)
         .login(identifier: identifier, password: password);
@@ -59,16 +62,13 @@ class AuthController extends AsyncNotifier<User?> {
   /// Lança [ApiException] se falhar.
   Future<void> register({
     required String name,
-    required String email,
+    String? email,
     required String password,
     required String phone,
   }) async {
-    final user = await ref.read(authRepositoryProvider).register(
-          name: name,
-          email: email,
-          password: password,
-          phone: phone,
-        );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .register(name: name, email: email, password: password, phone: phone);
     state = AsyncData(user);
   }
 
@@ -78,5 +78,6 @@ class AuthController extends AsyncNotifier<User?> {
   }
 }
 
-final authControllerProvider =
-    AsyncNotifierProvider<AuthController, User?>(AuthController.new);
+final authControllerProvider = AsyncNotifierProvider<AuthController, User?>(
+  AuthController.new,
+);

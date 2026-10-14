@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/app_text.dart';
+import '../../../../theme/app_theme.dart';
 import '../../domain/models/profile.dart';
 import '../../domain/models/profile_address.dart';
 import '../../domain/models/profile_stats.dart';
@@ -34,16 +35,15 @@ class ProfileCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          padding: const EdgeInsets.all(20),
+          child: Column(
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
                   CircleAvatar(
-                    radius: 36,
-                    backgroundColor: theme.colorScheme.primaryContainer,
+                    radius: 44,
+                    backgroundColor: AppColors.imagePlaceholder,
                     foregroundImage: profile.photoUrl == null
                         ? null
                         : NetworkImage(profile.photoUrl!),
@@ -53,8 +53,8 @@ class ProfileCard extends StatelessWidget {
                     child: Text(
                       initials.isEmpty ? '?' : initials,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w700,
+                        color: AppColors.brand,
+                        fontSize: 26,
                       ),
                     ),
                   ),
@@ -62,7 +62,7 @@ class ProfileCard extends StatelessWidget {
                     right: -2,
                     bottom: -2,
                     child: Material(
-                      color: theme.colorScheme.primary,
+                      color: AppColors.brand,
                       shape: const CircleBorder(),
                       child: IconButton(
                         tooltip: appText(
@@ -70,51 +70,43 @@ class ProfileCard extends StatelessWidget {
                           'Alterar fotografia',
                           'Change photo',
                         ),
-                        visualDensity: VisualDensity.compact,
                         constraints: const BoxConstraints.tightFor(
-                          width: 34,
-                          height: 34,
+                          width: 36,
+                          height: 36,
                         ),
                         onPressed: onCameraTap,
                         icon: const Icon(Icons.camera_alt_outlined, size: 17),
-                        color: theme.colorScheme.onPrimary,
+                        color: AppColors.surface,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.fullName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    _ContactLine(
-                      icon: Icons.email_outlined,
-                      text: profile.email,
-                    ),
-                    if (profile.phone?.isNotEmpty == true)
-                      _ContactLine(
-                        icon: Icons.phone_outlined,
-                        text: profile.phone!,
-                      ),
-                    if (profile.isVerified) ...[
-                      const SizedBox(height: 8),
-                      const _VerifiedBadge(),
-                    ],
-                  ],
+              const SizedBox(height: 14),
+              Text(
+                profile.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+              const SizedBox(height: 4),
+              Text(
+                profile.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+              if (profile.phone?.isNotEmpty == true)
+                _ContactLine(icon: Icons.phone_outlined, text: profile.phone!),
+              if (profile.isVerified) ...[
+                const SizedBox(height: 8),
+                const _VerifiedBadge(),
+              ],
             ],
           ),
         ),
@@ -154,24 +146,21 @@ class _VerifiedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: colors.secondaryContainer,
+        color: AppColors.imagePlaceholder,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified, size: 14, color: colors.onSecondaryContainer),
+          Icon(Icons.verified, size: 14, color: AppColors.brand),
           const SizedBox(width: 5),
           Text(
             appText(context, 'Conta verificada', 'Verified account'),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.onSecondaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: AppColors.brand, fontWeight: FontWeight.w600),
           ),
         ],
       ),

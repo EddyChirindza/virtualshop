@@ -36,14 +36,24 @@ class Profile {
   );
 
   factory Profile.fromJson(Map<String, dynamic> json) {
-    final rawDate = json['date_of_birth'] ?? json['birth_date'];
+    final rawDate =
+        json['birthDate'] ?? json['birth_date'] ?? json['date_of_birth'];
     return Profile(
       id: _asInt(json['id']),
-      fullName: (json['full_name'] ?? json['name']) as String? ?? '',
+      fullName:
+          (json['fullName'] ?? json['full_name'] ?? json['name']) as String? ??
+          '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
-      photoUrl: (json['photo_url'] ?? json['avatar_url'] ?? json['image_url']) as String?,
-      isVerified: json['is_verified'] as bool? ?? json['isVerified'] as bool? ?? false,
+      photoUrl:
+          (json['photoUrl'] ??
+                  json['avatarUrl'] ??
+                  json['photo_url'] ??
+                  json['avatar_url'] ??
+                  json['image_url'])
+              as String?,
+      isVerified:
+          json['isVerified'] as bool? ?? json['is_verified'] as bool? ?? false,
       dateOfBirth: rawDate is String ? DateTime.tryParse(rawDate) : null,
       gender: json['gender'] as String?,
     );

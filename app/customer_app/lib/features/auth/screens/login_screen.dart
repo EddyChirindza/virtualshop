@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/phone_number_field.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -15,14 +16,15 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _phoneCountryCode = '+258';
   bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -36,7 +38,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .login(
-            identifier: _emailController.text.trim(),
+            identifier: formatInternationalPhone(
+              _phoneCountryCode,
+              _phoneController.text,
+            ),
             password: _passwordController.text,
           );
       // Sucesso: o AuthGate (em main.dart) vê o utilizador e troca este
@@ -93,29 +98,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: InputDecoration(
-                      labelText: appText(context, 'E-mail', 'Email'),
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
+                  PhoneNumberField(
+                    controller: _phoneController,
+                    countryCode: _phoneCountryCode,
+                    onCountryCodeChanged: (value) =>
+                        setState(() => _phoneCountryCode = value),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      if (!isValidInternationalPhone(
+                        _phoneCountryCode,
+                        value ?? '',
+                      )) {
                         return appText(
                           context,
-                          'Indica o teu e-mail',
-                          'Enter your email',
+                          'Número de telefone inválido.',
+                          'Invalid phone number.',
                         );
                       }
-                      if (!value.contains('@'))
-                        return appText(
-                          context,
-                          'E-mail inválido',
-                          'Invalid email',
-                        );
                       return null;
                     },
                   ),

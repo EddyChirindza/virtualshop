@@ -9,25 +9,28 @@ import '../models/user.dart';
 
 class AuthRepository {
   AuthRepository({required Dio dio, required SecureStorageService storage})
-      : _dio = dio,
-        _storage = storage;
+    : _dio = dio,
+      _storage = storage;
 
   final Dio _dio;
   final SecureStorageService _storage;
 
   Future<User> register({
     required String name,
-    required String email,
+    String? email,
     required String password,
     required String phone,
   }) async {
     try {
-      final response = await _dio.post(ApiConstants.register, data: {
+      final payload = <String, dynamic>{
         'full_name': name,
-        'email': email,
         'password': password,
         'phone': phone,
-      });
+      };
+      if (email != null && email.trim().isNotEmpty) {
+        payload['email'] = email.trim();
+      }
+      final response = await _dio.post(ApiConstants.register, data: payload);
       // ignore: unawaited_return_in_try_block
       return _saveSession(unwrapMap(response));
     } on DioException catch (e) {
@@ -35,12 +38,15 @@ class AuthRepository {
     }
   }
 
-  Future<User> login({required String identifier, required String password}) async {
+  Future<User> login({
+    required String identifier,
+    required String password,
+  }) async {
     try {
-      final response = await _dio.post(ApiConstants.login, data: {
-        'identifier': identifier,
-        'password': password,
-      });
+      final response = await _dio.post(
+        ApiConstants.login,
+        data: {'identifier': identifier, 'password': password},
+      );
       // ignore: unawaited_return_in_try_block
       return _saveSession(unwrapMap(response));
     } on DioException catch (e) {
@@ -62,7 +68,10 @@ class AuthRepository {
     final refreshToken = await _storage.getRefreshToken();
     try {
       if (refreshToken != null) {
-        await _dio.post(ApiConstants.logout, data: {'refreshToken': refreshToken});
+        await _dio.post(
+          ApiConstants.logout,
+          data: {'refreshToken': refreshToken},
+        );
       }
     } on DioException {
       // Best-effort: even if the server call fails, wipe local tokens below.

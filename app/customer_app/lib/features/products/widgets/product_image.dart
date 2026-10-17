@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../theme/app_theme.dart';
 
 /// Imagem de produto com placeholder quando não há URL, enquanto carrega,
@@ -23,11 +24,11 @@ class ProductImage extends StatelessWidget {
       ),
     );
 
-    final imageUrl = url;
-    if (imageUrl == null || imageUrl.isEmpty) return placeholder;
+    final imagePath = url;
+    if (imagePath == null || imagePath.isEmpty) return placeholder;
 
     return Image.network(
-      imageUrl,
+      ApiConstants.resolveImageUrl(imagePath),
       fit: fit,
       width: double.infinity,
       height: double.infinity,

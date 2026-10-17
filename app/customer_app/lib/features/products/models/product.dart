@@ -10,6 +10,7 @@ class Product {
     this.description,
     this.imageUrl,
     this.categoryName,
+    this.stockStatus,
     this.isPopular = false,
     this.isNewArrival = false,
   });
@@ -22,10 +23,14 @@ class Product {
   final double rating;
   final String? imageUrl;
   final String? categoryName;
+  final String? stockStatus;
   final bool isPopular;
   final bool isNewArrival;
 
   bool get inStock => stock > 0;
+
+  String get availability => stockStatus ??
+      (stock <= 0 ? 'out_of_stock' : stock <= 5 ? 'low_stock' : 'in_stock');
 
   /// A API devolve `price` e `rating` como TEXTO ("150.00", "4.5") porque o
   /// PostgreSQL serializa NUMERIC assim — parseDouble aceita texto ou número.
@@ -39,6 +44,7 @@ class Product {
       rating: parseDouble(json['rating']),
       imageUrl: json['image_url'] as String?,
       categoryName: json['category_name'] as String?,
+      stockStatus: json['stock_status'] as String?,
       isPopular: json['is_popular'] as bool? ?? false,
       isNewArrival: json['is_new_arrival'] as bool? ?? false,
     );

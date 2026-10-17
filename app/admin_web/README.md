@@ -15,3 +15,15 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+Credencias do painel do admin
+Email: admin-f4286b4b59@virtualshop.local
+Palavra-passe: Vshop-ff4fab8264011be1b8199f88-a9
+
+correr sem precisar de estar na mesma rede
+flutter run -d chrome --dart-define=API_BASE_URL=https://toxicologic-abel-overcomplacent.ngrok-free.dev/api
+
+flutter run --dart-define=API_BASE_URL=https://toxicologic-abel-overcomplacent.ngrok-free.dev/api
+
+Como correr na web 
+flutter run -d web-server --web-hostname localhost --web-port 7357

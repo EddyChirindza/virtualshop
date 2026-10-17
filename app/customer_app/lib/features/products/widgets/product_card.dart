@@ -140,6 +140,24 @@ class ProductCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                const SizedBox(height: 3),
+                Text(
+                  switch (product.availability) {
+                    'in_stock' => appText(context, 'Em stock', 'In stock'),
+                    'low_stock' => appText(context, 'Últimas unidades', 'Low stock'),
+                    _ => appText(context, 'Esgotado', 'Out of stock'),
+                  },
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: product.availability == 'out_of_stock'
+                        ? Theme.of(context).colorScheme.error
+                        : product.availability == 'low_stock'
+                            ? const Color(0xFFB54708)
+                            : const Color(0xFF12805C),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const Spacer(),
                 Row(
                   children: [

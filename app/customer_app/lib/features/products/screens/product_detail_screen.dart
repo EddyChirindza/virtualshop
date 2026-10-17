@@ -238,13 +238,11 @@ class _ProductDetailBody extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                product.inStock
-                    ? appText(
-                        context,
-                        'Em stock (${product.stock} disponíveis)',
-                        'In stock (${product.stock} available)',
-                      )
-                    : appText(context, 'Esgotado', 'Out of stock'),
+                switch (product.availability) {
+                  'in_stock' => appText(context, 'Em stock', 'In stock'),
+                  'low_stock' => appText(context, 'Últimas unidades', 'Low stock'),
+                  _ => appText(context, 'Esgotado', 'Out of stock'),
+                },
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: product.inStock
                       ? scheme.onSurfaceVariant

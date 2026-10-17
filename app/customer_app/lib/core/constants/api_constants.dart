@@ -28,6 +28,14 @@ class ApiConstants {
     return 'http://localhost:3000/api';
   }
 
+  /// Resolve image paths stored relative to the API, while preserving full
+  /// remote URLs for existing catalog records during migration.
+  static String resolveImageUrl(String path) {
+    final uri = Uri.tryParse(path);
+    if (uri != null && uri.hasScheme) return path;
+    return Uri.parse(baseUrl).resolve(path).toString();
+  }
+
   // Auth
   static const String register = '/auth/register';
   static const String login = '/auth/login';

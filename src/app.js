@@ -2,6 +2,7 @@
 // VirtualShop API — Configuração da app Express
 // ─────────────────────────────────────────────
 const express = require('express');
+const path = require('node:path');
 const cors = require('cors');
 const helmet = require('helmet');
 const env = require('./config/env');
@@ -15,6 +16,8 @@ const cartRoutes = require('./modules/cart/cart.routes');
 const orderRoutes = require('./modules/orders/order.routes');
 const favoriteRoutes = require('./modules/favorites/favorites.routes');
 const userRoutes = require('./modules/users/users.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
+const notificationRoutes = require('./modules/notifications/notifications.routes');
 
 const app = express();
 
@@ -65,8 +68,8 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '8mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { fallthrough: false, maxAge: '1d' }));
 
 // ── Healthcheck ───────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -90,6 +93,8 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ── 404 + erros ────────────────────────────────
 app.use(notFoundHandler);

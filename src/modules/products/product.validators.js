@@ -30,10 +30,8 @@ const optionalLimit = (field) => optionalNumber(
 ).optional();
 
 const productListSchema = z.object({
-  q: z.preprocess(
-    (value) => typeof value === 'string' ? value.trim() : value,
-    z.string().max(100, 'q não pode ter mais de 100 caracteres.').optional()
-  ),
+  q: z.preprocess((value) => typeof value === 'string' ? value.trim() : value,
+    z.string().max(100, 'q não pode ter mais de 100 caracteres.').optional()),
   category: optionalCategoryId,
   category_id: optionalCategoryId,
   minPrice: optionalPrice('minPrice'),
@@ -46,12 +44,29 @@ const productListSchema = z.object({
   page_size: optionalLimit('page_size'),
 }).superRefine((params, context) => {
   if (params.minPrice !== undefined && params.maxPrice !== undefined && params.minPrice > params.maxPrice) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['minPrice'],
-      message: 'minPrice não pode ser superior a maxPrice.',
-    });
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['minPrice'], message: 'minPrice não pode ser superior a maxPrice.' });
   }
 });
 
-module.exports = { productListSchema };
+const nullableText = (field, max = 5000) => z.preprocess(
+  (value) => typeof value === 'string' && value.trim() === '' ? null : value,
+  z.string().trim().max(max, `${field} é demasiado longo.`).nullable().optional()
+);
+const productFields = {
+  name: z.string().trim().min(2, 'O nome deve ter pelo menos 2 caracteres.').max(150),
+  description: nullableText('A descrição'),
+  price: z.preprocess((value) => typeof value === 'string' ? Number(value) : value,
+    z.number({ invalid_type_error: 'O preço deve ser numérico.' }).finite().nonnegative('O preço não pode ser negativo.')),
+  stock: z.preprocess((value) => typeof value === 'string' ? Number(value) : value,
+    z.number({ invalid_type_error: 'O stock deve ser numérico.' }).int('O stock deve ser inteiro.').nonnegative('O stock não pode ser negativo.')).optional(),
+  stock_status: z.enum(['in_stock', 'low_stock', 'out_of_stock']).optional(),
+  image_url: nullableText('A URL da imagem', 2048),
+  category_id: z.preprocess((value) => value === '' || value === null ? null : typeof value === 'string' ? Number(value) : value,
+    z.number().int().positive().nullable().optional()),
+  is_popular: z.boolean().optional(),
+  is_new_arrival: z.boolean().optional(),
+};
+const productCreateSchema = z.object(productFields);
+const productUpdateSchema = z.object(productFields).partial().refine((fields) => Object.keys(fields).length > 0, 'Indica pelo menos um campo para atualizar.');
+
+module.exports = { productListSchema, productCreateSchema, productUpdateSchema };

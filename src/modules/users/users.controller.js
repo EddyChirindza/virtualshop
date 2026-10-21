@@ -33,6 +33,15 @@ async function updateProfile(req, res, next) {
   }
 }
 
+async function updateProfilePhoto(req, res, next) {
+  try {
+    const data = await usersService.updateProfilePhoto(req.user.id, req.body?.base64);
+    res.json({ success: true, message: 'Fotografia de perfil atualizada.', data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function updatePassword(req, res, next) {
   try {
     const input = changePasswordSchema.parse(req.body);
@@ -105,6 +114,7 @@ async function setDefaultAddress(req, res, next) {
 module.exports = {
   getProfile,
   updateProfile,
+  updateProfilePhoto,
   updatePassword,
   getStats,
   listAddresses,

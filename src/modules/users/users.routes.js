@@ -7,6 +7,7 @@ const router = Router();
 router.use(requireAuth);
 router.get('/me', controller.getProfile);
 router.patch('/me', controller.updateProfile);
+router.post('/me/photo', controller.updateProfilePhoto);
 router.patch('/me/password', controller.updatePassword);
 router.get('/me/stats', controller.getStats);
 router.get('/me/addresses', controller.listAddresses);

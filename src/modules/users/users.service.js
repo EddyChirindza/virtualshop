@@ -1,10 +1,12 @@
 const bcrypt = require('bcrypt');
+const profilePhotoService = require('./profile_photo.service');
 const { pool, query } = require('../../config/db');
 const env = require('../../config/env');
 const { ApiError } = require('../../middlewares/error.middleware');
 
 const profileColumns = {
   fullName: 'full_name',
+  email: 'email',
   phone: 'phone',
   birthDate: 'birth_date',
   gender: 'gender',
@@ -68,6 +70,18 @@ async function getProfile(userId) {
 }
 
 async function updateProfile(userId, input) {
+  if (Object.prototype.hasOwnProperty.call(input, 'email')) {
+    const { rows: currentRows } = await query(
+      'SELECT email FROM users WHERE id = $1',
+      [userId]
+    );
+    if (!currentRows[0]) throw new ApiError(404, 'Utilizador não encontrado.');
+    const currentEmail = currentRows[0].email?.trim().toLowerCase() || '';
+    if (currentEmail && currentEmail !== input.email) {
+      throw new ApiError(409, 'O e-mail não pode ser alterado depois de guardado.');
+    }
+  }
+
   const entries = Object.entries(input);
   const values = entries.map(([, value]) => value);
   const assignments = entries.map(([key], index) => `${profileColumns[key]} = $${index + 1}`);
@@ -84,6 +98,9 @@ async function updateProfile(userId, input) {
   } catch (err) {
     if (err.code === '23505' && entries.some(([key]) => key === 'phone')) {
       throw new ApiError(409, 'Este telemóvel já está associado a outra conta.');
+    }
+    if (err.code === '23505' && entries.some(([key]) => key === 'email')) {
+      throw new ApiError(409, 'Este e-mail já está associado a outra conta.');
     }
     throw err;
   }
@@ -103,6 +120,36 @@ async function updateProfile(userId, input) {
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
   };
+}
+
+async function updateProfilePhoto(userId, base64) {
+  const photo = await profilePhotoService.saveProfilePhoto({ base64 });
+  try {
+    const { rows } = await query(
+      `UPDATE users SET avatar_url = $1, updated_at = now()
+       WHERE id = $2
+       RETURNING id, full_name, email, phone, birth_date, gender, avatar_url,
+                 COALESCE(is_verified, false) AS is_verified, last_login_at, created_at`,
+      [photo.avatar_url, userId]
+    );
+    const user = rows[0];
+    if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
+    return {
+      id: user.id,
+      fullName: user.full_name,
+      email: user.email,
+      phone: user.phone,
+      birthDate: user.birth_date,
+      gender: user.gender,
+      avatarUrl: user.avatar_url,
+      isVerified: user.is_verified,
+      lastLoginAt: user.last_login_at,
+      createdAt: user.created_at,
+    };
+  } catch (err) {
+    await profilePhotoService.removeProfilePhoto(photo.avatar_url);
+    throw err;
+  }
 }
 
 async function updatePassword(userId, { currentPassword, newPassword }) {
@@ -251,6 +298,7 @@ async function setDefaultAddress(userId, addressId) {
 module.exports = {
   getProfile,
   updateProfile,
+  updateProfilePhoto,
   updatePassword,
   getStats,
   listAddresses,

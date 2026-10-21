@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../data/customers_repository.dart';
 import '../../models/admin_customer.dart';
 
@@ -83,6 +84,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
         content: SizedBox(
           width: 420,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
+            CircleAvatar(
+              radius: 42,
+              backgroundColor: const Color(0xFFE8EDFF),
+              foregroundImage: customer.photoUrl == null || customer.photoUrl!.isEmpty
+                  ? null
+                  : NetworkImage(ApiConstants.resolveImageUrl(customer.photoUrl!)),
+              onForegroundImageError: customer.photoUrl == null || customer.photoUrl!.isEmpty
+                  ? null
+                  : (_, __) {},
+              child: Text(
+                customer.name.isEmpty ? '?' : customer.name[0].toUpperCase(),
+                style: const TextStyle(color: _blue, fontSize: 26, fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(height: 16),
             _DetailRow(label: 'ID', value: _display(customer.id)),
             _DetailRow(label: 'Nome', value: customer.name),
             _DetailRow(label: 'Email', value: _display(customer.email)),
@@ -120,7 +136,16 @@ class _CustomerTile extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(border: Border.all(color: _line), borderRadius: BorderRadius.circular(12)),
             child: Row(children: [
-              CircleAvatar(backgroundColor: const Color(0xFFE8EDFF), child: Text(customer.name.isEmpty ? '?' : customer.name[0].toUpperCase(), style: const TextStyle(color: _blue, fontWeight: FontWeight.w700))),
+              CircleAvatar(
+                backgroundColor: const Color(0xFFE8EDFF),
+                foregroundImage: customer.photoUrl == null || customer.photoUrl!.isEmpty
+                    ? null
+                    : NetworkImage(ApiConstants.resolveImageUrl(customer.photoUrl!)),
+                onForegroundImageError: customer.photoUrl == null || customer.photoUrl!.isEmpty
+                    ? null
+                    : (_, __) {},
+                child: Text(customer.name.isEmpty ? '?' : customer.name[0].toUpperCase(), style: const TextStyle(color: _blue, fontWeight: FontWeight.w700)),
+              ),
               const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(customer.name, style: const TextStyle(color: _ink, fontWeight: FontWeight.w600)),

@@ -54,9 +54,14 @@ class ApiConstants {
   static const String cartItems = '/cart/items';
   static const String orders = '/orders';
   static const String favorites = '/favorites';
+  static const String notifications = '/notifications';
+  static const String notificationUnreadCount = '/notifications/unread-count';
+  static String notificationRead(Object id) => '$notifications/$id/read';
+  static const String notificationsReadAll = '/notifications/read-all';
 
   // User profile and addresses
   static const String userProfile = '/users/me';
+  static const String userProfilePhoto = '/users/me/photo';
   static const String userPassword = '/users/me/password';
   static const String userStats = '/users/me/stats';
   static const String userAddresses = '/users/me/addresses';

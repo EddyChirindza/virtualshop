@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/app_text.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/widgets/error_retry.dart';
 import '../../../../theme/app_theme.dart';
@@ -13,7 +17,7 @@ import '../widgets/profile_widgets.dart';
 import 'address_form_screen.dart';
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
-import 'edit_profile_sheet.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -26,6 +30,204 @@ class ProfileScreen extends ConsumerWidget {
     ]);
   }
 
+  Future<void> _changePhoto(
+    BuildContext context,
+    WidgetRef ref,
+    Profile profile,
+  ) async {
+    final photoUrl = profile.photoUrl;
+    if (photoUrl == null || photoUrl.isEmpty) {
+      await _pickAndSavePhoto(context, ref);
+      return;
+    }
+
+    final action = await showModalBottomSheet<_ProfilePhotoAction>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.visibility_outlined),
+              title: Text(appText(context, 'Ver foto', 'View photo')),
+              onTap: () => Navigator.pop(context, _ProfilePhotoAction.view),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(appText(context, 'Apagar foto', 'Delete photo')),
+              onTap: () => Navigator.pop(context, _ProfilePhotoAction.delete),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_a_photo_outlined),
+              title: Text(
+                appText(context, 'Adicionar nova foto', 'Add a new photo'),
+              ),
+              onTap: () => Navigator.pop(context, _ProfilePhotoAction.replace),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted || action == null) return;
+    switch (action) {
+      case _ProfilePhotoAction.view:
+        await showDialog<void>(
+          context: context,
+          builder: (context) => Dialog(
+            clipBehavior: Clip.antiAlias,
+            child: InteractiveViewer(
+              child: Image.network(
+                ApiConstants.resolveImageUrl(photoUrl),
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  height: 240,
+                  child: Center(
+                    child: Icon(Icons.broken_image_outlined, size: 48),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      case _ProfilePhotoAction.delete:
+        await _deletePhoto(context, ref);
+      case _ProfilePhotoAction.replace:
+        await _pickAndSavePhoto(context, ref);
+    }
+  }
+
+  Future<void> _pickAndSavePhoto(BuildContext context, WidgetRef ref) async {
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        compressQuality: 85,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: appText(context, 'Recortar foto', 'Crop photo'),
+            lockAspectRatio: true,
+            cropStyle: CropStyle.circle,
+          ),
+          IOSUiSettings(
+            title: appText(context, 'Recortar foto', 'Crop photo'),
+            aspectRatioLockEnabled: true,
+            cropStyle: CropStyle.circle,
+          ),
+          if (kIsWeb) WebUiSettings(context: context),
+        ],
+      );
+      if (cropped == null) return;
+      final bytes = await cropped.readAsBytes();
+      await ref.read(profileProvider.notifier).updateProfilePhoto(bytes);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              appText(
+                context,
+                'Fotografia atualizada.',
+                'Profile photo updated.',
+              ),
+            ),
+          ),
+        );
+      }
+    } on ApiException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              appText(
+                context,
+                'Não foi possível atualizar a fotografia.',
+                'Could not update the profile photo.',
+              ),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deletePhoto(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(appText(context, 'Apagar foto?', 'Delete photo?')),
+        content: Text(
+          appText(
+            context,
+            'A fotografia de perfil será removida.',
+            'Your profile photo will be removed.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(appText(context, 'Cancelar', 'Cancel')),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(appText(context, 'Apagar', 'Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(profileProvider.notifier).deleteProfilePhoto();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              appText(
+                context,
+                'Fotografia removida.',
+                'Profile photo removed.',
+              ),
+            ),
+          ),
+        );
+      }
+    } on ApiException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              appText(
+                context,
+                'Não foi possível apagar a fotografia.',
+                'Could not delete the profile photo.',
+              ),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -34,12 +236,11 @@ class ProfileScreen extends ConsumerWidget {
       );
   }
 
-  Future<void> _editProfile(BuildContext context, Profile profile) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => EditProfileSheet(profile: profile),
+  void _editProfile(BuildContext context, Profile profile) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => EditProfileScreen(profile: profile),
+      ),
     );
   }
 
@@ -159,10 +360,7 @@ class ProfileScreen extends ConsumerWidget {
         data: (profile) => ProfileCard(
           profile: profile,
           onTap: () => _editProfile(context, profile),
-          onCameraTap: () {
-            // TODO: ligar a seleção e o envio da fotografia de perfil.
-            _showComingSoon(context);
-          },
+          onCameraTap: () => _changePhoto(context, ref, profile),
         ),
       );
 
@@ -215,7 +413,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
           onTap: () {
             final profile = ref.read(profileProvider).valueOrNull;
-            if (profile != null) _editProfile(context, profile);
+            if (profile == null) return;
+            _editProfile(context, profile);
           },
         ),
         _OptionTile(
@@ -374,6 +573,8 @@ class ProfileScreen extends ConsumerWidget {
     ),
   );
 }
+
+enum _ProfilePhotoAction { view, delete, replace }
 
 class _OptionTile extends StatelessWidget {
   const _OptionTile({

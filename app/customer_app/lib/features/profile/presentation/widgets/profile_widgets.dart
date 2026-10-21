@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/app_text.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../theme/app_theme.dart';
 import '../../domain/models/profile.dart';
 import '../../domain/models/profile_address.dart';
@@ -44,10 +45,14 @@ class ProfileCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 44,
                     backgroundColor: AppColors.imagePlaceholder,
-                    foregroundImage: profile.photoUrl == null
+                    foregroundImage:
+                        profile.photoUrl == null || profile.photoUrl!.isEmpty
                         ? null
-                        : NetworkImage(profile.photoUrl!),
-                    onForegroundImageError: profile.photoUrl == null
+                        : NetworkImage(
+                            ApiConstants.resolveImageUrl(profile.photoUrl!),
+                          ),
+                    onForegroundImageError:
+                        profile.photoUrl == null || profile.photoUrl!.isEmpty
                         ? null
                         : (_, _) {},
                     child: Text(
@@ -92,14 +97,6 @@ class ProfileCard extends StatelessWidget {
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                profile.email,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
               ),
               if (profile.phone?.isNotEmpty == true)
                 _ContactLine(icon: Icons.phone_outlined, text: profile.phone!),

@@ -5,6 +5,7 @@ import 'features/catalog/data/catalog_repository.dart';
 import 'features/customers/data/customers_repository.dart';
 import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/notifications/data/admin_notifications_repository.dart';
 
 void main() => runApp(const VirtualShopAdminApp());
 
@@ -39,6 +40,7 @@ class _VirtualShopAdminAppState extends State<VirtualShopAdminApp> {
                 repository: DashboardRepository(token: _token!),
                 catalogRepository: CatalogRepository(token: _token!),
                 customersRepository: CustomersRepository(token: _token!),
+                notificationsRepository: AdminNotificationsRepository(token: _token!),
                 onLogout: () => setState(() => _token = null),
               ),
       );

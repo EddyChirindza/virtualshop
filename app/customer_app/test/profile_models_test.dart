@@ -43,6 +43,19 @@ void main() {
       expect(profile.isVerified, isTrue);
     });
 
+    test('maps split names while keeping a combined display name', () {
+      final profile = Profile.fromJson({
+        'id': 22,
+        'first_name': 'Ana Maria',
+        'last_name': 'Mucavele',
+        'email': '',
+      });
+
+      expect(profile.fullName, 'Ana Maria Mucavele');
+      expect(profile.firstName, 'Ana Maria');
+      expect(profile.lastName, 'Mucavele');
+    });
+
     test('maps totals and preserves a missing average rating', () {
       final stats = ProfileStats.fromJson({
         'total_orders': '12',

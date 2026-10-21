@@ -16,20 +16,21 @@ class AuthRepository {
   final SecureStorageService _storage;
 
   Future<User> register({
-    required String name,
-    String? email,
+    required String firstName,
+    required String lastName,
     required String password,
     required String phone,
   }) async {
     try {
       final payload = <String, dynamic>{
-        'full_name': name,
+        'first_name': firstName,
+        'last_name': lastName,
+        // Keep the legacy field populated for existing API deployments and
+        // accounts while the backend migration rolls out.
+        'full_name': '$firstName $lastName',
         'password': password,
         'phone': phone,
       };
-      if (email != null && email.trim().isNotEmpty) {
-        payload['email'] = email.trim();
-      }
       final response = await _dio.post(ApiConstants.register, data: payload);
       // ignore: unawaited_return_in_try_block
       return _saveSession(unwrapMap(response));

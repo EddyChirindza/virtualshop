@@ -142,6 +142,8 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   String? _pickedImageName;
   bool _removeImage = false;
   late bool _popular, _newArrival;
+  var _notifyCustomers = false;
+  String? _notificationMessage;
   var _saving = false;
 
   @override
@@ -207,7 +209,34 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
       'image_url': imageUrl, 'category_id': _categoryId,
       'is_popular': _popular, 'is_new_arrival': _newArrival,
       };
-      if (widget.product == null) { await widget.repository.createProduct(fields); } else { await widget.repository.updateProduct(widget.product!.id, fields); }
+      var notificationError = false;
+      if (widget.product == null) {
+        final productId = await widget.repository.createProduct(fields);
+        if (_notifyCustomers) {
+          try {
+            final notificationMessage = _notificationMessage?.trim().isNotEmpty == true
+                ? _notificationMessage!.trim()
+                : 'Novo produto disponível: ${_name.text.trim()}';
+            await widget.repository.createProductNotification(
+              productId: productId,
+              title: 'Novo produto disponível',
+              message: notificationMessage,
+            );
+          } catch (_) {
+            notificationError = true;
+          }
+        }
+      } else {
+        await widget.repository.updateProduct(widget.product!.id, fields);
+      }
+      if (notificationError && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Produto criado, mas a notificação não foi publicada. A API de notificações não confirmou o pedido.'),
+            backgroundColor: Color(0xFFB54708),
+          ),
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_errorText(error)), backgroundColor: const Color(0xFFB42318)));
@@ -221,7 +250,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: Text(widget.product == null ? 'Adicionar produto' : 'Editar produto'),
         content: SizedBox(width: 550, child: SingleChildScrollView(child: Form(key: _form, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nome do produto'), validator: (v) => _required(v, 'O nome')),
+          TextFormField(controller: _name, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Nome do produto'), validator: (v) => _required(v, 'O nome')),
           const SizedBox(height: 12),
           TextFormField(controller: _description, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Descrição')),
           const SizedBox(height: 12),
@@ -243,6 +272,39 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           ],
           CheckboxListTile(contentPadding: EdgeInsets.zero, value: _newArrival, onChanged: (value) => setState(() => _newArrival = value ?? false), title: const Text('Mostrar como novidade no customer app'), controlAffinity: ListTileControlAffinity.leading),
           CheckboxListTile(contentPadding: EdgeInsets.zero, value: _popular, onChanged: (value) => setState(() => _popular = value ?? false), title: const Text('Mostrar nos produtos populares'), controlAffinity: ListTileControlAffinity.leading),
+          if (widget.product == null) ...[
+            const Divider(height: 24),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _notifyCustomers,
+              onChanged: _saving ? null : (value) => setState(() => _notifyCustomers = value ?? false),
+              title: const Text('Notificar clientes sobre este produto'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            if (_notifyCustomers) ...[
+              TextFormField(
+                initialValue: _notificationMessage,
+                maxLength: 240,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Mensagem da notificação (opcional)',
+                  hintText: 'Novo produto disponível: ...',
+                ),
+                onChanged: (value) => setState(() => _notificationMessage = value),
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: const Color(0xFFF2F4F7), borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  _notificationMessage?.trim().isNotEmpty == true
+                      ? _notificationMessage!.trim()
+                      : 'Novo produto disponível: ${_name.text.trim().isEmpty ? 'Nome do produto' : _name.text.trim()}',
+                  style: const TextStyle(color: _muted),
+                ),
+              ),
+            ],
+          ],
           Align(alignment: Alignment.centerLeft, child: Text('Imagem local obrigatória · PNG, JPEG ou WebP · máximo 5 MB', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted))),
         ])))),
         actions: [TextButton(onPressed: _saving ? null : () => Navigator.pop(context, false), child: const Text('Cancelar')), FilledButton(onPressed: _saving ? null : _save, child: _saving ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Guardar'))],

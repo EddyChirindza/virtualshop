@@ -61,14 +61,19 @@ class AuthController extends AsyncNotifier<User?> {
 
   /// Lança [ApiException] se falhar.
   Future<void> register({
-    required String name,
-    String? email,
+    required String firstName,
+    required String lastName,
     required String password,
     required String phone,
   }) async {
     final user = await ref
         .read(authRepositoryProvider)
-        .register(name: name, email: email, password: password, phone: phone);
+        .register(
+          firstName: firstName,
+          lastName: lastName,
+          password: password,
+          phone: phone,
+        );
     state = AsyncData(user);
   }
 

@@ -53,12 +53,14 @@ class AppPageHeader extends StatelessWidget {
     super.key,
     this.isHome = false,
     this.onNotifications,
+    this.unreadNotificationCount = 0,
   });
 
   final String userName;
   final String title;
   final VoidCallback onMenu;
   final VoidCallback? onNotifications;
+  final int unreadNotificationCount;
   final bool isHome;
 
   @override
@@ -98,7 +100,10 @@ class AppPageHeader extends StatelessWidget {
                 ),
         ),
         if (isHome)
-          _NotificationButton(onPressed: onNotifications)
+          _NotificationButton(
+            onPressed: onNotifications,
+            unreadCount: unreadNotificationCount,
+          )
         else
           const SizedBox(width: 44),
       ],
@@ -107,9 +112,13 @@ class AppPageHeader extends StatelessWidget {
 }
 
 class _NotificationButton extends StatelessWidget {
-  const _NotificationButton({required this.onPressed});
+  const _NotificationButton({
+    required this.onPressed,
+    required this.unreadCount,
+  });
 
   final VoidCallback? onPressed;
+  final int unreadCount;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -120,19 +129,29 @@ class _NotificationButton extends StatelessWidget {
         tooltip: appText(context, 'Notificações', 'Notifications'),
         onPressed: onPressed,
       ),
-      Positioned(
-        top: 2,
-        right: 2,
-        child: Container(
-          width: 9,
-          height: 9,
-          decoration: BoxDecoration(
-            color: AppColors.accent,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.surface, width: 2),
+      if (unreadCount > 0)
+        Positioned(
+          top: -3,
+          right: -5,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 19, minHeight: 19),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.accent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.surface, width: 2),
+            ),
+            child: Text(
+              unreadCount > 99 ? '99+' : '$unreadCount',
+              style: const TextStyle(
+                color: AppColors.surface,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ),
-      ),
     ],
   );
 }

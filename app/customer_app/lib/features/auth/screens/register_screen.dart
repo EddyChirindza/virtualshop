@@ -15,8 +15,8 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -26,8 +26,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -43,10 +43,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .register(
-            name: _nameController.text.trim(),
-            email: _emailController.text.trim().isEmpty
-                ? null
-                : _emailController.text.trim(),
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
             password: _passwordController.text,
             phone: formatInternationalPhone(
               _phoneCountryCode,
@@ -92,9 +90,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
-                  controller: _nameController,
+                  controller: _firstNameController,
                   decoration: InputDecoration(
-                    labelText: appText(context, 'Nome completo', 'Full name'),
+                    labelText: appText(context, 'Nome', 'First name'),
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -104,27 +102,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _lastNameController,
                   decoration: InputDecoration(
-                    labelText: appText(
-                      context,
-                      'E-mail (opcional)',
-                      'Email (optional)',
-                    ),
-                    prefixIcon: Icon(Icons.email_outlined),
+                    labelText: appText(context, 'Apelido', 'Last name'),
+                    prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    if (!v.contains('@'))
-                      return appText(
-                        context,
-                        'E-mail inválido',
-                        'Invalid email',
-                      );
-                    return null;
-                  },
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? appText(
+                          context,
+                          'Indica o teu apelido',
+                          'Enter your last name',
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 PhoneNumberField(

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/constants/api_constants.dart';
@@ -33,6 +35,38 @@ class ProfileRepository {
           ? Map<String, dynamic>.from(data['user'] as Map)
           : data;
       return Profile.fromJson(user);
+    } on DioException catch (error) {
+      throw ApiException.fromDioException(error);
+    }
+  }
+
+  Future<Profile> updateProfilePhoto(List<int> bytes) async {
+    try {
+      await _dio.post(
+        ApiConstants.userProfilePhoto,
+        data: {'base64': base64Encode(bytes)},
+      );
+      // Some APIs return only a success message (or an empty response) for
+      // photo mutations. Fetch the profile so the UI always uses the
+      // authoritative photo URL returned by the server.
+      return await fetchProfile();
+    } on DioException catch (error) {
+      throw ApiException.fromDioException(error);
+    }
+  }
+
+  Future<Profile> deleteProfilePhoto() async {
+    try {
+      try {
+        await _dio.delete(ApiConstants.userProfilePhoto);
+      } on DioException catch (error) {
+        // Older API deployments may not expose /users/me/photo yet. The
+        // profile PATCH route is already used by the app and can clear the
+        // stored URL directly.
+        if (error.response?.statusCode != 404) rethrow;
+        await _dio.patch(ApiConstants.userProfile, data: {'photoUrl': null});
+      }
+      return await fetchProfile();
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
     }

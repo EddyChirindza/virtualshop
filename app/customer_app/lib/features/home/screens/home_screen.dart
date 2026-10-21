@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_text.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../categories/screens/category_products_screen.dart';
 import '../../cart/providers/cart_provider.dart';
@@ -11,6 +12,9 @@ import '../../cart/screens/cart_screen.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/widgets/products_section.dart';
 import '../../profile/presentation/screens/profile_screen.dart';
+import '../../profile/presentation/providers/profile_providers.dart';
+import '../../notifications/presentation/providers/notification_providers.dart';
+import '../../notifications/presentation/screens/notifications_screen.dart';
 import '../../search/presentation/providers/search_providers.dart';
 import '../../search/presentation/screens/search_screen.dart';
 import '../../../theme/app_theme.dart';
@@ -81,6 +85,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final cartItemCount = ref.watch(
       cartControllerProvider.select((cart) => cart.itemCount),
     );
+    final unreadNotificationCount =
+        ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
     final titles = [
       appText(context, 'ShopSwift', 'ShopSwift'),
       appText(context, 'Pesquisar', 'Search'),
@@ -110,6 +116,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   title: titles[_selectedIndex],
                   isHome: _selectedIndex == 0,
                   onMenu: () => Scaffold.of(context).openDrawer(),
+                  unreadNotificationCount: unreadNotificationCount,
+                  onNotifications: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -206,14 +218,15 @@ enum _MenuOption {
   final IconData icon;
 }
 
-class _AppDrawer extends StatelessWidget {
+class _AppDrawer extends ConsumerWidget {
   const _AppDrawer({required this.userName, required this.onSelected});
 
   final String userName;
   final ValueChanged<_MenuOption> onSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photoUrl = ref.watch(profileProvider).valueOrNull?.photoUrl;
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -242,9 +255,18 @@ class _AppDrawer extends StatelessWidget {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 24,
                           backgroundColor: AppColors.surface,
+                          foregroundImage: photoUrl == null || photoUrl.isEmpty
+                              ? null
+                              : NetworkImage(
+                                  ApiConstants.resolveImageUrl(photoUrl),
+                                ),
+                          onForegroundImageError:
+                              photoUrl == null || photoUrl.isEmpty
+                              ? null
+                              : (_, _) {},
                           child: Icon(
                             Icons.person_rounded,
                             color: AppColors.brand,

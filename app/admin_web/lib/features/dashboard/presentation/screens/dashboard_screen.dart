@@ -7,6 +7,8 @@ import '../../../catalog/presentation/screens/categories_screen.dart';
 import '../../../catalog/presentation/screens/products_screen.dart';
 import '../../../customers/data/customers_repository.dart';
 import '../../../customers/presentation/screens/customers_screen.dart';
+import '../../../notifications/data/admin_notifications_repository.dart';
+import '../../../notifications/presentation/screens/admin_notifications_screen.dart';
 
 const _ink = Color(0xFF182230);
 const _muted = Color(0xFF667085);
@@ -14,10 +16,11 @@ const _line = Color(0xFFEAECF0);
 const _blue = Color(0xFF3157D5);
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.repository, required this.catalogRepository, required this.customersRepository, required this.onLogout});
+  const DashboardScreen({super.key, required this.repository, required this.catalogRepository, required this.customersRepository, required this.notificationsRepository, required this.onLogout});
   final DashboardRepository repository;
   final CatalogRepository catalogRepository;
   final CustomersRepository customersRepository;
+  final AdminNotificationsRepository notificationsRepository;
   final VoidCallback onLogout;
 
   @override
@@ -61,6 +64,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: ProductsScreen(key: ValueKey('products-$_refreshVersion'), repository: widget.catalogRepository))
               : _section == 'categories'
                   ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: CategoriesScreen(key: ValueKey('categories-$_refreshVersion'), repository: widget.catalogRepository))
+                  : _section == 'notifications'
+                      ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: AdminNotificationsScreen(key: ValueKey('notifications-$_refreshVersion'), repository: widget.notificationsRepository))
                   : FutureBuilder<DashboardData>(
             future: _future,
             builder: (context, snapshot) {
@@ -129,6 +134,7 @@ class _SideNavigation extends StatelessWidget {
           _NavItem(icon: Icons.inventory_2_outlined, title: 'Produtos', selected: selected == 'products', onTap: () => onSelect('products')),
           _NavItem(icon: Icons.category_outlined, title: 'Categorias', selected: selected == 'categories', onTap: () => onSelect('categories')),
           _NavItem(icon: Icons.people_outline, title: 'Clientes', selected: selected == 'customers', onTap: () => onSelect('customers')),
+          _NavItem(icon: Icons.notifications_none_rounded, title: 'Notificações', selected: selected == 'notifications', onTap: () => onSelect('notifications')),
           const Spacer(),
           const Divider(color: Color(0xFF334155), height: 1),
           ListTile(leading: const Icon(Icons.logout_rounded, color: Color(0xFFCBD5E1)), title: const Text('Terminar sessão', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)), onTap: onLogout),
@@ -166,7 +172,7 @@ class _TopBar extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: compact ? 18 : 36),
         decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: _line))),
         child: Row(children: [
-          if (compact) PopupMenuButton<String>(onSelected: onSelect, itemBuilder: (_) => const [PopupMenuItem(value: 'dashboard', child: Text('Dashboard')), PopupMenuItem(value: 'products', child: Text('Produtos')), PopupMenuItem(value: 'categories', child: Text('Categorias')), PopupMenuItem(value: 'customers', child: Text('Clientes'))], child: const Icon(Icons.storefront_rounded, color: _blue)),
+          if (compact) PopupMenuButton<String>(onSelected: onSelect, itemBuilder: (_) => const [PopupMenuItem(value: 'dashboard', child: Text('Dashboard')), PopupMenuItem(value: 'products', child: Text('Produtos')), PopupMenuItem(value: 'categories', child: Text('Categorias')), PopupMenuItem(value: 'customers', child: Text('Clientes')), PopupMenuItem(value: 'notifications', child: Text('Notificações'))], child: const Icon(Icons.storefront_rounded, color: _blue)),
           if (compact) const SizedBox(width: 10),
           Text(_sectionTitle(section), style: const TextStyle(color: _ink, fontWeight: FontWeight.w600)),
           const Spacer(),
@@ -367,5 +373,6 @@ String _sectionTitle(String section) => switch (section) {
       'categories' => 'Categorias',
       'orders' => 'Pedidos',
       'customers' => 'Clientes',
+      'notifications' => 'Notificações',
       _ => 'Painel administrativo',
     };

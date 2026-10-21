@@ -13,16 +13,23 @@ class FavoritesRepository {
     try {
       final response = await _dio.get(
         ApiConstants.favorites,
-        queryParameters: {'page': page, 'pageSize': pageSize},
+        queryParameters: {'page': page, 'page_size': pageSize},
       );
       final body = response.data;
       final root = body is Map
           ? Map<String, dynamic>.from(body)
           : <String, dynamic>{};
-      final data = root['data'] is Map
-          ? Map<String, dynamic>.from(root['data'] as Map)
-          : root;
-      final rawItems = data['items'] is List ? data['items'] as List : const [];
+      final payload = body is List ? body : root['data'];
+      final List<dynamic> rawItems;
+      if (payload is List) {
+        rawItems = payload;
+      } else if (payload is Map && payload['items'] is List) {
+        rawItems = payload['items'] as List;
+      } else if (root['items'] is List) {
+        rawItems = root['items'] as List;
+      } else {
+        rawItems = const [];
+      }
       return rawItems
           .whereType<Map>()
           .map((item) => Favorite.fromJson(Map<String, dynamic>.from(item)))

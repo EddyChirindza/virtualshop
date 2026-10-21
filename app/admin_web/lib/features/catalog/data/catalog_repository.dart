@@ -31,8 +31,33 @@ class CatalogRepository {
         .toList();
   }
 
-  Future<void> createProduct(Map<String, dynamic> fields) async {
-    await _api.dio.post('/products', data: fields);
+  Future<int> createProduct(Map<String, dynamic> fields) async {
+    final response = await _api.dio.post('/products', data: fields);
+    final body = response.data;
+    final data = body is Map && body['data'] is Map ? body['data'] as Map : body;
+    final product = data is Map && data['product'] is Map
+        ? data['product'] as Map
+        : data;
+    final id = product is Map ? int.tryParse('${product['id']}') : null;
+    if (id == null) {
+      throw const FormatException('A API não devolveu o ID do produto criado.');
+    }
+    return id;
+  }
+
+  Future<void> createProductNotification({
+    required int productId,
+    required String title,
+    required String message,
+  }) async {
+    await _api.dio.post('/admin/notifications', data: {
+      'title': title,
+      'message': message,
+      'type': 'new_product',
+      'product_id': productId,
+      'status': 'published',
+      'idempotency_key': 'product:$productId:new_product',
+    });
   }
 
   Future<void> updateProduct(int id, Map<String, dynamic> fields) async {

@@ -34,7 +34,7 @@ test('product list query rejects invalid search parameters with clear messages',
   for (const [queryParams, expectedMessage] of invalidQueries) {
     assert.throws(
       () => productListSchema.parse(queryParams),
-      (error) => expectedMessage.test(error.errors[0].message)
+      (error) => expectedMessage.test(error.issues[0].message)
     );
   }
 });

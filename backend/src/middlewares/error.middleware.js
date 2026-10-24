@@ -21,7 +21,7 @@ function notFoundHandler(req, res) {
 function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
   // Erros de validação do Zod
   if (err.name === 'ZodError') {
-    const message = err.errors?.[0]?.message || 'Dados inválidos.';
+    const message = err.issues?.[0]?.message || 'Dados inválidos.';
     return res.status(400).json({ success: false, message });
   }
 

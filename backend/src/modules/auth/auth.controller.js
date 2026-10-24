@@ -23,7 +23,7 @@ async function register(req, res, next) {
       name: err.name,
       code: err.code,
       message: err.message,
-      issues: err.errors,
+      issues: err.issues,
         stack: err.stack,
     });
     next(err);

@@ -1,5 +1,34 @@
 # VirtualShop API development
 
+## Backend tests
+
+Run the validator and service tests from this directory with Node's built-in
+test runner:
+
+```sh
+node --test tests/auth-validators.test.js tests/users-validators.test.js tests/notifications.validators.test.js
+node --test tests/products-search.test.js tests/notifications.service.test.js
+```
+
+The configuration loader uses `dotenv`'s default behavior, which reads
+`backend/.env` relative to the current working directory, then validates the
+required database and JWT variables. This repository does not include a
+`.env.example` or a separate test environment file. The product search and
+notification service tests stub the database module and do not require
+PostgreSQL configuration.
+
+`tests/favorites.test.js` connects to PostgreSQL through the normal database
+pool. Its setup issues unqualified `DELETE` statements against `favorites`,
+`products`, `categories`, and `users`, then inserts fixture rows. Do not run it
+against development or production data. To run it safely, create a dedicated,
+disposable PostgreSQL database, apply the project's migrations to that database,
+and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and
+`JWT_SECRET` in a private `backend/.env` (or provide them in the process
+environment). Verify `DB_NAME` points only to that disposable test database
+before running `node --test tests/favorites.test.js`. No database is configured
+in this checkout, so the favorites tests have not been run here. There is no
+`.env.example`; do not copy production credentials into a test configuration.
+
 ## Start the API
 
 From this directory, start the backend with:

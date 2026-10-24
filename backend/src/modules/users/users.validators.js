@@ -25,7 +25,6 @@ const birthDateSchema = z.string()
 
 const profileUpdateSchema = z.object({
   fullName: z.string().trim().min(2, 'O nome deve ter entre 2 e 100 caracteres.').max(100, 'O nome deve ter entre 2 e 100 caracteres.').optional(),
-  email: z.string().trim().toLowerCase().email('Email inválido.').max(150, 'O email não pode exceder 150 caracteres.').optional(),
   phone: z
     .string()
     .trim()
@@ -35,7 +34,7 @@ const profileUpdateSchema = z.object({
     )
     .optional(),
   birthDate: birthDateSchema.nullable().optional(),
-  gender: z.enum(genderValues, { errorMap: () => ({ message: 'Género inválido.' }) }).nullable().optional(),
+  gender: z.enum(genderValues, { error: 'Género inválido.' }).nullable().optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, 'Indica pelo menos um campo para atualizar.');
 
 const addressFields = {

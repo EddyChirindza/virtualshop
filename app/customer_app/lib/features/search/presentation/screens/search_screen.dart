@@ -41,6 +41,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void didUpdateWidget(covariant SearchScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
+      final query = ref.read(searchControllerProvider).query;
+      if (_textController.text != query) _textController.text = query;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
       });
@@ -224,6 +226,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           product: product,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
+              settings: RouteSettings(name: '/products/${product.id}'),
               builder: (_) => ProductDetailScreen(productId: product.id),
             ),
           ),

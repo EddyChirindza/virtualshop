@@ -9,6 +9,7 @@ class AdminProduct {
     required this.isNewArrival,
     this.description,
     this.imageUrl,
+    this.imageUrls = const [],
     this.categoryId,
     this.categoryName,
     this.stockStatus,
@@ -21,6 +22,7 @@ class AdminProduct {
   final int stock;
   final double rating;
   final String? imageUrl;
+  final List<String> imageUrls;
   final int? categoryId;
   final String? categoryName;
   final String? stockStatus;
@@ -35,6 +37,7 @@ class AdminProduct {
         stock: _int(json['stock']),
         rating: _double(json['rating']),
         imageUrl: json['image_url']?.toString(),
+        imageUrls: _imageUrls(json['image_urls'], json['image_url']),
         categoryId: json['category_id'] == null ? null : _int(json['category_id']),
         categoryName: json['category_name']?.toString(),
         stockStatus: json['stock_status']?.toString(),
@@ -44,6 +47,11 @@ class AdminProduct {
 
   static int _int(dynamic value) => int.tryParse('$value') ?? 0;
   static double _double(dynamic value) => double.tryParse('$value') ?? 0;
+  static List<String> _imageUrls(dynamic value, dynamic legacy) {
+    final urls = value is List ? value.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() : <String>[];
+    if (urls.isEmpty && legacy != null && '$legacy'.isNotEmpty) urls.add('$legacy');
+    return urls;
+  }
 
   String get availability => stockStatus ??
       (stock <= 0 ? 'out_of_stock' : stock <= 5 ? 'low_stock' : 'in_stock');

@@ -71,6 +71,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       if (notification.productId != null) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
+            settings: RouteSettings(
+              name: '/products/${notification.productId}',
+            ),
             builder: (_) =>
                 ProductDetailScreen(productId: notification.productId!),
           ),

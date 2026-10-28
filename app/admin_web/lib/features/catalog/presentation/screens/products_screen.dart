@@ -137,10 +137,8 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   late final TextEditingController _name, _description, _price;
   int? _categoryId;
   String _stockStatus = 'in_stock';
-  String? _imageUrl;
-  Uint8List? _pickedImageBytes;
-  String? _pickedImageName;
-  bool _removeImage = false;
+  late List<String> _imageUrls;
+  final List<Uint8List> _pickedImageBytes = [];
   late bool _popular, _newArrival;
   var _notifyCustomers = false;
   String? _notificationMessage;
@@ -154,7 +152,11 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     _description = TextEditingController(text: p?.description ?? '');
     _price = TextEditingController(text: p?.price.toStringAsFixed(2) ?? '');
     _stockStatus = p?.availability ?? 'in_stock';
-    _imageUrl = p?.imageUrl;
+    _imageUrls = List<String>.from(
+      p?.imageUrls.isNotEmpty == true
+          ? p!.imageUrls
+          : (p?.imageUrl?.isNotEmpty == true ? [p!.imageUrl!] : const []),
+    );
     _categoryId = p?.categoryId;
     _popular = p?.isPopular ?? false;
     _newArrival = p?.isNewArrival ?? true;
@@ -163,50 +165,44 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   @override
   void dispose() { _name.dispose(); _description.dispose(); _price.dispose(); super.dispose(); }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     try {
-      final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (file == null || !mounted) return;
-      final imageBytes = await file.readAsBytes();
-      if (imageBytes.length > 5 * 1024 * 1024) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A imagem deve ter no máximo 5 MB.')),
-        );
+      final files = await ImagePicker().pickMultiImage();
+      if (files.isEmpty || !mounted) return;
+      if (_imageUrls.length + _pickedImageBytes.length + files.length > 20) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Um produto pode ter no máximo 20 imagens.')));
         return;
       }
-      setState(() {
-        _pickedImageBytes = imageBytes;
-        _pickedImageName = file.name;
-        _removeImage = false;
-      });
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível ler a imagem selecionada.')),
-        );
+      final picked = <Uint8List>[];
+      for (final file in files) {
+        final bytes = await file.readAsBytes();
+        if (!mounted) return;
+        if (bytes.length > 5 * 1024 * 1024) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cada imagem deve ter no máximo 5 MB.')));
+          return;
+        }
+        picked.add(bytes);
       }
+      setState(() => _pickedImageBytes.addAll(picked));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível ler as imagens selecionadas.')));
     }
   }
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
-    final hasLocalImage = _imageUrl?.startsWith('/uploads/products/') ?? false;
-    if (_pickedImageBytes == null && (_removeImage || !hasLocalImage)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escolhe uma imagem local para este produto.')),
-      );
+    if (_pickedImageBytes.isEmpty && _imageUrls.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Escolhe pelo menos uma imagem para este produto.')));
       return;
     }
     setState(() => _saving = true);
     try {
-      var imageUrl = _removeImage ? null : _imageUrl;
-      if (_pickedImageBytes != null) {
-        imageUrl = await widget.repository.uploadProductImage(base64Encode(_pickedImageBytes!));
-      }
+      final uploaded = await widget.repository.uploadProductImages(_pickedImageBytes.map(base64Encode).toList());
+      final imageUrls = [..._imageUrls, ...uploaded];
       final fields = <String, dynamic>{
       'name': _name.text.trim(), 'description': _description.text.trim().isEmpty ? null : _description.text.trim(),
       'price': double.parse(_price.text.replaceAll(',', '.')), 'stock_status': _stockStatus,
-      'image_url': imageUrl, 'category_id': _categoryId,
+      'image_url': imageUrls.first, 'image_urls': imageUrls, 'category_id': _categoryId,
       'is_popular': _popular, 'is_new_arrival': _newArrival,
       };
       var notificationError = false;
@@ -246,6 +242,8 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
 
   String? _required(String? value, String label) => value == null || value.trim().isEmpty ? '$label é obrigatório.' : null;
 
+  Widget _preview(Widget image, VoidCallback remove) => Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 70, height: 70, child: image)), Positioned(right: 0, top: 0, child: IconButton.filledTonal(tooltip: 'Remover imagem', visualDensity: VisualDensity.compact, onPressed: remove, icon: const Icon(Icons.close, size: 16)))]);
+
   @override
   Widget build(BuildContext context) => AlertDialog(
         title: Text(widget.product == null ? 'Adicionar produto' : 'Editar produto'),
@@ -260,15 +258,15 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(value: _categoryId, decoration: const InputDecoration(labelText: 'Categoria'), items: [const DropdownMenuItem<int?>(value: null, child: Text('Sem categoria')), ...widget.categories.map((category) => DropdownMenuItem<int?>(value: category.id, child: Text('${category.parentId == null ? '' : '↳ '}${category.name}', overflow: TextOverflow.ellipsis)))], onChanged: (value) => setState(() => _categoryId = value)),
           const SizedBox(height: 12),
-          Align(alignment: Alignment.centerLeft, child: OutlinedButton.icon(onPressed: _saving ? null : _pickImage, icon: const Icon(Icons.upload_file_outlined), label: Text(_pickedImageName ?? 'Escolher imagem local'))),
-          if (_pickedImageBytes != null || (!_removeImage && _imageUrl != null && _imageUrl!.isNotEmpty)) ...[
+          Align(alignment: Alignment.centerLeft, child: OutlinedButton.icon(onPressed: _saving ? null : _pickImages, icon: const Icon(Icons.upload_file_outlined), label: const Text('Adicionar imagens'))),
+          if (_pickedImageBytes.isNotEmpty || _imageUrls.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Row(children: [
-              ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 70, height: 70, child: _pickedImageBytes != null ? Image.memory(_pickedImageBytes!, fit: BoxFit.cover) : Image.network(ApiConstants.resolveImageUrl(_imageUrl!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFFF2F4F7), child: Icon(Icons.broken_image_outlined)))),),
-              const SizedBox(width: 10),
-              const Expanded(child: Text('A imagem selecionada será guardada na API.', style: TextStyle(color: _muted, fontSize: 12))),
-              IconButton(tooltip: 'Remover imagem', onPressed: () => setState(() { _pickedImageBytes = null; _pickedImageName = null; _removeImage = true; }), icon: const Icon(Icons.delete_outline, color: Color(0xFFB42318))),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              ..._imageUrls.asMap().entries.map((e) => _preview(Image.network(ApiConstants.resolveImageUrl(e.value), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFFF2F4F7), child: Icon(Icons.broken_image_outlined))), () => setState(() => _imageUrls.removeAt(e.key)))),
+              ..._pickedImageBytes.asMap().entries.map((e) => _preview(Image.memory(e.value, fit: BoxFit.cover), () => setState(() => _pickedImageBytes.removeAt(e.key)))),
             ]),
+            const SizedBox(height: 6),
+            Text('${_imageUrls.length + _pickedImageBytes.length} imagem(ns). Máximo 5 MB por ficheiro.', style: const TextStyle(color: _muted, fontSize: 12)),
           ],
           CheckboxListTile(contentPadding: EdgeInsets.zero, value: _newArrival, onChanged: (value) => setState(() => _newArrival = value ?? false), title: const Text('Mostrar como novidade no customer app'), controlAffinity: ListTileControlAffinity.leading),
           CheckboxListTile(contentPadding: EdgeInsets.zero, value: _popular, onChanged: (value) => setState(() => _popular = value ?? false), title: const Text('Mostrar nos produtos populares'), controlAffinity: ListTileControlAffinity.leading),
@@ -305,7 +303,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
               ),
             ],
           ],
-          Align(alignment: Alignment.centerLeft, child: Text('Imagem local obrigatória · PNG, JPEG ou WebP · máximo 5 MB', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted))),
+          Align(alignment: Alignment.centerLeft, child: Text('Imagens locais · máximo 5 MB por ficheiro', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted))),
         ])))),
         actions: [TextButton(onPressed: _saving ? null : () => Navigator.pop(context, false), child: const Text('Cancelar')), FilledButton(onPressed: _saving ? null : _save, child: _saving ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Guardar'))],
       );

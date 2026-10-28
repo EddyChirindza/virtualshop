@@ -75,6 +75,9 @@ class CatalogRepository {
     return data['image_url'] as String;
   }
 
+  Future<List<String>> uploadProductImages(List<String> images) async =>
+      Future.wait(images.map(uploadProductImage));
+
   Future<void> createCategory(Map<String, dynamic> fields) async {
     await _api.dio.post('/categories', data: fields);
   }

@@ -29,6 +29,17 @@ before running `node --test tests/favorites.test.js`. No database is configured
 in this checkout, so the favorites tests have not been run here. There is no
 `.env.example`; do not copy production credentials into a test configuration.
 
+## Product images
+
+Products store an ordered `image_urls` array and retain `image_url` as the
+primary image for older clients. Migration `014_add_product_images.sql` adds
+the array and copies each existing primary image into it. Apply it with
+`npm run migrate` after configuring a database; do not run migrations against a
+database unless it is the intended environment. Product image uploads are
+written to `backend/uploads/products`, so deployments must keep that directory
+on persistent storage and serve `/uploads`. The admin accepts up to 20 images
+per product, with a 5 MB per-image upload limit.
+
 ## Start the API
 
 From this directory, start the backend with:

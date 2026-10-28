@@ -40,6 +40,7 @@ class CartItem {
       'productId': productId,
       'name': product.name,
       'imageUrl': product.imageUrl,
+      'image_urls': product.images,
       'price': unitPrice,
       'stock': product.stock,
       'rating': product.rating,
@@ -60,6 +61,9 @@ class CartItem {
       stock: parseInt(merged['stock']),
       rating: parseDouble(merged['rating']),
       imageUrl: merged['imageUrl'] as String? ?? merged['image_url'] as String?,
+      imageUrls: merged['image_urls'] is List
+          ? (merged['image_urls'] as List).map((value) => value.toString()).where((value) => value.isNotEmpty).toList()
+          : const [],
       categoryName: merged['categoryName'] as String? ?? merged['category_name'] as String?,
       description: merged['description'] as String?,
     );

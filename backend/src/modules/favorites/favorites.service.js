@@ -9,6 +9,7 @@ function normalizeProduct(row) {
     price: Number(row.price),
     stock: Number(row.stock),
     image: row.image_url,
+    image_urls: row.image_urls,
     categoryName: row.category_name || null,
   };
 }
@@ -61,6 +62,7 @@ async function listFavorites(userId, { page = 1, pageSize = 20 } = {}) {
             p.price,
             p.stock,
             p.image_url,
+            p.image_urls,
             c.name AS category_name
      FROM favorites f
      JOIN products p ON p.id = f.product_id

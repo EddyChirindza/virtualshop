@@ -9,6 +9,7 @@ class Product {
     required this.rating,
     this.description,
     this.imageUrl,
+    this.imageUrls = const [],
     this.categoryName,
     this.stockStatus,
     this.isPopular = false,
@@ -22,6 +23,11 @@ class Product {
   final int stock;
   final double rating;
   final String? imageUrl;
+  final List<String> imageUrls;
+
+  List<String> get images => imageUrls.isNotEmpty
+      ? imageUrls
+      : (imageUrl == null || imageUrl!.isEmpty ? const [] : [imageUrl!]);
   final String? categoryName;
   final String? stockStatus;
   final bool isPopular;
@@ -43,6 +49,12 @@ class Product {
       stock: parseInt(json['stock']),
       rating: parseDouble(json['rating']),
       imageUrl: (json['image_url'] ?? json['image']) as String?,
+      imageUrls: json['image_urls'] is List
+          ? (json['image_urls'] as List)
+                .map((value) => value.toString())
+                .where((value) => value.isNotEmpty)
+                .toList()
+          : const [],
       categoryName: (json['category_name'] ?? json['categoryName']) as String?,
       stockStatus: json['stock_status'] as String?,
       isPopular: json['is_popular'] as bool? ?? false,

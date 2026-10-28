@@ -7,6 +7,9 @@ const { ApiError } = require('../../middlewares/error.middleware');
 // category_name vem de um JOIN — é o que o ProductModel do Flutter espera
 const BASE_SELECT = `
   SELECT p.id, p.name, p.description, p.price, p.stock, p.image_url,
+         CASE WHEN cardinality(p.image_urls) > 0 THEN p.image_urls
+              WHEN p.image_url IS NOT NULL AND btrim(p.image_url) <> '' THEN ARRAY[p.image_url]
+              ELSE ARRAY[]::text[] END AS image_urls,
          p.rating, p.is_popular, p.is_new_arrival,
          p.category_id, c.name AS category_name,
          CASE WHEN p.stock = 0 THEN 'out_of_stock' WHEN p.stock <= 5 THEN 'low_stock' ELSE 'in_stock' END AS stock_status
@@ -83,13 +86,17 @@ function quantityForStatus(status, currentStock = 0) {
 }
 
 async function create(fields) {
+  const imageUrls = Object.hasOwn(fields, 'image_urls')
+    ? fields.image_urls
+    : (fields.image_url ? [fields.image_url] : []);
+  const imageUrl = imageUrls[0] ?? null;
   const stock = fields.stock_status
     ? quantityForStatus(fields.stock_status)
     : (fields.stock ?? 0);
   const { rows } = await query(
-    `INSERT INTO products (name, description, price, stock, image_url, category_id, is_popular, is_new_arrival)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [fields.name, fields.description ?? null, fields.price, stock, fields.image_url ?? null,
+    `INSERT INTO products (name, description, price, stock, image_url, image_urls, category_id, is_popular, is_new_arrival)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+    [fields.name, fields.description ?? null, fields.price, stock, imageUrl, imageUrls,
       fields.category_id ?? null, fields.is_popular ?? false, fields.is_new_arrival ?? true]
   );
   return getById(rows[0].id);
@@ -101,9 +108,14 @@ async function update(id, fields) {
     if (!existing.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
     fields = { ...fields, stock: quantityForStatus(fields.stock_status, Number(existing.rows[0].stock)) };
   }
+  if (Object.hasOwn(fields, 'image_urls')) {
+    fields = { ...fields, image_url: fields.image_urls[0] ?? null };
+  } else if (Object.hasOwn(fields, 'image_url')) {
+    fields = { ...fields, image_urls: fields.image_url ? [fields.image_url] : [] };
+  }
   const columns = {
     name: 'name', description: 'description', price: 'price', stock: 'stock', stock_status: null,
-    image_url: 'image_url', category_id: 'category_id',
+    image_url: 'image_url', image_urls: 'image_urls', category_id: 'category_id',
     is_popular: 'is_popular', is_new_arrival: 'is_new_arrival',
   };
   const values = [];

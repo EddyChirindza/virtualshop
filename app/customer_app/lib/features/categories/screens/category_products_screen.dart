@@ -87,6 +87,7 @@ class _CategoryProductsScreenState
                       product: product,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
+                          settings: RouteSettings(name: '/products/${product.id}'),
                           builder: (_) =>
                               ProductDetailScreen(productId: product.id),
                         ),

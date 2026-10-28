@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
@@ -7,8 +8,9 @@ import '../../../theme/app_theme.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../auth/providers/auth_providers.dart';
 import '../models/product.dart';
-import 'product_image.dart';
+import 'product_image_carousel.dart';
 
 /// Cartão de produto. Ocupa o espaço que o pai lhe der (tem de ter altura
 /// limitada) — usado tanto nas listas horizontais como na grelha.
@@ -51,14 +53,14 @@ class ProductCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 120,
+                  height: 112,
                   width: double.infinity,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.image),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        ProductImage(url: product.imageUrl),
+                        ProductImageCarousel.forProduct(product, compact: true),
                         Positioned(
                           top: 6,
                           right: 6,
@@ -144,7 +146,11 @@ class ProductCard extends ConsumerWidget {
                 Text(
                   switch (product.availability) {
                     'in_stock' => appText(context, 'Em stock', 'In stock'),
-                    'low_stock' => appText(context, 'Últimas unidades', 'Low stock'),
+                    'low_stock' => appText(
+                      context,
+                      'Últimas unidades',
+                      'Low stock',
+                    ),
                     _ => appText(context, 'Esgotado', 'Out of stock'),
                   },
                   maxLines: 1,
@@ -153,8 +159,8 @@ class ProductCard extends ConsumerWidget {
                     color: product.availability == 'out_of_stock'
                         ? Theme.of(context).colorScheme.error
                         : product.availability == 'low_stock'
-                            ? const Color(0xFFB54708)
-                            : const Color(0xFF12805C),
+                        ? const Color(0xFFB54708)
+                        : const Color(0xFF12805C),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -192,9 +198,23 @@ class ProductCard extends ConsumerWidget {
                           ),
                           onPressed: !canAdd
                               ? null
-                              : () => ref
-                                    .read(cartControllerProvider.notifier)
-                                    .addProduct(product),
+                              : () async {
+                                  if (kIsWeb &&
+                                      ref
+                                              .read(authControllerProvider)
+                                              .valueOrNull ==
+                                          null) {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => const LoginScreen(),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  ref
+                                      .read(cartControllerProvider.notifier)
+                                      .addProduct(product);
+                                },
                           icon: Icon(
                             product.inStock
                                 ? Icons.add_rounded

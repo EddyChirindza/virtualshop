@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
@@ -8,10 +9,11 @@ import '../../../core/widgets/error_retry.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../cart/screens/cart_screen.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../auth/providers/auth_providers.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../models/product.dart';
 import '../providers/product_providers.dart';
-import '../widgets/product_image.dart';
+import '../widgets/product_image_carousel.dart';
 
 class ProductDetailScreen extends ConsumerWidget {
   const ProductDetailScreen({super.key, required this.productId});
@@ -60,6 +62,13 @@ class ProductDetailScreen extends ConsumerWidget {
           quantity: quantity,
           addAllowed: addAllowed,
           onAdd: () {
+            if (kIsWeb &&
+                ref.read(authControllerProvider).valueOrNull == null) {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+              );
+              return;
+            }
             final added = ref
                 .read(cartControllerProvider.notifier)
                 .addProduct(p);
@@ -78,6 +87,13 @@ class ProductDetailScreen extends ConsumerWidget {
             }
           },
           onBuyNow: () {
+            if (kIsWeb &&
+                ref.read(authControllerProvider).valueOrNull == null) {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+              );
+              return;
+            }
             if (quantity == 0) {
               final added = ref
                   .read(cartControllerProvider.notifier)
@@ -172,10 +188,7 @@ class _ProductDetailBody extends StatelessWidget {
 
     return ListView(
       children: [
-        AspectRatio(
-          aspectRatio: 4 / 3,
-          child: ProductImage(url: product.imageUrl),
-        ),
+        ProductImageCarousel.forProduct(product),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -240,7 +253,11 @@ class _ProductDetailBody extends StatelessWidget {
               Text(
                 switch (product.availability) {
                   'in_stock' => appText(context, 'Em stock', 'In stock'),
-                  'low_stock' => appText(context, 'Últimas unidades', 'Low stock'),
+                  'low_stock' => appText(
+                    context,
+                    'Últimas unidades',
+                    'Low stock',
+                  ),
                   _ => appText(context, 'Esgotado', 'Out of stock'),
                 },
                 style: theme.textTheme.bodyMedium?.copyWith(

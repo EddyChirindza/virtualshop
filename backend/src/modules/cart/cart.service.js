@@ -45,7 +45,7 @@ async function getCart(userId) {
   const { rows: items } = await query(
     `SELECT ci.id, ci.product_id, ci.quantity, ci.unit_price,
             (ci.quantity * ci.unit_price) AS subtotal,
-            p.id AS product_id_fk, p.name, p.price AS product_price, p.stock, p.image_url
+            p.id AS product_id_fk, p.name, p.price AS product_price, p.stock, p.image_url, p.image_urls
      FROM cart_items ci
      JOIN products p ON p.id = ci.product_id
      WHERE ci.cart_id = $1
@@ -65,6 +65,7 @@ async function getCart(userId) {
       price: normalizeMoney(row.product_price),
       stock: Number(row.stock),
       image: row.image_url,
+      image_urls: row.image_urls,
     },
   }));
 

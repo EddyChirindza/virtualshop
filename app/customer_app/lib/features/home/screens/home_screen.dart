@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
@@ -13,6 +14,8 @@ import '../../products/providers/product_providers.dart';
 import '../../products/widgets/products_section.dart';
 import '../../profile/presentation/screens/profile_screen.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../../auth/screens/login_screen.dart';
 import '../../notifications/presentation/providers/notification_providers.dart';
 import '../../notifications/presentation/screens/notifications_screen.dart';
 import '../../search/presentation/providers/search_providers.dart';
@@ -103,39 +106,161 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const ProfileScreen(),
     ];
 
+    final isWideWeb = kIsWeb && MediaQuery.sizeOf(context).width >= 760;
     return Scaffold(
       drawer: _AppDrawer(userName: widget.userName, onSelected: _openMenuPage),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Builder(
-                builder: (context) => AppPageHeader(
-                  userName: widget.userName,
-                  title: titles[_selectedIndex],
-                  isHome: _selectedIndex == 0,
-                  onMenu: () => Scaffold.of(context).openDrawer(),
-                  unreadNotificationCount: unreadNotificationCount,
-                  onNotifications: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationsScreen(),
+            if (isWideWeb)
+              _WebStoreHeader(
+                selectedIndex: _selectedIndex,
+                cartItemCount: cartItemCount,
+                onSelect: _selectTab,
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Builder(
+                  builder: (context) => AppPageHeader(
+                    userName: widget.userName,
+                    title: titles[_selectedIndex],
+                    isHome: _selectedIndex == 0,
+                    onMenu: () => Scaffold.of(context).openDrawer(),
+                    unreadNotificationCount: unreadNotificationCount,
+                    onNotifications: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
             Expanded(
-              child: IndexedStack(index: _selectedIndex, children: pages),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isWideWeb ? 1240 : double.infinity,
+                  ),
+                  child: IndexedStack(index: _selectedIndex, children: pages),
+                ),
+              ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: FloatingBottomNav(
-        selectedIndex: _selectedIndex,
-        cartItemCount: cartItemCount,
-        onSelected: _selectTab,
+      bottomNavigationBar: isWideWeb
+          ? null
+          : FloatingBottomNav(
+              selectedIndex: _selectedIndex,
+              cartItemCount: cartItemCount,
+              onSelected: _selectTab,
+            ),
+    );
+  }
+}
+
+class _WebStoreHeader extends ConsumerWidget {
+  const _WebStoreHeader({
+    required this.selectedIndex,
+    required this.cartItemCount,
+    required this.onSelect,
+  });
+
+  final int selectedIndex;
+  final int cartItemCount;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final signedIn = ref.watch(authControllerProvider).valueOrNull != null;
+    final labels = [
+      appText(context, 'Loja', 'Shop'),
+      appText(context, 'Pesquisar', 'Search'),
+      appText(context, 'Carrinho', 'Cart'),
+      signedIn
+          ? appText(context, 'Conta', 'Account')
+          : appText(context, 'Entrar', 'Sign in'),
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.imagePlaceholder)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1240),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () => onSelect(0),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.storefront_rounded,
+                        color: AppColors.brand,
+                        size: 30,
+                      ),
+                      const SizedBox(width: 9),
+                      Text(
+                        'VirtualShop',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.brand,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                for (var index = 0; index < labels.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: TextButton.icon(
+                      onPressed: () {
+                        if (index == 3 && !signedIn) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        } else {
+                          onSelect(index);
+                        }
+                      },
+                      icon: index == 2
+                          ? Badge(
+                              label: cartItemCount == 0
+                                  ? null
+                                  : Text('$cartItemCount'),
+                              child: const Icon(Icons.shopping_bag_outlined),
+                            )
+                          : Icon(
+                              index == 0
+                                  ? Icons.storefront_outlined
+                                  : index == 1
+                                  ? Icons.search
+                                  : index == 3
+                                  ? Icons.person_outline
+                                  : Icons.circle_outlined,
+                            ),
+                      label: Text(labels[index]),
+                      style: TextButton.styleFrom(
+                        foregroundColor: selectedIndex == index
+                            ? AppColors.brand
+                            : AppColors.ink,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -165,16 +290,28 @@ class _HomeTab extends ConsumerWidget {
               onFilter: () {
                 ref.read(homeTabRequestProvider.notifier).state = 1;
               },
+              onSubmitted: (query) {
+                final controller = ref.read(searchControllerProvider.notifier);
+                controller.updateQuery(query);
+                controller.searchFirstPage();
+                ref.read(homeTabRequestProvider.notifier).state = 1;
+              },
             ),
             const SizedBox(height: 18),
             _CategoriesRow(),
-            const SizedBox(height: 20),
-            const PromoBanner(),
-            const SizedBox(height: 24),
+            if (!kIsWeb) ...[
+              const SizedBox(height: 20),
+              const PromoBanner(),
+              const SizedBox(height: 24),
+            ] else ...[
+              const SizedBox(height: 24),
+              _WebStoreIntro(userName: userName),
+              const SizedBox(height: 24),
+            ],
             SectionHeader(
               title: appText(context, 'Produtos populares', 'Popular products'),
               actionLabel: appText(context, 'Ver tudo', 'View all'),
-              onAction: () {},
+              onAction: () => ref.read(homeTabRequestProvider.notifier).state = 1,
             ),
             const SizedBox(height: 4),
             ProductsSection(
@@ -186,7 +323,7 @@ class _HomeTab extends ConsumerWidget {
             SectionHeader(
               title: appText(context, 'Novidades', 'New arrivals'),
               actionLabel: appText(context, 'Ver novidades', 'Just in'),
-              onAction: () {},
+              onAction: () => ref.read(homeTabRequestProvider.notifier).state = 1,
             ),
             const SizedBox(height: 4),
             ProductsSection(
@@ -194,11 +331,91 @@ class _HomeTab extends ConsumerWidget {
               products: ref.watch(newArrivalsProvider),
               onRetry: () => ref.invalidate(newArrivalsProvider),
             ),
+            if (kIsWeb) ...[
+              const SizedBox(height: 40),
+              const _WebStoreFooter(),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _WebStoreIntro extends StatelessWidget {
+  const _WebStoreIntro({required this.userName});
+
+  final String userName;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(32),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      gradient: const LinearGradient(
+        colors: [Color(0xFFEAF3FF), Color(0xFFF3F7FC)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: LayoutBuilder(
+      builder: (context, constraints) => Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appText(context, 'A tua loja, à tua maneira', 'Your store, your way'),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  appText(context, 'Descobre produtos disponíveis e explora o catálogo VirtualShop.', 'Discover available products and explore the VirtualShop catalog.'),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.secondaryText),
+                ),
+                if (userName != 'Visitante') ...[
+                  const SizedBox(height: 12),
+                  Text(appText(context, 'Bem-vindo, $userName', 'Welcome, $userName')),
+                ],
+              ],
+            ),
+          ),
+          if (constraints.maxWidth >= 680) ...[
+            const SizedBox(width: 24),
+            Container(
+              width: 116,
+              height: 116,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.75), shape: BoxShape.circle),
+              child: const Icon(Icons.storefront_rounded, size: 58, color: AppColors.brand),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+class _WebStoreFooter extends StatelessWidget {
+  const _WebStoreFooter();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 20),
+    child: Row(
+      children: [
+        const Icon(Icons.storefront_rounded, color: AppColors.brand),
+        const SizedBox(width: 8),
+        Text('VirtualShop', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const Spacer(),
+        Text('© ${DateTime.now().year} VirtualShop', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.secondaryText)),
+      ],
+    ),
+  );
 }
 
 enum _MenuOption {

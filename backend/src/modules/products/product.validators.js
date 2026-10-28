@@ -56,6 +56,9 @@ const nullableText = (field, max = 5000) => z.preprocess(
   (value) => typeof value === 'string' && value.trim() === '' ? null : value,
   z.string().trim().max(max, `${field} é demasiado longo.`).nullable().optional()
 );
+const imageUrls = z.array(
+  z.string().trim().min(1, 'A URL da imagem não pode estar vazia.').max(2048, 'A URL da imagem é demasiado longa.')
+).max(20, 'Um produto pode ter no máximo 20 imagens.').optional();
 const productFields = {
   name: z.string().trim().min(2, 'O nome deve ter pelo menos 2 caracteres.').max(150),
   description: nullableText('A descrição'),
@@ -65,6 +68,7 @@ const productFields = {
     numberWithTypeMessage('O stock deve ser numérico.').int('O stock deve ser inteiro.').nonnegative('O stock não pode ser negativo.')).optional(),
   stock_status: z.enum(['in_stock', 'low_stock', 'out_of_stock']).optional(),
   image_url: nullableText('A URL da imagem', 2048),
+  image_urls: imageUrls,
   category_id: z.preprocess((value) => value === '' || value === null ? null : typeof value === 'string' ? Number(value) : value,
     z.number().int().positive().nullable().optional()),
   is_popular: z.boolean().optional(),

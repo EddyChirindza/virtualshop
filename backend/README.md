@@ -54,21 +54,12 @@ default host is `127.0.0.1`; set `HOST` explicitly when a deployment requires a
 different binding. PostgreSQL connection settings remain in the backend `.env`
 and the database should not be exposed to mobile devices.
 
-## Flutter targets
+## Customer Web and Flutter targets
 
-Run these commands from `app/customer_app` in the Flutter repository. Keep the
-`/api` suffix in the base URL:
-
-```sh
-# Android emulator
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
-
-# Physical Android device on the same trusted LAN
-flutter run --dart-define=API_BASE_URL=http://<PC_LAN_IP>:3000/api
-
-# Flutter Web in Chrome
-flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api
-```
+The browser customer storefront is React at `app/customer_web`. Flutter
+`app/customer_app` is for Android and iOS. Run Admin Web separately with
+Flutter or through the optional Docker Compose `admin` profile. See the root
+README for setup and commands. Keep `/api` at the end of each API base URL.
 
 Find the PC's current LAN IPv4 address on Linux with:
 
@@ -96,9 +87,9 @@ curl http://localhost:3000/api/health/ready
 ```
 
 From a physical device, open `http://<PC_LAN_IP>:3000/api/health` in its browser.
-Native Android requests are not subject to browser CORS. For Flutter Web, set
-`CORS_ORIGINS` in the backend environment to the exact development origin if it
-is not a localhost origin, for example `http://localhost:5000`.
+Native Android requests are not subject to browser CORS. For browser clients
+served from a non-localhost origin, set `CORS_ORIGINS` in the backend
+environment to the exact development or deployment origin.
 
 If UFW is enabled, allow only the API port from the trusted development subnet,
 substituting that subnet for the example:

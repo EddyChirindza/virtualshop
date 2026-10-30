@@ -5,15 +5,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Backed by Keystore on Android and Keychain on iOS.
 class SecureStorageService {
   SecureStorageService()
-      : _storage = const FlutterSecureStorage(
-          aOptions: AndroidOptions(encryptedSharedPreferences: true),
-          iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-        );
+    : _storage = const FlutterSecureStorage(
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+      );
 
   final FlutterSecureStorage _storage;
 
   static const _kAccessToken = 'access_token';
   static const _kRefreshToken = 'refresh_token';
+  static const _kCachedUser = 'cached_user';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -29,10 +30,17 @@ class SecureStorageService {
 
   Future<String?> getRefreshToken() => _storage.read(key: _kRefreshToken);
 
+  Future<void> saveCachedUser(String json) {
+    return _storage.write(key: _kCachedUser, value: json);
+  }
+
+  Future<String?> getCachedUser() => _storage.read(key: _kCachedUser);
+
   Future<void> clear() async {
     await Future.wait([
       _storage.delete(key: _kAccessToken),
       _storage.delete(key: _kRefreshToken),
+      _storage.delete(key: _kCachedUser),
     ]);
   }
 

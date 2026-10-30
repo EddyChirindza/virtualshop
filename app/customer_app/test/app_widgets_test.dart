@@ -20,7 +20,7 @@ void main() {
               children: [
                 AppPageHeader(
                   userName: 'Shopper',
-                  title: 'ShopSwift',
+                  title: 'VirtualShop',
                   isHome: true,
                   onMenu: _noop,
                 ),

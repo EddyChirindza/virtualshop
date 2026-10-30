@@ -6,6 +6,10 @@ const favoritesService = require('../src/modules/favorites/favorites.service');
 
 async function resetDb() {
   await query('DELETE FROM favorites');
+  await query('DELETE FROM cart_items');
+  await query('DELETE FROM carts');
+  await query('DELETE FROM order_items');
+  await query('DELETE FROM orders');
   await query('DELETE FROM products');
   await query('DELETE FROM categories');
   await query('DELETE FROM users');

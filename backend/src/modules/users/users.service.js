@@ -3,6 +3,7 @@ const profilePhotoService = require('./profile_photo.service');
 const { pool, query } = require('../../config/db');
 const env = require('../../config/env');
 const { ApiError } = require('../../middlewares/error.middleware');
+const { removeUnreferencedUploadsSafely } = require('../../services/upload_files.service');
 
 const profileColumns = {
   fullName: 'full_name',
@@ -123,6 +124,13 @@ async function updateProfile(userId, input) {
 }
 
 async function updateProfilePhoto(userId, base64) {
+  const { rows: currentRows } = await query(
+    'SELECT avatar_url FROM users WHERE id = $1',
+    [userId]
+  );
+  if (!currentRows[0]) throw new ApiError(404, 'Utilizador não encontrado.');
+  const previousAvatarUrl = currentRows[0].avatar_url;
+
   const photo = await profilePhotoService.saveProfilePhoto({ base64 });
   try {
     const { rows } = await query(
@@ -134,7 +142,7 @@ async function updateProfilePhoto(userId, base64) {
     );
     const user = rows[0];
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
-    return {
+    const profile = {
       id: user.id,
       fullName: user.full_name,
       email: user.email,
@@ -146,6 +154,8 @@ async function updateProfilePhoto(userId, base64) {
       lastLoginAt: user.last_login_at,
       createdAt: user.created_at,
     };
+    await removeUnreferencedUploadsSafely([previousAvatarUrl]);
+    return profile;
   } catch (err) {
     await profilePhotoService.removeProfilePhoto(photo.avatar_url);
     throw err;

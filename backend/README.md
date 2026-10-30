@@ -8,6 +8,7 @@ test runner:
 ```sh
 node --test tests/auth-validators.test.js tests/users-validators.test.js tests/notifications.validators.test.js
 node --test tests/products-search.test.js tests/notifications.service.test.js
+node --test tests/uploads-lifecycle.test.js tests/product-image-lifecycle.test.js tests/user-photo-lifecycle.test.js
 ```
 
 The configuration loader uses `dotenv`'s default behavior, which reads
@@ -39,6 +40,27 @@ database unless it is the intended environment. Product image uploads are
 written to `backend/uploads/products`, so deployments must keep that directory
 on persistent storage and serve `/uploads`. The admin accepts up to 20 images
 per product, with a 5 MB per-image upload limit.
+
+## Upload lifecycle and cleanup
+
+Updating or deleting a product releases its previous local images after the
+database change succeeds. Replacing a profile photo also releases the previous
+avatar. A file is only removed when no product, user avatar or category icon
+still references it; remote URLs are never touched.
+
+Uploads can still become orphaned when a request fails after the file is
+written. Run the cleanup command periodically, for example from cron:
+
+```sh
+npm run cleanup:uploads -- --dry-run
+npm run cleanup:uploads
+npm run cleanup:uploads -- --min-age-hours=48
+```
+
+The command scans `uploads/products` and `uploads/avatars`, compares files with
+local upload URLs stored in PostgreSQL, and deletes only unreferenced files.
+The default grace period is 24 hours so uploads still being attached to a new
+product are not removed. `--dry-run` reports candidates without deleting them.
 
 ## Start the API
 

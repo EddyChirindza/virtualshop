@@ -12,7 +12,8 @@ import '../models/cart_item.dart';
 import '../models/cart_state.dart';
 
 final localCartRepositoryProvider = Provider<CartRepository>((ref) {
-  return LocalCartRepository(storage: ref.watch(secureStorageProvider));
+  final user = ref.watch(authControllerProvider).valueOrNull;
+  return LocalCartRepository(userId: user?.id);
 });
 
 final remoteCartRepositoryProvider = Provider<RemoteCartRepository>((ref) {

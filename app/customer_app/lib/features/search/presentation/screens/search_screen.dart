@@ -9,6 +9,7 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/app_widgets.dart';
 import '../../../products/screens/product_detail_screen.dart';
 import '../../../products/widgets/product_card.dart';
+import '../../../products/widgets/product_grid_layout.dart';
 import '../../../categories/models/category.dart';
 import '../../../categories/providers/category_providers.dart';
 import '../../domain/models/search_filters.dart';
@@ -210,9 +211,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return GridView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 104),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.68,
+      gridDelegate: productGridDelegate(
+        context,
         crossAxisSpacing: 14,
         mainAxisSpacing: 14,
       ),

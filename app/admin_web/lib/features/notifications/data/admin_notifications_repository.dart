@@ -31,8 +31,10 @@ class AdminNotification {
 }
 
 class AdminNotificationsRepository {
-  AdminNotificationsRepository({required String token})
-    : _api = AdminApi(token: token);
+  AdminNotificationsRepository({String? token, AdminApi? api})
+    : assert(token != null || api != null, 'Fornece token ou api.'),
+      _api = api ?? AdminApi(token: token!);
+
   final AdminApi _api;
 
   Future<List<AdminNotification>> list() async {

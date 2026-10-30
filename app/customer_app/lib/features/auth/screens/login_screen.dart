@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
@@ -45,9 +44,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             password: _passwordController.text,
           );
-      if (kIsWeb && mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
       // Sucesso: o AuthGate (em main.dart) vê o utilizador e troca este
       // ecrã pela Home — não é preciso navegar manualmente.
     } on ApiException catch (e) {

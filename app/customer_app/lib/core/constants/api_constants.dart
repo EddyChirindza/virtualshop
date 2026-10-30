@@ -8,9 +8,8 @@ import 'package:flutter/foundation.dart';
 ///   flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
 ///   flutter build apk --dart-define=API_BASE_URL=https://api.virtualshop.co.mz/api
 ///
-/// If you forget to pass it, this falls back to the local dev default so the
-/// app is still runnable out of the box — but that fallback must never be a
-/// production URL.
+/// Em builds debug/profile, se não for passado, usa o default local de
+/// desenvolvimento. Em builds release é obrigatório e tem de usar HTTPS.
 class ApiConstants {
   ApiConstants._();
 
@@ -19,13 +18,39 @@ class ApiConstants {
   /// --dart-define tem sempre prioridade. Sem ele, escolhe o default de
   /// desenvolvimento certo para a plataforma:
   ///  - Android emulator -> 10.0.2.2 (é o "localhost" da máquina host)
-  ///  - Web (Chrome), Linux, etc. -> localhost
+  ///  - iOS simulator e desktop -> localhost
   static String get baseUrl {
-    if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    final configured = _envBaseUrl.trim();
+    if (configured.isNotEmpty) {
+      final uri = Uri.tryParse(configured);
+      if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+        throw StateError('API_BASE_URL inválida: $configured');
+      }
+      if (kReleaseMode && uri.scheme != 'https') {
+        throw StateError(
+          'API_BASE_URL tem de usar HTTPS em builds release: $configured',
+        );
+      }
+      return configured;
+    }
+    if (kReleaseMode) {
+      throw StateError(
+        'API_BASE_URL é obrigatória em builds release. Usa '
+        '--dart-define=API_BASE_URL=https://api.exemplo.com/api',
+      );
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:3000/api';
     }
     return 'http://localhost:3000/api';
+  }
+
+  /// Falha cedo (no arranque) se a configuração de release estiver em falta.
+  static void validateConfiguration() {
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      throw StateError('API_BASE_URL inválida.');
+    }
   }
 
   /// Resolve image paths stored relative to the API, while preserving full
@@ -68,6 +93,7 @@ class ApiConstants {
 
   static String favorite(int productId) => '$favorites/$productId';
   static String userAddress(Object id) => '$userAddresses/$id';
+  static String userAddressDefault(Object id) => '${userAddress(id)}/default';
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 10);

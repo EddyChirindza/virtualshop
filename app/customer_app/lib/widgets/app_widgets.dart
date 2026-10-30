@@ -85,7 +85,7 @@ class AppPageHeader extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Text(
-                      'ShopSwift',
+                      'VirtualShop',
                       style: Theme.of(context).textTheme.titleLarge
                           ?.copyWith(color: AppColors.brand, fontSize: 20),
                     ),

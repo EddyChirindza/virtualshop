@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_navigation.dart';
@@ -7,8 +6,6 @@ import '../../../core/app_text.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/utils/format.dart';
 import '../../products/widgets/product_image.dart';
-import '../../auth/providers/auth_providers.dart';
-import '../../auth/screens/login_screen.dart';
 import '../providers/cart_provider.dart';
 
 class CartScreen extends ConsumerWidget {
@@ -17,8 +14,6 @@ class CartScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
-    final needsSignIn =
-        kIsWeb && ref.watch(authControllerProvider).valueOrNull == null;
 
     ref.listen(cartControllerProvider, (previous, next) {
       if (next.errorMessage != null &&
@@ -44,10 +39,8 @@ class CartScreen extends ConsumerWidget {
               Text(
                 appText(
                   context,
-                  needsSignIn
-                      ? 'Inicia sessão para comprar'
-                      : 'O teu carrinho está vazio',
-                  needsSignIn ? 'Sign in to shop' : 'Your cart is empty',
+                  'O teu carrinho está vazio',
+                  'Your cart is empty',
                 ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
@@ -56,12 +49,8 @@ class CartScreen extends ConsumerWidget {
               Text(
                 appText(
                   context,
-                  needsSignIn
-                      ? 'A tua conta permite guardar o carrinho e concluir a compra.'
-                      : 'Adiciona produtos para começar a comprar.',
-                  needsSignIn
-                      ? 'Your account lets you save your cart and complete checkout.'
-                      : 'Add products to start shopping.',
+                  'Adiciona produtos para começar a comprar.',
+                  'Add products to start shopping.',
                 ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium
@@ -69,28 +58,13 @@ class CartScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: needsSignIn
-                    ? () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                      )
-                    : () {
-                        ref.read(homeTabRequestProvider.notifier).state = 0;
-                        Navigator.of(context)
-                            .popUntil((route) => route.isFirst);
-                      },
-                icon: Icon(
-                  needsSignIn ? Icons.login : Icons.storefront_outlined,
-                ),
+                onPressed: () {
+                  ref.read(homeTabRequestProvider.notifier).state = 0;
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                icon: const Icon(Icons.storefront_outlined),
                 label: Text(
-                  needsSignIn
-                      ? appText(context, 'Iniciar sessão', 'Sign in')
-                      : appText(
-                          context,
-                          'Explorar produtos',
-                          'Browse products',
-                        ),
+                  appText(context, 'Explorar produtos', 'Browse products'),
                 ),
               ),
             ],

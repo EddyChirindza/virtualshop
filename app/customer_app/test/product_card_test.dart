@@ -60,6 +60,40 @@ void main() {
     expect(find.byTooltip('Add to cart'), findsOneWidget);
     expect(find.text('1'), findsNothing);
   });
+
+  testWidgets('mostra o estado do stock sem revelar a quantidade', (
+    tester,
+  ) async {
+    final product = Product(
+      id: 2,
+      name: 'Leite',
+      price: 450,
+      stock: 3,
+      rating: 4.5,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_PendingAuthController.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 220,
+                height: 250,
+                child: ProductCard(product: product, onTap: () {}),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Low stock'), findsOneWidget);
+    expect(find.text('3'), findsNothing);
+  });
 }
 
 class _PendingAuthController extends AuthController {

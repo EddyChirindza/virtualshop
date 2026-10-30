@@ -2,9 +2,10 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { ApiError } = require('../../middlewares/error.middleware');
+const { AVATAR_UPLOAD_DIR } = require('../../utils/upload_paths');
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const UPLOAD_DIR = path.join(__dirname, '../../../uploads/avatars');
+const UPLOAD_DIR = AVATAR_UPLOAD_DIR;
 
 function detectImage(bytes) {
   if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'png';

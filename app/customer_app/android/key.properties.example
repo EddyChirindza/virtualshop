@@ -1,0 +1,7 @@
+# Copia este ficheiro para android/key.properties e preenche os valores reais.
+# O android/key.properties e os ficheiros .jks/.keystore estão no .gitignore.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=virtualshop
+# Caminho absoluto ou relativo à pasta android/.
+storeFile=virtualshop-upload.jks

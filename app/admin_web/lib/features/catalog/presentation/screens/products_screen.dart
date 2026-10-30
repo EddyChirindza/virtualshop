@@ -96,7 +96,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (result.items.isEmpty) return const _EmptyCatalog(message: 'Nenhum produto encontrado.');
           return Column(children: [
             Expanded(child: Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _line), borderRadius: BorderRadius.circular(12)), child: ListView(children: [
-              if (MediaQuery.sizeOf(context).width > 740) const Padding(padding: EdgeInsets.fromLTRB(16, 15, 16, 10), child: Row(children: [SizedBox(width: 58), Expanded(flex: 4, child: _ColumnLabel('PRODUTO')), Expanded(flex: 2, child: _ColumnLabel('CATEGORIA')), Expanded(child: _ColumnLabel('PREÇO')), Expanded(flex: 2, child: _ColumnLabel('DISPONIBILIDADE')), SizedBox(width: 88)])),
+              if (MediaQuery.sizeOf(context).width > 740) const Padding(padding: EdgeInsets.fromLTRB(16, 15, 16, 10), child: Row(children: [SizedBox(width: 58), Expanded(flex: 4, child: _ColumnLabel('PRODUTO')), Expanded(flex: 2, child: _ColumnLabel('CATEGORIA')), Expanded(child: _ColumnLabel('PREÇO')), Expanded(flex: 2, child: _ColumnLabel('STOCK')), SizedBox(width: 96)])),
               ...result.items.map((product) => _ProductRow(product: product, onEdit: () => _edit(product), onDelete: () => _delete(product))),
               if (_busy) const LinearProgressIndicator(minHeight: 2),
             ]))),
@@ -118,8 +118,8 @@ class _ProductRow extends StatelessWidget {
         Expanded(flex: 4, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w600, fontSize: 13)), const SizedBox(height: 4), Text('#${product.id}${product.isNewArrival ? ' · Novidade' : ''}${product.isPopular ? ' · Popular' : ''}', style: const TextStyle(color: _muted, fontSize: 11))])),
         Expanded(flex: 2, child: Text(product.categoryName ?? 'Sem categoria', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontSize: 12))),
         Expanded(child: Text('MZN ${product.price.toStringAsFixed(2)}', style: const TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w600))),
-        Expanded(flex: 2, child: _StockStatusChip(status: product.availability)),
-        SizedBox(width: 88, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [IconButton(tooltip: 'Editar', onPressed: onEdit, icon: const Icon(Icons.edit_outlined, size: 18)), IconButton(tooltip: 'Eliminar', onPressed: onDelete, icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFB42318)))])),
+        Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text('${product.stock} un.', style: const TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w600)), const SizedBox(height: 3), _StockStatusChip(status: product.availability)])),
+        SizedBox(width: 96, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [IconButton(tooltip: 'Editar', onPressed: onEdit, icon: const Icon(Icons.edit_outlined, size: 18)), IconButton(tooltip: 'Eliminar', onPressed: onDelete, icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFB42318)))])),
       ]));
 }
 
@@ -134,15 +134,16 @@ class _ProductFormDialog extends StatefulWidget {
 
 class _ProductFormDialogState extends State<_ProductFormDialog> {
   final _form = GlobalKey<FormState>();
-  late final TextEditingController _name, _description, _price;
+  late final TextEditingController _name, _description, _price, _stock;
   int? _categoryId;
-  String _stockStatus = 'in_stock';
   late List<String> _imageUrls;
   final List<Uint8List> _pickedImageBytes = [];
   late bool _popular, _newArrival;
   var _notifyCustomers = false;
   String? _notificationMessage;
   var _saving = false;
+
+  int get _stockValue => int.tryParse(_stock.text.trim()) ?? 0;
 
   @override
   void initState() {
@@ -151,7 +152,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     _name = TextEditingController(text: p?.name ?? '');
     _description = TextEditingController(text: p?.description ?? '');
     _price = TextEditingController(text: p?.price.toStringAsFixed(2) ?? '');
-    _stockStatus = p?.availability ?? 'in_stock';
+    _stock = TextEditingController(text: '${p?.stock ?? 0}');
     _imageUrls = List<String>.from(
       p?.imageUrls.isNotEmpty == true
           ? p!.imageUrls
@@ -163,7 +164,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   }
 
   @override
-  void dispose() { _name.dispose(); _description.dispose(); _price.dispose(); super.dispose(); }
+  void dispose() { _name.dispose(); _description.dispose(); _price.dispose(); _stock.dispose(); super.dispose(); }
 
   Future<void> _pickImages() async {
     try {
@@ -198,10 +199,14 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     setState(() => _saving = true);
     try {
       final uploaded = await widget.repository.uploadProductImages(_pickedImageBytes.map(base64Encode).toList());
-      final imageUrls = [..._imageUrls, ...uploaded];
+      if (uploaded.isNotEmpty) {
+        _imageUrls = [..._imageUrls, ...uploaded];
+        _pickedImageBytes.clear();
+      }
+      final imageUrls = _imageUrls;
       final fields = <String, dynamic>{
       'name': _name.text.trim(), 'description': _description.text.trim().isEmpty ? null : _description.text.trim(),
-      'price': double.parse(_price.text.replaceAll(',', '.')), 'stock_status': _stockStatus,
+      'price': double.parse(_price.text.replaceAll(',', '.')), 'stock': _stockValue,
       'image_url': imageUrls.first, 'image_urls': imageUrls, 'category_id': _categoryId,
       'is_popular': _popular, 'is_new_arrival': _newArrival,
       };
@@ -254,7 +259,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           const SizedBox(height: 12),
           TextFormField(controller: _price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Preço (MZN)'), validator: (value) { if (_required(value, 'O preço') != null) return 'O preço é obrigatório.'; final amount = double.tryParse(value!.replaceAll(',', '.')); return amount == null || amount < 0 ? 'Introduz um preço válido.' : null; }),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(value: _stockStatus, decoration: const InputDecoration(labelText: 'Disponibilidade'), items: const [DropdownMenuItem(value: 'in_stock', child: Text('Em stock')), DropdownMenuItem(value: 'low_stock', child: Text('Últimas unidades')), DropdownMenuItem(value: 'out_of_stock', child: Text('Esgotado'))], onChanged: (value) { if (value != null) setState(() => _stockStatus = value); }),
+          TextFormField(controller: _stock, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantidade em stock', helperText: '0 = Esgotado · 1 a 5 = Últimas unidades · 6 ou mais = Em stock'), validator: (value) { final stock = int.tryParse(value?.trim() ?? ''); return stock == null || stock < 0 ? 'Introduz uma quantidade válida.' : null; }),
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(value: _categoryId, decoration: const InputDecoration(labelText: 'Categoria'), items: [const DropdownMenuItem<int?>(value: null, child: Text('Sem categoria')), ...widget.categories.map((category) => DropdownMenuItem<int?>(value: category.id, child: Text('${category.parentId == null ? '' : '↳ '}${category.name}', overflow: TextOverflow.ellipsis)))], onChanged: (value) => setState(() => _categoryId = value)),
           const SizedBox(height: 12),

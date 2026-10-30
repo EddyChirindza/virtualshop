@@ -7,6 +7,7 @@ import '../../../core/widgets/error_retry.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/screens/product_detail_screen.dart';
 import '../../products/widgets/product_card.dart';
+import '../../products/widgets/product_grid_layout.dart';
 import '../models/category.dart';
 
 /// Produtos de uma categoria. Se a categoria tiver subcategorias, mostra
@@ -74,9 +75,8 @@ class _CategoryProductsScreenState
                 }
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 200,
-                    childAspectRatio: 0.7,
+                  gridDelegate: productGridDelegate(
+                    context,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),

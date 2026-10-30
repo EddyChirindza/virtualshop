@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -125,7 +124,6 @@ class ProfileScreen extends ConsumerWidget {
             aspectRatioLockEnabled: true,
             cropStyle: CropStyle.circle,
           ),
-          if (kIsWeb) WebUiSettings(context: context),
         ],
       );
       if (cropped == null) return;

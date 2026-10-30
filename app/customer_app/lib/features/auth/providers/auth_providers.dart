@@ -35,16 +35,20 @@ class AuthController extends AsyncNotifier<User?> {
     final storage = ref.watch(secureStorageProvider);
     if (!await storage.hasSession()) return null;
 
+    final repository = ref.read(authRepositoryProvider);
+    final cachedUser = await repository.cachedUser();
     try {
-      return await ref.read(authRepositoryProvider).fetchMe();
+      return await repository.fetchMe();
     } on ApiException catch (e) {
-      // Só apaga os tokens se o servidor os rejeitou de facto. Se for apenas
-      // falta de rede no arranque, mantém-nos — não faz sentido "deslogar"
-      // alguém por estar sem internet.
-      if (e.type == ApiErrorType.unauthorized) await storage.clear();
-      return null;
+      // Só apaga a sessão se o servidor rejeitou os tokens. Sem rede usamos o
+      // último utilizador guardado, para não desautenticar quem está offline.
+      if (e.type == ApiErrorType.unauthorized) {
+        await storage.clear();
+        return null;
+      }
+      return cachedUser;
     } catch (_) {
-      return null;
+      return cachedUser;
     }
   }
 

@@ -7,6 +7,7 @@ import '../../../core/widgets/error_retry.dart';
 import '../models/product.dart';
 import '../screens/product_detail_screen.dart';
 import 'product_card.dart';
+import 'product_grid_layout.dart';
 
 /// Secção da Home: título + lista horizontal de produtos, com estados de
 /// loading / erro (com retry) / vazio tratados aqui num só sítio.
@@ -65,41 +66,26 @@ class ProductsSection extends StatelessWidget {
                 ),
               );
             }
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final columns = width >= 1200
-                    ? 5
-                    : width >= 960
-                    ? 4
-                    : width >= 680
-                    ? 3
-                    : 2;
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    childAspectRatio: width >= 680 ? 0.72 : 0.68,
-                    crossAxisSpacing: 18,
-                    mainAxisSpacing: 18,
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              gridDelegate: productGridDelegate(
+                context,
+                crossAxisSpacing: 18,
+                mainAxisSpacing: 18,
+              ),
+              itemBuilder: (context, index) {
+                final product = items[index];
+                return ProductCard(
+                  product: product,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      settings: RouteSettings(name: '/products/${product.id}'),
+                      builder: (_) =>
+                          ProductDetailScreen(productId: product.id),
+                    ),
                   ),
-                  itemBuilder: (context, index) {
-                    final product = items[index];
-                    return ProductCard(
-                      product: product,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          settings: RouteSettings(
-                            name: '/products/${product.id}',
-                          ),
-                          builder: (_) =>
-                              ProductDetailScreen(productId: product.id),
-                        ),
-                      ),
-                    );
-                  },
                 );
               },
             );

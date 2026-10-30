@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_preferences.dart';
+import 'core/constants/api_constants.dart';
 import 'features/auth/providers/auth_providers.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -11,6 +11,7 @@ import 'features/products/screens/product_detail_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+  ApiConstants.validateConfiguration();
   runApp(const ProviderScope(child: VirtualShopApp()));
 }
 
@@ -74,10 +75,8 @@ class AuthGate extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => const LoginScreen(),
       data: (user) {
-        // The web storefront is browsable without an account. Protected
-        // operations remain guarded by the existing auth-aware repositories.
-        if (user == null && !kIsWeb) return const LoginScreen();
-        return HomeScreen(userName: user?.name ?? 'Visitante');
+        if (user == null) return const LoginScreen();
+        return HomeScreen(userName: user.name);
       },
     );
   }

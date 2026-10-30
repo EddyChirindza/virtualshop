@@ -6,6 +6,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../products/screens/product_detail_screen.dart';
 import '../../products/widgets/product_card.dart';
+import '../../products/widgets/product_grid_layout.dart';
 import '../providers/favorites_provider.dart';
 
 class FavoritesScreen extends ConsumerWidget {
@@ -49,11 +50,10 @@ class FavoritesScreen extends ConsumerWidget {
             child: GridView.builder(
               padding: const EdgeInsets.all(16),
               physics: const AlwaysScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              gridDelegate: productGridDelegate(
+                context,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.62,
               ),
               itemCount: items.length,
               itemBuilder: (context, index) {

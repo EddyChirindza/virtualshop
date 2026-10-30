@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/auth/admin_session.dart';
 import '../../data/admin_auth_repository.dart';
 
 class AdminLoginScreen extends StatefulWidget {
-  const AdminLoginScreen({super.key, required this.onAuthenticated});
+  const AdminLoginScreen({super.key, required this.onAuthenticated, this.repository, this.initialError});
 
-  final ValueChanged<String> onAuthenticated;
+  final ValueChanged<AdminTokens> onAuthenticated;
+  final AdminAuthRepository? repository;
+  final String? initialError;
 
   @override
   State<AdminLoginScreen> createState() => _AdminLoginScreenState();
@@ -15,10 +18,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _password = TextEditingController();
-  final _repository = AdminAuthRepository();
+  late final AdminAuthRepository _repository;
   bool _loading = false;
   bool _obscure = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? AdminAuthRepository();
+    _error = widget.initialError;
+  }
 
   @override
   void dispose() {
@@ -34,8 +44,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       _error = null;
     });
     try {
-      final token = await _repository.login(_phone.text.trim(), _password.text);
-      if (mounted) widget.onAuthenticated(token);
+      final tokens = await _repository.login(_phone.text.trim(), _password.text);
+      if (mounted) widget.onAuthenticated(tokens);
     } catch (error) {
       if (mounted) setState(() => _error = _errorMessage(error));
     } finally {

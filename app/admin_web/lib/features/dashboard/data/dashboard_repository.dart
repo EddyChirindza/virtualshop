@@ -2,7 +2,9 @@ import '../../../core/network/admin_api.dart';
 import '../models/dashboard_data.dart';
 
 class DashboardRepository {
-  DashboardRepository({required String token}) : _api = AdminApi(token: token);
+  DashboardRepository({String? token, AdminApi? api})
+    : assert(token != null || api != null, 'Fornece token ou api.'),
+      _api = api ?? AdminApi(token: token!);
 
   final AdminApi _api;
 

@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────
 const { query } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
+const { removeUnreferencedUploadsSafely } = require('../../services/upload_files.service');
 
 // category_name vem de um JOIN — é o que o ProductModel do Flutter espera
 const BASE_SELECT = `
@@ -90,9 +91,11 @@ async function create(fields) {
     ? fields.image_urls
     : (fields.image_url ? [fields.image_url] : []);
   const imageUrl = imageUrls[0] ?? null;
-  const stock = fields.stock_status
-    ? quantityForStatus(fields.stock_status)
-    : (fields.stock ?? 0);
+  const stock = Object.hasOwn(fields, 'stock')
+    ? fields.stock
+    : fields.stock_status
+      ? quantityForStatus(fields.stock_status)
+      : 0;
   const { rows } = await query(
     `INSERT INTO products (name, description, price, stock, image_url, image_urls, category_id, is_popular, is_new_arrival)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
@@ -103,7 +106,11 @@ async function create(fields) {
 }
 
 async function update(id, fields) {
-  if (fields.stock_status) {
+  let previousImages = [];
+  if (Object.hasOwn(fields, 'image_urls') || Object.hasOwn(fields, 'image_url')) {
+    previousImages = (await getById(id)).image_urls;
+  }
+  if (!Object.hasOwn(fields, 'stock') && fields.stock_status) {
     const existing = await query('SELECT stock FROM products WHERE id = $1', [id]);
     if (!existing.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
     fields = { ...fields, stock: quantityForStatus(fields.stock_status, Number(existing.rows[0].stock)) };
@@ -129,16 +136,24 @@ async function update(id, fields) {
   values.push(id);
   const result = await query(`UPDATE products SET ${assignments.join(', ')}, updated_at = now() WHERE id = $${values.length} RETURNING id`, values);
   if (!result.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
-  return getById(id);
+  const updated = await getById(id);
+  if (previousImages.length > 0) {
+    await removeUnreferencedUploadsSafely(previousImages);
+  }
+  return updated;
 }
 
 async function remove(id) {
+  const product = await getById(id);
   try {
     const result = await query('DELETE FROM products WHERE id = $1 RETURNING id', [id]);
     if (!result.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
   } catch (err) {
     if (err.code === '23503') throw new ApiError(409, 'Este produto já faz parte de encomendas e não pode ser eliminado.');
     throw err;
+  }
+  if (product.image_urls.length > 0) {
+    await removeUnreferencedUploadsSafely(product.image_urls);
   }
 }
 

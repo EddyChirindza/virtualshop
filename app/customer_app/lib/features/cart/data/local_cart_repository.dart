@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../../../core/storage/secure_storage_service.dart';
 import '../models/cart_item.dart';
 
 abstract class CartRepository {
@@ -12,22 +11,23 @@ abstract class CartRepository {
 }
 
 class LocalCartRepository implements CartRepository {
-  LocalCartRepository({required SecureStorageService storage})
-      : _storage = storage,
-        _secureStorage = const FlutterSecureStorage();
+  LocalCartRepository({this.userId})
+    : _secureStorage = const FlutterSecureStorage();
 
-  final SecureStorageService _storage;
+  static const _keyPrefix = 'virtualshop_cart_items';
+
+  final int? userId;
   final FlutterSecureStorage _secureStorage;
 
-  Future<String> get _cartKey async {
-    final token = await _storage.getAccessToken();
-    final scope = token != null && token.isNotEmpty ? token.substring(0, token.length > 12 ? 12 : token.length) : 'guest';
-    return 'virtualshop_cart_items_$scope';
+  String get _cartKey {
+    final id = userId;
+    final scope = id != null && id > 0 ? 'user_$id' : 'guest';
+    return '${_keyPrefix}_$scope';
   }
 
   @override
   Future<List<CartItem>> load() async {
-    final raw = await _secureStorage.read(key: await _cartKey);
+    final raw = await _secureStorage.read(key: _cartKey);
     if (raw == null || raw.isEmpty) return const [];
 
     final decoded = jsonDecode(raw);
@@ -42,11 +42,11 @@ class LocalCartRepository implements CartRepository {
   @override
   Future<void> save(List<CartItem> items) async {
     final payload = jsonEncode(items.map((item) => item.toJson()).toList());
-    await _secureStorage.write(key: await _cartKey, value: payload);
+    await _secureStorage.write(key: _cartKey, value: payload);
   }
 
   @override
   Future<void> clear() async {
-    await _secureStorage.delete(key: await _cartKey);
+    await _secureStorage.delete(key: _cartKey);
   }
 }

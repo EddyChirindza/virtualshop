@@ -75,58 +75,75 @@ class PhoneNumberField extends StatelessWidget {
       orElse: () => phoneCountryCodes.first,
     );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 126,
-          child: DropdownButtonFormField<String>(
-            initialValue: selectedCountry.code,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: appText(context, 'Código do país', 'Country code'),
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-            ),
-            selectedItemBuilder: (context) => [
-              for (final country in phoneCountryCodes)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('${country.code} ${country.isoCode}'),
-                ),
-            ],
-            items: [
-              for (final country in phoneCountryCodes)
-                DropdownMenuItem(
-                  value: country.code,
-                  child: Text(
-                    '${country.code} ${country.name(context)}',
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value != null) onCountryCodeChanged(value);
-            },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final stackFields =
+            constraints.maxWidth < 320 ||
+            (scale >= 1.3 && constraints.maxWidth < 380);
+        final countryField = DropdownButtonFormField<String>(
+          initialValue: selectedCountry.code,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: appText(context, 'Código do país', 'Country code'),
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            keyboardType: TextInputType.phone,
-            autofillHints: const [AutofillHints.telephoneNumberNational],
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: appText(context, 'Número de telefone', 'Phone number'),
-              hintText: '84 123 4567',
-              prefixIcon: const Icon(Icons.phone_outlined),
-              border: const OutlineInputBorder(),
-            ),
-            validator: validator,
+          selectedItemBuilder: (context) => [
+            for (final country in phoneCountryCodes)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('${country.code} ${country.isoCode}'),
+              ),
+          ],
+          items: [
+            for (final country in phoneCountryCodes)
+              DropdownMenuItem(
+                value: country.code,
+                child: Text(
+                  '${country.code} ${country.name(context)}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) onCountryCodeChanged(value);
+          },
+        );
+        final numberField = TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          autofillHints: const [AutofillHints.telephoneNumberNational],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            labelText: appText(context, 'Número de telefone', 'Phone number'),
+            hintText: '84 123 4567',
+            prefixIcon: const Icon(Icons.phone_outlined),
+            border: const OutlineInputBorder(),
           ),
-        ),
-      ],
+          validator: validator,
+        );
+
+        if (stackFields) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              countryField,
+              const SizedBox(height: 12),
+              numberField,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 126, child: countryField),
+            const SizedBox(width: 10),
+            Expanded(child: numberField),
+          ],
+        );
+      },
     );
   }
 }

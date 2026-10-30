@@ -2,7 +2,9 @@ import '../../../core/network/admin_api.dart';
 import '../models/admin_customer.dart';
 
 class CustomersRepository {
-  CustomersRepository({required String token}) : _api = AdminApi(token: token);
+  CustomersRepository({String? token, AdminApi? api})
+    : assert(token != null || api != null, 'Fornece token ou api.'),
+      _api = api ?? AdminApi(token: token!);
 
   final AdminApi _api;
 

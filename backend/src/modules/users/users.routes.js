@@ -1,10 +1,12 @@
 const { Router } = require('express');
 const controller = require('./users.controller');
+const paymentMethodRoutes = require('../payment_methods/payment_methods.routes');
 const { requireAuth } = require('../../middlewares/auth.middleware');
 
 const router = Router();
 
 router.use(requireAuth);
+router.use('/me/payment-methods', paymentMethodRoutes);
 router.get('/me', controller.getProfile);
 router.patch('/me', controller.updateProfile);
 router.post('/me/photo', controller.updateProfilePhoto);

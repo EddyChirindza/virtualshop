@@ -9,6 +9,7 @@ import 'features/customers/data/customers_repository.dart';
 import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/notifications/data/admin_notifications_repository.dart';
+import 'features/orders/data/orders_repository.dart';
 
 void main() => runApp(const VirtualShopAdminApp());
 
@@ -27,6 +28,7 @@ class _VirtualShopAdminAppState extends State<VirtualShopAdminApp> {
   late final CatalogRepository _catalogRepository;
   late final CustomersRepository _customersRepository;
   late final AdminNotificationsRepository _notificationsRepository;
+  late final OrdersRepository _ordersRepository;
 
   bool _authenticated = false;
   String? _loginError;
@@ -41,6 +43,7 @@ class _VirtualShopAdminAppState extends State<VirtualShopAdminApp> {
     _catalogRepository = CatalogRepository(api: _api);
     _customersRepository = CustomersRepository(api: _api);
     _notificationsRepository = AdminNotificationsRepository(api: _api);
+    _ordersRepository = OrdersRepository(api: _api);
   }
 
   void _handleSessionExpired() {
@@ -88,6 +91,7 @@ class _VirtualShopAdminAppState extends State<VirtualShopAdminApp> {
             catalogRepository: _catalogRepository,
             customersRepository: _customersRepository,
             notificationsRepository: _notificationsRepository,
+            ordersRepository: _ordersRepository,
             onLogout: _logout,
           )
         : AdminLoginScreen(

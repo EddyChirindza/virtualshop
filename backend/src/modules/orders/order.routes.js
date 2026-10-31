@@ -5,6 +5,7 @@ const { requireAuth } = require('../../middlewares/auth.middleware');
 const router = Router();
 
 router.use(requireAuth);
+router.get('/', controller.list);
 router.post('/', controller.checkout);
 router.get('/:id', controller.detail);
 

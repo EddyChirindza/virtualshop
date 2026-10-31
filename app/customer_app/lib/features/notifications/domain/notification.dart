@@ -7,6 +7,7 @@ class ShopNotification {
     required this.createdAt,
     required this.isRead,
     this.productId,
+    this.orderId,
     this.promotionId,
     this.imageUrl,
   });
@@ -18,6 +19,7 @@ class ShopNotification {
   final DateTime? createdAt;
   final bool isRead;
   final int? productId;
+  final int? orderId;
   final int? promotionId;
   final String? imageUrl;
 
@@ -25,6 +27,7 @@ class ShopNotification {
     final rawDate =
         json['createdAt'] ?? json['created_at'] ?? json['published_at'];
     final rawProductId = json['productId'] ?? json['product_id'];
+    final rawOrderId = json['orderId'] ?? json['order_id'];
     final rawPromotionId = json['promotionId'] ?? json['promotion_id'];
     final product = json['product'];
     final productMap = product is Map
@@ -41,6 +44,7 @@ class ShopNotification {
           json['is_read'] as bool? ??
           (json['readAt'] ?? json['read_at']) != null,
       productId: _asInt(rawProductId ?? productMap?['id']),
+      orderId: _asInt(rawOrderId),
       promotionId: _asInt(rawPromotionId),
       imageUrl:
           (json['imageUrl'] ??
@@ -59,6 +63,7 @@ class ShopNotification {
     createdAt: createdAt,
     isRead: isRead ?? this.isRead,
     productId: productId,
+    orderId: orderId,
     promotionId: promotionId,
     imageUrl: imageUrl,
   );

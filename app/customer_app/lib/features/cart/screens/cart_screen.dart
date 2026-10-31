@@ -6,6 +6,7 @@ import '../../../core/app_text.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/utils/format.dart';
 import '../../products/widgets/product_image.dart';
+import '../../checkout/screens/checkout_screen.dart';
 import '../providers/cart_provider.dart';
 
 class CartScreen extends ConsumerWidget {
@@ -250,24 +251,12 @@ class CartScreen extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: cart.isUpdating
                           ? null
-                          : () async {
-                              final success = await ref
-                                  .read(cartControllerProvider.notifier)
-                                  .checkout();
-                              if (!context.mounted) return;
-                              if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      appText(
-                                        context,
-                                        'Pedido criado com sucesso.',
-                                        'Order placed successfully.',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
+                          : () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const CheckoutScreen(),
+                                ),
+                              );
                             },
                       child: cart.isUpdating
                           ? const SizedBox(

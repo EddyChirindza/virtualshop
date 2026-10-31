@@ -5,6 +5,7 @@ import '../../../../core/app_text.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/widgets/error_retry.dart';
+import '../../../orders/presentation/screens/order_detail_screen.dart';
 import '../../../products/screens/product_detail_screen.dart';
 import '../../domain/notification.dart';
 import '../providers/notification_providers.dart';
@@ -68,7 +69,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             .markAsRead(notification.id);
       }
       if (!mounted) return;
-      if (notification.productId != null) {
+      if (notification.orderId != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            settings: RouteSettings(
+              name: '/orders/${notification.orderId}',
+            ),
+            builder: (_) =>
+                OrderDetailScreen(orderId: notification.orderId!),
+          ),
+        );
+      } else if (notification.productId != null) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             settings: RouteSettings(
@@ -302,6 +313,7 @@ class _NotificationTile extends StatelessWidget {
     'new_product' || 'product' => Icons.inventory_2_outlined,
     'promotion' || 'discount' => Icons.local_offer_outlined,
     'product_alert' || 'alert' => Icons.notifications_active_outlined,
+    'order_update' => Icons.receipt_long_outlined,
     _ => Icons.info_outline,
   };
 

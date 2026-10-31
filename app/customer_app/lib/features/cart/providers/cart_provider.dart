@@ -187,14 +187,26 @@ class CartController extends Notifier<CartState> {
     unawaited(_syncClear(previous));
   }
 
-  Future<bool> checkout() async {
+  Future<bool> checkout({
+    int? deliveryAddressId,
+    int? paymentMethodId,
+    String? deliveryMethod,
+    String? couponCode,
+    String? notes,
+  }) async {
     if (!_canUseCart() || state.isEmpty) return false;
     final repository = _repository;
     if (repository is! RemoteCartRepository) return false;
 
     state = state.copyWith(isUpdating: true, clearError: true);
     try {
-      await repository.checkout();
+      await repository.checkout(
+        deliveryAddressId: deliveryAddressId,
+        paymentMethodId: paymentMethodId,
+        deliveryMethod: deliveryMethod,
+        couponCode: couponCode,
+        notes: notes,
+      );
       await ref.read(localCartRepositoryProvider).clear();
       state = const CartState();
       return true;

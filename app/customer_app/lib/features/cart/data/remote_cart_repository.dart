@@ -24,23 +24,46 @@ class RemoteCartRepository implements CartRepository {
     }
   }
 
-  Future<void> addProduct({required int productId, required int quantity}) async {
-    await _request(() => _dio.post(ApiConstants.cartItems, data: {
-          'productId': productId,
-          'quantity': quantity,
-        }));
+  Future<void> addProduct({
+    required int productId,
+    required int quantity,
+  }) async {
+    await _request(
+      () => _dio.post(
+        ApiConstants.cartItems,
+        data: {'productId': productId, 'quantity': quantity},
+      ),
+    );
   }
 
   Future<void> updateItem({required int itemId, required int quantity}) async {
-    await _request(() => _dio.patch('${ApiConstants.cartItems}/$itemId', data: {'quantity': quantity}));
+    await _request(
+      () => _dio.patch(
+        '${ApiConstants.cartItems}/$itemId',
+        data: {'quantity': quantity},
+      ),
+    );
   }
 
   Future<void> removeItem({required int itemId}) async {
     await _request(() => _dio.delete('${ApiConstants.cartItems}/$itemId'));
   }
 
-  Future<void> checkout() async {
-    await _request(() => _dio.post(ApiConstants.orders));
+  Future<void> checkout({
+    int? deliveryAddressId,
+    int? paymentMethodId,
+    String? deliveryMethod,
+    String? couponCode,
+    String? notes,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (deliveryAddressId != null)
+      payload['deliveryAddressId'] = deliveryAddressId;
+    if (paymentMethodId != null) payload['paymentMethodId'] = paymentMethodId;
+    if (deliveryMethod != null) payload['deliveryMethod'] = deliveryMethod;
+    if (couponCode != null) payload['couponCode'] = couponCode;
+    if (notes != null) payload['notes'] = notes;
+    await _request(() => _dio.post(ApiConstants.orders, data: payload));
   }
 
   @override
@@ -62,11 +85,18 @@ class RemoteCartRepository implements CartRepository {
   }
 
   CartState _stateFromResponse(dynamic body) {
-    final root = body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
-    final data = root['data'] is Map ? Map<String, dynamic>.from(root['data'] as Map) : root;
+    final root = body is Map
+        ? Map<String, dynamic>.from(body)
+        : <String, dynamic>{};
+    final data = root['data'] is Map
+        ? Map<String, dynamic>.from(root['data'] as Map)
+        : root;
     final rawItems = data['items'] is List ? data['items'] as List : const [];
     return CartState(
-      items: rawItems.whereType<Map>().map((item) => CartItem.fromJson(Map<String, dynamic>.from(item))).toList(),
+      items: rawItems
+          .whereType<Map>()
+          .map((item) => CartItem.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       discount: parseDouble(data['discount']),
       deliveryFee: parseDouble(data['deliveryFee'] ?? data['delivery_fee']),
     );

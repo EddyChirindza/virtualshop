@@ -10,6 +10,13 @@ import '../../../../core/widgets/error_retry.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../auth/providers/auth_providers.dart';
 import '../../../favorites/screens/favorites_screen.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../orders/presentation/screens/orders_screen.dart';
+import '../../../payment_methods/domain/models/payment_method.dart';
+import '../../../payment_methods/presentation/providers/payment_methods_provider.dart';
+import '../../../payment_methods/presentation/screens/payment_method_form_screen.dart';
+import '../../../payment_methods/presentation/screens/payment_methods_screen.dart';
+import '../../../payment_methods/presentation/widgets/payment_method_tile.dart';
 import '../../domain/models/profile.dart';
 import '../providers/profile_providers.dart';
 import '../widgets/profile_widgets.dart';
@@ -26,6 +33,7 @@ class ProfileScreen extends ConsumerWidget {
       ref.read(profileProvider.notifier).refresh(),
       ref.read(profileStatsProvider.notifier).refresh(),
       ref.read(profileAddressesProvider.notifier).refresh(),
+      ref.read(paymentMethodsProvider.notifier).refresh(),
     ]);
   }
 
@@ -226,14 +234,6 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(appText(context, 'Em breve', 'Coming soon'))),
-      );
-  }
-
   void _editProfile(BuildContext context, Profile profile) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -313,7 +313,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   _addressesCard(context, ref),
                   const SizedBox(height: 20),
-                  _paymentCard(context),
+                  _paymentCard(context, ref),
                   const SizedBox(height: 20),
                   OutlinedButton.icon(
                     onPressed: () => _logout(context, ref),
@@ -437,7 +437,23 @@ class ProfileScreen extends ConsumerWidget {
             'Pedidos, promoções, novidades',
             'Orders, promotions, updates',
           ),
-          onTap: () => _showComingSoon(context),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const NotificationsScreen(),
+            ),
+          ),
+        ),
+        _OptionTile(
+          icon: Icons.receipt_long_outlined,
+          title: appText(context, 'Meus pedidos', 'My orders'),
+          subtitle: appText(
+            context,
+            'Acompanha o estado das tuas compras',
+            'Track the status of your purchases',
+          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const OrdersScreen())),
         ),
         _OptionTile(
           icon: Icons.favorite_border,
@@ -532,44 +548,81 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _paymentCard(BuildContext context) => ProfileSectionCard(
-    title: appText(context, 'Métodos de pagamento', 'Payment methods'),
-    actionLabel: appText(context, 'Gerenciar', 'Manage'),
-    onAction: () => _showComingSoon(context),
-    child: Column(
-      children: [
-        // TODO: Substituir estes exemplos por métodos vindos da API de pagamentos.
-        const _PaymentMethod(
-          icon: Icons.phone_android,
-          title: 'M-Pesa',
-          detail: '•••• 7821',
-          isDefault: true,
+  Widget _paymentCard(BuildContext context, WidgetRef ref) {
+    final methods = ref.watch(paymentMethodsProvider);
+    void openMethod({PaymentMethod? method}) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => PaymentMethodFormScreen(method: method),
         ),
-        const _PaymentMethod(
-          icon: Icons.credit_card,
-          title: 'Visa',
-          detail: '•••• 4521',
+      );
+    }
+
+    return ProfileSectionCard(
+      title: appText(context, 'Métodos de pagamento', 'Payment methods'),
+      actionLabel: appText(context, 'Gerenciar', 'Manage'),
+      onAction: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const PaymentMethodsScreen()),
+      ),
+      child: methods.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
-          child: OutlinedButton.icon(
-            onPressed: () => _showComingSoon(context),
-            icon: const Icon(Icons.add),
-            label: Text(
-              appText(
-                context,
-                'Adicionar método de pagamento',
-                'Add payment method',
+        error: (error, _) => ErrorRetry(
+          message: error is ApiException
+              ? error.message
+              : appText(
+                  context,
+                  'Não foi possível carregar os métodos de pagamento.',
+                  'Could not load payment methods.',
+                ),
+          onRetry: () => ref.read(paymentMethodsProvider.notifier).refresh(),
+        ),
+        data: (items) => Column(
+          children: [
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    appText(
+                      context,
+                      'Ainda não tens métodos de pagamento. Adiciona o primeiro.',
+                      'You have no payment methods yet. Add your first one.',
+                    ),
+                  ),
+                ),
+              )
+            else
+              for (final method in items.take(2))
+                PaymentMethodTile(
+                  method: method,
+                  onTap: () => openMethod(method: method),
+                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
+              child: OutlinedButton.icon(
+                onPressed: openMethod,
+                icon: const Icon(Icons.add),
+                label: Text(
+                  appText(
+                    context,
+                    'Adicionar método de pagamento',
+                    'Add payment method',
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                ),
               ),
             ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(44),
-            ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 enum _ProfilePhotoAction { view, delete, replace }
@@ -607,39 +660,5 @@ class _OptionTile extends StatelessWidget {
     ),
     subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
     trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
-  );
-}
-
-class _PaymentMethod extends StatelessWidget {
-  const _PaymentMethod({
-    required this.icon,
-    required this.title,
-    required this.detail,
-    this.isDefault = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-  final bool isDefault;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-    title: Row(
-      children: [
-        Text(title),
-        if (isDefault) ...[
-          const SizedBox(width: 8),
-          Chip(
-            label: const Text('Padrão'),
-            visualDensity: VisualDensity.compact,
-            labelStyle: Theme.of(context).textTheme.labelSmall,
-            padding: EdgeInsets.zero,
-          ),
-        ],
-      ],
-    ),
-    subtitle: Text(detail),
   );
 }

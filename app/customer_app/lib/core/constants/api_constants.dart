@@ -82,6 +82,7 @@ class ApiConstants {
   static const String notifications = '/notifications';
   static const String notificationUnreadCount = '/notifications/unread-count';
   static String notificationRead(Object id) => '$notifications/$id/read';
+  static String order(Object id) => '$orders/$id';
   static const String notificationsReadAll = '/notifications/read-all';
 
   // User profile and addresses
@@ -90,10 +91,14 @@ class ApiConstants {
   static const String userPassword = '/users/me/password';
   static const String userStats = '/users/me/stats';
   static const String userAddresses = '/users/me/addresses';
+  static const String userPaymentMethods = '/users/me/payment-methods';
 
   static String favorite(int productId) => '$favorites/$productId';
   static String userAddress(Object id) => '$userAddresses/$id';
   static String userAddressDefault(Object id) => '${userAddress(id)}/default';
+  static String userPaymentMethod(Object id) => '$userPaymentMethods/$id';
+  static String userPaymentMethodDefault(Object id) =>
+      '${userPaymentMethod(id)}/default';
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 10);

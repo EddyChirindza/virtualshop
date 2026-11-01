@@ -163,18 +163,40 @@ async function updateProfilePhoto(userId, base64) {
 }
 
 async function updatePassword(userId, { currentPassword, newPassword }) {
-  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
-  const user = rows[0];
-  if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT password_hash FROM users WHERE id = $1 FOR UPDATE',
+      [userId]
+    );
+    const user = rows[0];
+    if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
 
-  const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!passwordMatches) throw new ApiError(400, 'A password atual está incorreta.');
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!passwordMatches) throw new ApiError(400, 'A password atual está incorreta.');
 
-  const passwordHash = await bcrypt.hash(newPassword, env.bcryptSaltRounds);
-  await query(
-    'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
-    [passwordHash, userId]
-  );
+    const passwordHash = await bcrypt.hash(newPassword, env.bcryptSaltRounds);
+    await client.query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [passwordHash, userId]
+    );
+    await client.query(
+      'UPDATE user_sessions SET revoked_at = COALESCE(revoked_at, now()) WHERE user_id = $1',
+      [userId]
+    );
+    await client.query(
+      `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, now())
+       WHERE user_id = $1`,
+      [userId]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function getStats(userId) {

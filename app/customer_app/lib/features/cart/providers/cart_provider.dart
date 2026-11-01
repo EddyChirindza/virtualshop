@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/session/session_controller.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../products/models/product.dart';
 import '../data/local_cart_repository.dart';
@@ -28,16 +29,23 @@ class CartController extends Notifier<CartState> {
   late CartRepository _repository;
   bool _isAuthenticated = false;
   bool _guestBlocked = false;
+  int _generation = 0;
+  int _buildId = 0;
+  late SessionController _sessionController;
 
   @override
   CartState build() {
     final authState = ref.watch(authControllerProvider);
+    final session = ref.watch(sessionControllerProvider);
+    _sessionController = ref.read(sessionControllerProvider.notifier);
+    _generation = session.generation;
+    final buildId = ++_buildId;
     _isAuthenticated = authState.valueOrNull != null;
     _guestBlocked = authState.hasValue && !_isAuthenticated;
     _repository = _isAuthenticated
         ? ref.read(remoteCartRepositoryProvider)
         : ref.read(localCartRepositoryProvider);
-    _loadFromStorage();
+    _loadFromStorage(generation: _generation, buildId: buildId);
     return CartState(
       errorMessage: _guestBlocked
           ? 'Inicia sessão para usar o carrinho.'
@@ -46,22 +54,30 @@ class CartController extends Notifier<CartState> {
     );
   }
 
-  Future<void> _loadFromStorage() async {
+  Future<void> _loadFromStorage({
+    required int generation,
+    required int buildId,
+  }) async {
     if (_guestBlocked) return;
+    final repository = _repository;
     try {
-      final repository = _repository;
       if (repository is RemoteCartRepository) {
-        state = await repository.loadState();
+        final loaded = await repository.loadState();
+        if (!_isCurrent(generation, buildId)) return;
+        state = loaded;
       } else {
         final items = await repository.load();
+        if (!_isCurrent(generation, buildId)) return;
         state = CartState(items: items);
       }
     } on ApiException catch (error) {
+      if (!_isCurrent(generation, buildId)) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: _messageFor(error),
       );
     } catch (_) {
+      if (!_isCurrent(generation, buildId)) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Não foi possível carregar o carrinho.',
@@ -69,8 +85,11 @@ class CartController extends Notifier<CartState> {
     }
   }
 
-  Future<void> _persist() async {
-    await _repository.save(state.items);
+  bool _isCurrent(int generation, int buildId) =>
+      buildId == _buildId && _sessionController.isCurrent(generation);
+
+  Future<void> _persist(CartRepository repository) async {
+    await repository.save(state.items);
   }
 
   CartItem? getItemByProductId(int productId) {
@@ -129,6 +148,8 @@ class CartController extends Notifier<CartState> {
     );
     unawaited(
       _syncAdd(
+        generation: _generation,
+        buildId: _buildId,
         previous: previous,
         item: items[index >= 0 ? index : items.length - 1],
         wasExisting: index >= 0,
@@ -151,7 +172,14 @@ class CartController extends Notifier<CartState> {
       final removed = items[index];
       items.removeAt(index);
       state = state.copyWith(items: items, isUpdating: true, clearError: true);
-      unawaited(_syncRemove(previous: previous, item: removed));
+      unawaited(
+        _syncRemove(
+          generation: _generation,
+          buildId: _buildId,
+          previous: previous,
+          item: removed,
+        ),
+      );
       return;
     }
 
@@ -164,7 +192,14 @@ class CartController extends Notifier<CartState> {
     );
     final previous = state;
     state = state.copyWith(items: items, isUpdating: true, clearError: true);
-    unawaited(_syncUpdate(previous: previous, item: items[index]));
+    unawaited(
+      _syncUpdate(
+        generation: _generation,
+        buildId: _buildId,
+        previous: previous,
+        item: items[index],
+      ),
+    );
   }
 
   void removeProduct(int productId) {
@@ -177,14 +212,27 @@ class CartController extends Notifier<CartState> {
     final previous = state;
     final removed = state.items[index];
     state = state.copyWith(items: items, isUpdating: true, clearError: true);
-    unawaited(_syncRemove(previous: previous, item: removed));
+    unawaited(
+      _syncRemove(
+        generation: _generation,
+        buildId: _buildId,
+        previous: previous,
+        item: removed,
+      ),
+    );
   }
 
   void clearCart() {
     if (!_canUseCart()) return;
     final previous = state;
     state = const CartState(isUpdating: true);
-    unawaited(_syncClear(previous));
+    unawaited(
+      _syncClear(
+        generation: _generation,
+        buildId: _buildId,
+        previous: previous,
+      ),
+    );
   }
 
   Future<bool> checkout({
@@ -195,7 +243,10 @@ class CartController extends Notifier<CartState> {
     String? notes,
   }) async {
     if (!_canUseCart() || state.isEmpty) return false;
+    final generation = _generation;
+    final buildId = _buildId;
     final repository = _repository;
+    final localRepository = ref.read(localCartRepositoryProvider);
     if (repository is! RemoteCartRepository) return false;
 
     state = state.copyWith(isUpdating: true, clearError: true);
@@ -207,10 +258,13 @@ class CartController extends Notifier<CartState> {
         couponCode: couponCode,
         notes: notes,
       );
-      await ref.read(localCartRepositoryProvider).clear();
+      if (!_isCurrent(generation, buildId)) return true;
+      await localRepository.clear();
+      if (!_isCurrent(generation, buildId)) return true;
       state = const CartState();
       return true;
     } on ApiException catch (error) {
+      if (!_isCurrent(generation, buildId)) return false;
       state = state.copyWith(
         isUpdating: false,
         errorMessage: _messageFor(error),
@@ -220,12 +274,15 @@ class CartController extends Notifier<CartState> {
   }
 
   Future<void> _syncAdd({
+    required int generation,
+    required int buildId,
     required CartState previous,
     required CartItem item,
     required bool wasExisting,
   }) async {
+    if (!_isCurrent(generation, buildId)) return;
+    final repository = _repository;
     try {
-      final repository = _repository;
       if (repository is RemoteCartRepository) {
         if (wasExisting && item.id != null) {
           await repository.updateItem(
@@ -239,66 +296,104 @@ class CartController extends Notifier<CartState> {
           );
         }
       } else {
-        await _persist();
+        await _persist(repository);
+        if (!_isCurrent(generation, buildId)) return;
         state = state.copyWith(isUpdating: false);
       }
-      await _reloadRemote();
+      await _reloadRemote(
+        generation: generation,
+        buildId: buildId,
+        repository: repository,
+      );
     } catch (error) {
+      if (!_isCurrent(generation, buildId)) return;
       _restoreAfterError(previous, error);
     }
   }
 
   Future<void> _syncUpdate({
+    required int generation,
+    required int buildId,
     required CartState previous,
     required CartItem item,
   }) async {
+    if (!_isCurrent(generation, buildId)) return;
+    final repository = _repository;
     try {
-      final repository = _repository;
       if (repository is RemoteCartRepository) {
         if (item.id == null) throw StateError('Missing remote cart item id');
         await repository.updateItem(itemId: item.id!, quantity: item.quantity);
       } else {
-        await _persist();
+        await _persist(repository);
+        if (!_isCurrent(generation, buildId)) return;
         state = state.copyWith(isUpdating: false);
       }
-      await _reloadRemote();
+      await _reloadRemote(
+        generation: generation,
+        buildId: buildId,
+        repository: repository,
+      );
     } catch (error) {
+      if (!_isCurrent(generation, buildId)) return;
       _restoreAfterError(previous, error);
     }
   }
 
   Future<void> _syncRemove({
+    required int generation,
+    required int buildId,
     required CartState previous,
     required CartItem item,
   }) async {
+    if (!_isCurrent(generation, buildId)) return;
+    final repository = _repository;
     try {
-      final repository = _repository;
       if (repository is RemoteCartRepository && item.id != null) {
         await repository.removeItem(itemId: item.id!);
-        await _reloadRemote();
+        await _reloadRemote(
+          generation: generation,
+          buildId: buildId,
+          repository: repository,
+        );
       } else {
-        await _persist();
+        await _persist(repository);
+        if (!_isCurrent(generation, buildId)) return;
         state = state.copyWith(isUpdating: false);
       }
     } catch (error) {
+      if (!_isCurrent(generation, buildId)) return;
       _restoreAfterError(previous, error);
     }
   }
 
-  Future<void> _syncClear(CartState previous) async {
+  Future<void> _syncClear({
+    required int generation,
+    required int buildId,
+    required CartState previous,
+  }) async {
+    if (!_isCurrent(generation, buildId)) return;
+    final repository = _repository;
     try {
-      await _repository.clear();
+      await repository.clear();
+      if (!_isCurrent(generation, buildId)) return;
       state = const CartState();
     } catch (error) {
+      if (!_isCurrent(generation, buildId)) return;
       _restoreAfterError(previous, error);
     }
   }
 
-  Future<void> _reloadRemote() async {
-    final repository = _repository;
+  Future<void> _reloadRemote({
+    required int generation,
+    required int buildId,
+    required CartRepository repository,
+  }) async {
     if (repository is RemoteCartRepository) {
-      state = await repository.loadState();
+      final loaded = await repository.loadState();
+      if (!_isCurrent(generation, buildId)) return;
+      state = loaded;
     } else {
+      if (!_isCurrent(generation, buildId)) return;
       state = state.copyWith(isUpdating: false);
     }
   }

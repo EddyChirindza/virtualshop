@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'network/dio_client.dart';
+import 'session/session_controller.dart';
 import 'storage/secure_storage_service.dart';
 
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
@@ -16,7 +17,13 @@ final dioClientProvider = Provider<DioClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
   return DioClient(
     storage: storage,
-    onSessionExpired: () {
+    sessionGeneration: () => ref.read(sessionControllerProvider).generation,
+    onSessionExpired: (generation) {
+      final session = ref.read(sessionControllerProvider);
+      if (!session.isCurrent(generation)) return;
+      ref
+          .read(sessionControllerProvider.notifier)
+          .endSession(expectedGeneration: generation);
       ref.read(sessionExpiredProvider.notifier).state++;
     },
   );

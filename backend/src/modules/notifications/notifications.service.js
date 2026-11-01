@@ -15,7 +15,7 @@ async function listForUser(userId, { page = 1, limit = 30 } = {}) {
       [userId]
     ),
     query(
-      `SELECT n.id, n.title, n.message, n.type, n.product_id,
+      `SELECT n.id, n.title, n.message, n.type, n.product_id, n.order_id,
               n.starts_at, n.expires_at, n.published_at, n.created_at,
               p.image_url AS product_image_url,
               (nr.read_at IS NOT NULL) AS is_read,
@@ -36,6 +36,7 @@ async function listForUser(userId, { page = 1, limit = 30 } = {}) {
       ...row,
       id: Number(row.id),
       product_id: row.product_id == null ? null : Number(row.product_id),
+      order_id: row.order_id == null ? null : Number(row.order_id),
       is_read: Boolean(row.is_read),
     })),
     page,
@@ -153,7 +154,7 @@ async function listForAdmin({ page = 1, limit = 50 } = {}) {
   const [countResult, result] = await Promise.all([
     query('SELECT COUNT(*)::int AS total FROM notifications'),
     query(
-      `SELECT n.id, n.title, n.message, n.type, n.product_id, n.status,
+      `SELECT n.id, n.title, n.message, n.type, n.product_id, n.order_id, n.status,
               n.recipient_scope, n.recipient_user_id, n.starts_at, n.expires_at,
               n.published_at, n.created_at, p.name AS product_name
        FROM notifications n
@@ -177,6 +178,28 @@ async function archive(id) {
   return { id: Number(rows[0].id), status: 'archived' };
 }
 
+// Cria uma notificação individual dentro de uma transação já aberta. A chave
+// idempotente evita duplicados quando a mesma transição é repetida.
+async function createOrderNotificationInTransaction(client, {
+  userId,
+  title,
+  message,
+  orderId,
+  idempotencyKey,
+  createdBy = null,
+}) {
+  const { rows } = await client.query(
+    `INSERT INTO notifications
+       (title, message, type, order_id, recipient_scope, recipient_user_id,
+        status, idempotency_key, created_by, published_at)
+     VALUES ($1, $2, 'order_update', $3, 'user', $4, 'published', $5, $6, now())
+     ON CONFLICT (idempotency_key) DO NOTHING
+     RETURNING id, title, message, type, order_id, recipient_user_id, created_at`,
+    [title, message, orderId, userId, idempotencyKey, createdBy]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   listForUser,
   getUnreadCount,
@@ -185,4 +208,5 @@ module.exports = {
   createByAdmin,
   listForAdmin,
   archive,
+  createOrderNotificationInTransaction,
 };

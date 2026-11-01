@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 
 const { query } = require('../src/config/db');
 const favoritesService = require('../src/modules/favorites/favorites.service');
+const { assertIsolatedTestDatabase } = require('../test-support/assert-test-database');
 
 async function resetDb() {
+  assertIsolatedTestDatabase();
   await query('DELETE FROM favorites');
   await query('DELETE FROM cart_items');
   await query('DELETE FROM carts');
@@ -22,7 +24,9 @@ async function resetDb() {
 
   const { rows: userRows } = await query(
     `INSERT INTO users (full_name, phone, email, password_hash, role)
-     VALUES ('User Favorite', '+351900000099', 'favorites.user@example.com', 'unused', 'customer')
+     VALUES
+       ('User Favorite', '+351900000099', 'favorites.user@example.com', 'unused', 'customer'),
+       ('Other Favorite', '+351900000098', 'favorites.other@example.com', 'unused', 'customer')
      RETURNING id`
   );
 
@@ -45,8 +49,18 @@ async function resetDb() {
     productRows.push(rows[0].id);
   }
 
-  return { userId, products: productRows };
+  return { userId, otherUserId: userRows[1].id, products: productRows };
 }
+
+test('favoritos e carrinhos permanecem isolados entre utilizadores', async () => {
+  const { userId, otherUserId, products } = await resetDb();
+  await favoritesService.addFavorite(userId, products[0]);
+  const xFavorites = await favoritesService.listFavorites(userId);
+  const yFavorites = await favoritesService.listFavorites(otherUserId);
+
+  assert.equal(xFavorites.length, 1);
+  assert.deepEqual(yFavorites, []);
+});
 
 test('adicionar favorito', async () => {
   const { userId, products } = await resetDb();

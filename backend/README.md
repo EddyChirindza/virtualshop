@@ -18,17 +18,19 @@ required database and JWT variables. This repository does not include a
 notification service tests stub the database module and do not require
 PostgreSQL configuration.
 
-`tests/favorites.test.js` connects to PostgreSQL through the normal database
-pool. Its setup issues unqualified `DELETE` statements against `favorites`,
-`products`, `categories`, and `users`, then inserts fixture rows. Do not run it
-against development or production data. To run it safely, create a dedicated,
-disposable PostgreSQL database, apply the project's migrations to that database,
-and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and
-`JWT_SECRET` in a private `backend/.env` (or provide them in the process
-environment). Verify `DB_NAME` points only to that disposable test database
-before running `node --test tests/favorites.test.js`. No database is configured
-in this checkout, so the favorites tests have not been run here. There is no
-`.env.example`; do not copy production credentials into a test configuration.
+PostgreSQL integration tests use the normal database pool. Several suites issue
+table-wide `DELETE` statements, so the shared test helper blocks them unless
+`NODE_ENV=test`, `TEST_DB_NAME`, and `DB_NAME` all agree and the database name
+contains `test`. Create a dedicated, disposable PostgreSQL database and apply
+migrations to that database only. Configure `DB_HOST`, `DB_PORT`, `DB_NAME`,
+`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `NODE_ENV=test`, and
+`TEST_DB_NAME=<the exact test database name>` in a private test environment.
+For example, if the disposable database is `virtualshop_test`, both `DB_NAME`
+and `TEST_DB_NAME` must be `virtualshop_test`. The guard runs immediately before
+the first test database operation. Never set these variables to development or
+production credentials. No database migration or cleanup should be run against
+the main application database. There is no `.env.example`; do not copy
+production credentials into a test configuration.
 
 ## Product images
 

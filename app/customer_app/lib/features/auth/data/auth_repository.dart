@@ -85,17 +85,19 @@ class AuthRepository {
 
   Future<void> logout() async {
     final refreshToken = await _storage.getRefreshToken();
+    await _storage.clear();
+    await logoutRemote(refreshToken);
+  }
+
+  Future<void> logoutRemote(String? refreshToken) async {
+    if (refreshToken == null || refreshToken.isEmpty) return;
     try {
-      if (refreshToken != null) {
-        await _dio.post(
-          ApiConstants.logout,
-          data: {'refreshToken': refreshToken},
-        );
-      }
+      await _dio.post(
+        ApiConstants.logout,
+        data: {'refreshToken': refreshToken},
+      );
     } on DioException {
-      // Best-effort: even if the server call fails, wipe local tokens below.
-    } finally {
-      await _storage.clear();
+      // Best-effort: the local session is already gone.
     }
   }
 

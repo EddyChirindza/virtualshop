@@ -9,6 +9,8 @@ import '../../../customers/data/customers_repository.dart';
 import '../../../customers/presentation/screens/customers_screen.dart';
 import '../../../notifications/data/admin_notifications_repository.dart';
 import '../../../notifications/presentation/screens/admin_notifications_screen.dart';
+import '../../../orders/data/orders_repository.dart';
+import '../../../orders/presentation/screens/orders_screen.dart';
 
 const _ink = Color(0xFF182230);
 const _muted = Color(0xFF667085);
@@ -16,11 +18,12 @@ const _line = Color(0xFFEAECF0);
 const _blue = Color(0xFF3157D5);
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.repository, required this.catalogRepository, required this.customersRepository, required this.notificationsRepository, required this.onLogout});
+  const DashboardScreen({super.key, required this.repository, required this.catalogRepository, required this.customersRepository, required this.notificationsRepository, required this.ordersRepository, required this.onLogout});
   final DashboardRepository repository;
   final CatalogRepository catalogRepository;
   final CustomersRepository customersRepository;
   final AdminNotificationsRepository notificationsRepository;
+  final OrdersRepository ordersRepository;
   final VoidCallback onLogout;
 
   @override
@@ -60,6 +63,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _TopBar(compact: compact, section: _section, onLogout: widget.onLogout, onSelect: (section) => setState(() => _section = section), onRefresh: _refreshSection),
           Expanded(child: _section == 'customers'
               ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: CustomersScreen(key: ValueKey('customers-$_refreshVersion'), repository: widget.customersRepository))
+              : _section == 'orders'
+              ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: OrdersScreen(key: ValueKey('orders-$_refreshVersion'), repository: widget.ordersRepository))
               : _section == 'products'
               ? Padding(padding: EdgeInsets.fromLTRB(compact ? 18 : 36, 28, compact ? 18 : 36, 24), child: ProductsScreen(key: ValueKey('products-$_refreshVersion'), repository: widget.catalogRepository))
               : _section == 'categories'
@@ -130,7 +135,7 @@ class _SideNavigation extends StatelessWidget {
           const Padding(padding: EdgeInsets.fromLTRB(24, 28, 20, 34), child: Row(children: [Icon(Icons.storefront_rounded, color: Colors.white, size: 28), SizedBox(width: 12), Text('VirtualShop', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700))])),
           const Padding(padding: EdgeInsets.fromLTRB(24, 0, 20, 10), child: Text('MENU', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2))),
           _NavItem(icon: Icons.grid_view_rounded, title: 'Dashboard', selected: selected == 'dashboard', onTap: () => onSelect('dashboard')),
-          const _NavItem(icon: Icons.receipt_long_outlined, title: 'Pedidos'),
+          _NavItem(icon: Icons.receipt_long_outlined, title: 'Pedidos', selected: selected == 'orders', onTap: () => onSelect('orders')),
           _NavItem(icon: Icons.inventory_2_outlined, title: 'Produtos', selected: selected == 'products', onTap: () => onSelect('products')),
           _NavItem(icon: Icons.category_outlined, title: 'Categorias', selected: selected == 'categories', onTap: () => onSelect('categories')),
           _NavItem(icon: Icons.people_outline, title: 'Clientes', selected: selected == 'customers', onTap: () => onSelect('customers')),
@@ -172,7 +177,7 @@ class _TopBar extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: compact ? 18 : 36),
         decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: _line))),
         child: Row(children: [
-          if (compact) PopupMenuButton<String>(onSelected: onSelect, itemBuilder: (_) => const [PopupMenuItem(value: 'dashboard', child: Text('Dashboard')), PopupMenuItem(value: 'products', child: Text('Produtos')), PopupMenuItem(value: 'categories', child: Text('Categorias')), PopupMenuItem(value: 'customers', child: Text('Clientes')), PopupMenuItem(value: 'notifications', child: Text('Notificações'))], child: const Icon(Icons.storefront_rounded, color: _blue)),
+          if (compact) PopupMenuButton<String>(onSelected: onSelect, itemBuilder: (_) => const [PopupMenuItem(value: 'dashboard', child: Text('Dashboard')), PopupMenuItem(value: 'orders', child: Text('Pedidos')), PopupMenuItem(value: 'products', child: Text('Produtos')), PopupMenuItem(value: 'categories', child: Text('Categorias')), PopupMenuItem(value: 'customers', child: Text('Clientes')), PopupMenuItem(value: 'notifications', child: Text('Notificações'))], child: const Icon(Icons.storefront_rounded, color: _blue)),
           if (compact) const SizedBox(width: 10),
           Text(_sectionTitle(section), style: const TextStyle(color: _ink, fontWeight: FontWeight.w600)),
           const Spacer(),
@@ -342,9 +347,11 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, bg, fg) = switch (status) {
       'pending' => ('Pendente', const Color(0xFFFFF3E8), const Color(0xFFB54708)),
-      'confirmed' || 'preparing' => ('Em curso', const Color(0xFFEAF0FF), _blue),
+      'accepted' || 'preparing' => ('Em curso', const Color(0xFFEAF0FF), _blue),
+      'ready_for_pickup' => ('Pronto', const Color(0xFFEAF7FB), const Color(0xFF087E8B)),
       'out_for_delivery' => ('Em entrega', const Color(0xFFF3E8FF), const Color(0xFF7A3EAE)),
-      'delivered' => ('Entregue', const Color(0xFFE8F8F1), const Color(0xFF12805C)),
+      'completed' => ('Concluído', const Color(0xFFE8F8F1), const Color(0xFF12805C)),
+      'rejected' => ('Rejeitado', const Color(0xFFFEF3F2), const Color(0xFFB42318)),
       _ => ('Cancelado', const Color(0xFFFEF3F2), const Color(0xFFB42318)),
     };
     return Align(alignment: Alignment.centerLeft, child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)), child: Text(label, style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.w600))));

@@ -4,8 +4,10 @@ const assert = require('node:assert/strict');
 const { query } = require('../src/config/db');
 const cartService = require('../src/modules/cart/cart.service');
 const orderService = require('../src/modules/orders/order.service');
+const { assertIsolatedTestDatabase } = require('../test-support/assert-test-database');
 
 async function resetDb() {
+  assertIsolatedTestDatabase();
   await query('DELETE FROM cart_items');
   await query('DELETE FROM carts');
   await query('DELETE FROM order_items');
@@ -20,7 +22,9 @@ async function resetDb() {
 
   const { rows: userRows } = await query(
     `INSERT INTO users (full_name, phone, email, password_hash, role)
-     VALUES ('Cart User', '+351900000001', 'cart.user@example.com', 'unused', 'customer')
+     VALUES
+       ('Cart User', '+351900000001', 'cart.user@example.com', 'unused', 'customer'),
+       ('Other Cart User', '+351900000002', 'cart.other@example.com', 'unused', 'customer')
      RETURNING id`
   );
 
@@ -34,8 +38,23 @@ async function resetDb() {
     [categoryId]
   );
 
-  return { userId, productId: productRows[0].id, price: Number(productRows[0].price) };
+  return {
+    userId,
+    otherUserId: userRows[1].id,
+    productId: productRows[0].id,
+    price: Number(productRows[0].price),
+  };
 }
+
+test('carrinho de outro utilizador não expõe os itens', async () => {
+  const { userId, otherUserId, productId } = await resetDb();
+  await cartService.addItem(userId, { productId, quantity: 1 });
+
+  const ownerCart = await cartService.getCart(userId);
+  const otherCart = await cartService.getCart(otherUserId);
+  assert.equal(ownerCart.items.length, 1);
+  assert.deepEqual(otherCart.items, []);
+});
 
 test('cart adds item and increments quantity for the same product', async () => {
   const { userId, productId } = await resetDb();

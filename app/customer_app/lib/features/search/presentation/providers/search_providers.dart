@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../core/session/session_controller.dart';
 import '../../data/recent_search_repository.dart';
 import '../../data/search_repository.dart';
 import '../state/search_controller.dart';
@@ -11,7 +12,8 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
 });
 
 final recentSearchRepositoryProvider = Provider<RecentSearchRepository>((ref) {
-  return RecentSearchRepository();
+  final session = ref.watch(sessionControllerProvider);
+  return RecentSearchRepository(userId: session.userId);
 });
 
 final recentSearchesProvider = FutureProvider<List<String>>((ref) {

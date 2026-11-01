@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../core/session/session_controller.dart';
 import '../../data/payment_method_repository.dart';
 import '../../domain/models/payment_method.dart';
 
@@ -17,14 +18,26 @@ final paymentMethodsProvider =
 
 class PaymentMethodsController extends AsyncNotifier<List<PaymentMethod>> {
   @override
-  Future<List<PaymentMethod>> build() =>
-      ref.read(paymentMethodRepositoryProvider).fetchPaymentMethods();
+  Future<List<PaymentMethod>> build() {
+    final session = ref.watch(sessionControllerProvider);
+    if (!session.isActive) return Future.value(const <PaymentMethod>[]);
+    return ref.read(paymentMethodRepositoryProvider).fetchPaymentMethods();
+  }
 
   Future<void> refresh() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(<PaymentMethod>[]);
+      return;
+    }
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     state = const AsyncLoading<List<PaymentMethod>>().copyWithPrevious(state);
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => ref.read(paymentMethodRepositoryProvider).fetchPaymentMethods(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 
   Future<PaymentMethod> add(Map<String, dynamic> fields) async {

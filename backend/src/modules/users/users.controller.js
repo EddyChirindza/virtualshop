@@ -46,7 +46,10 @@ async function updatePassword(req, res, next) {
   try {
     const input = changePasswordSchema.parse(req.body);
     await usersService.updatePassword(req.user.id, input);
-    res.json({ success: true, message: 'Password alterada com sucesso.' });
+    res.json({
+      success: true,
+      message: 'Password alterada. Todas as sessões terminaram; inicia sessão novamente.',
+    });
   } catch (err) {
     next(err);
   }

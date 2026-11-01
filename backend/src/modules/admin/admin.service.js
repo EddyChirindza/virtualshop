@@ -30,7 +30,7 @@ async function getDashboard(requestedPeriod = '30d') {
     query(
       `SELECT
          COALESCE((SELECT SUM(total) FROM orders
-           WHERE status <> 'cancelled' AND created_at >= now() - $1::interval), 0) AS revenue,
+           WHERE status NOT IN ('cancelled', 'rejected') AND created_at >= now() - $1::interval), 0) AS revenue,
          (SELECT COUNT(*) FROM orders
            WHERE created_at >= now() - $1::interval) AS order_count,
          (SELECT COUNT(*) FROM orders WHERE status = 'pending') AS pending_orders,
@@ -41,7 +41,7 @@ async function getDashboard(requestedPeriod = '30d') {
     ),
     query(
       `SELECT to_char(days.day, 'DD/MM') AS label,
-              COALESCE(SUM(o.total) FILTER (WHERE o.status <> 'cancelled'), 0) AS value
+              COALESCE(SUM(o.total) FILTER (WHERE o.status NOT IN ('cancelled', 'rejected')), 0) AS value
        FROM generate_series(
          date_trunc('day', now()) - (($1::int - 1) * interval '1 day'),
          date_trunc('day', now()), interval '1 day'

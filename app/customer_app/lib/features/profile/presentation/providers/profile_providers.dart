@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/session/session_controller.dart';
 import '../../data/profile_repository.dart';
 import '../../domain/models/profile.dart';
 import '../../domain/models/profile_address.dart';
@@ -10,6 +11,8 @@ import '../../domain/models/profile_stats.dart';
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository(dio: ref.watch(dioProvider));
 });
+
+const _emptyProfile = Profile(id: 0, fullName: '', email: '');
 
 final profileProvider = AsyncNotifierProvider<ProfileController, Profile>(
   ProfileController.new,
@@ -27,16 +30,31 @@ final profileAddressesProvider =
 
 class ProfileController extends AsyncNotifier<Profile> {
   @override
-  Future<Profile> build() => ref.read(profileRepositoryProvider).fetchProfile();
+  Future<Profile> build() {
+    final session = ref.watch(sessionControllerProvider);
+    if (!session.isActive) return Future.value(_emptyProfile);
+    return ref.read(profileRepositoryProvider).fetchProfile();
+  }
 
   Future<void> refresh() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(_emptyProfile);
+      return;
+    }
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     state = const AsyncLoading<Profile>().copyWithPrevious(state);
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => ref.read(profileRepositoryProvider).fetchProfile(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 
   Future<Profile> updateProfile(Map<String, dynamic> fields) async {
+    final generation = ref.sessionState.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull;
     final requestedEmail = fields['email'];
     if (current != null &&
@@ -52,6 +70,7 @@ class ProfileController extends AsyncNotifier<Profile> {
     final responseProfile = await ref
         .read(profileRepositoryProvider)
         .updateProfile(fields);
+    if (!sessionController.isCurrent(generation)) return responseProfile;
     final profile = current == null
         ? responseProfile
         : Profile(
@@ -88,10 +107,13 @@ class ProfileController extends AsyncNotifier<Profile> {
   }
 
   Future<Profile> updateProfilePhoto(List<int> bytes) async {
+    final generation = ref.sessionState.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull;
     final responseProfile = await ref
         .read(profileRepositoryProvider)
         .updateProfilePhoto(bytes);
+    if (!sessionController.isCurrent(generation)) return responseProfile;
     final profile = current == null
         ? responseProfile
         : Profile(
@@ -119,10 +141,13 @@ class ProfileController extends AsyncNotifier<Profile> {
   }
 
   Future<Profile> deleteProfilePhoto() async {
+    final generation = ref.sessionState.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull;
     final responseProfile = await ref
         .read(profileRepositoryProvider)
         .deleteProfilePhoto();
+    if (!sessionController.isCurrent(generation)) return responseProfile;
     final profile = current == null
         ? responseProfile
         : Profile(
@@ -152,27 +177,51 @@ class ProfileController extends AsyncNotifier<Profile> {
 
 class ProfileStatsController extends AsyncNotifier<ProfileStats> {
   @override
-  Future<ProfileStats> build() =>
-      ref.read(profileRepositoryProvider).fetchStats();
+  Future<ProfileStats> build() {
+    final session = ref.watch(sessionControllerProvider);
+    if (!session.isActive) return Future.value(const ProfileStats());
+    return ref.read(profileRepositoryProvider).fetchStats();
+  }
 
   Future<void> refresh() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(ProfileStats());
+      return;
+    }
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     state = const AsyncLoading<ProfileStats>().copyWithPrevious(state);
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => ref.read(profileRepositoryProvider).fetchStats(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 }
 
 class ProfileAddressesController extends AsyncNotifier<List<ProfileAddress>> {
   @override
-  Future<List<ProfileAddress>> build() =>
-      ref.read(profileRepositoryProvider).fetchAddresses();
+  Future<List<ProfileAddress>> build() {
+    final session = ref.watch(sessionControllerProvider);
+    if (!session.isActive) return Future.value(const <ProfileAddress>[]);
+    return ref.read(profileRepositoryProvider).fetchAddresses();
+  }
 
   Future<void> refresh() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(<ProfileAddress>[]);
+      return;
+    }
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     state = const AsyncLoading<List<ProfileAddress>>().copyWithPrevious(state);
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => ref.read(profileRepositoryProvider).fetchAddresses(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 
   Future<void> add(Map<String, dynamic> fields) async {

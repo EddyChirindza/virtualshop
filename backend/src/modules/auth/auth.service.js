@@ -125,7 +125,10 @@ async function refresh(refreshToken, meta) {
 
 async function logout(refreshToken) {
   const tokenHash = hashRefreshToken(refreshToken);
-  await query('UPDATE refresh_tokens SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL', [tokenHash]);
+  await query(
+    'UPDATE refresh_tokens SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL',
+    [tokenHash]
+  );
 }
 
 async function getById(userId) {

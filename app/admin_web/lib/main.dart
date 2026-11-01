@@ -10,6 +10,7 @@ import 'features/dashboard/data/dashboard_repository.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/notifications/data/admin_notifications_repository.dart';
 import 'features/orders/data/orders_repository.dart';
+import 'core/theme/app_theme.dart';
 
 void main() => runApp(const VirtualShopAdminApp());
 
@@ -76,15 +77,7 @@ class _VirtualShopAdminAppState extends State<VirtualShopAdminApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: 'VirtualShop Admin',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF3157D5),
-        brightness: Brightness.light,
-      ),
-      scaffoldBackgroundColor: const Color(0xFFF5F7FB),
-      fontFamily: 'Roboto',
-    ),
+    theme: AppTheme.light,
     home: _authenticated
         ? DashboardScreen(
             repository: _dashboardRepository,

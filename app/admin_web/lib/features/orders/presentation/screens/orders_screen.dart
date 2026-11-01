@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+
 import '../../data/orders_repository.dart';
 import '../../models/admin_order.dart';
 
-const _ink = Color(0xFF182230);
-const _muted = Color(0xFF667085);
-const _line = Color(0xFFEAECF0);
-const _blue = Color(0xFF3157D5);
+const _ink = AppColors.textPrimary;
+const _muted = AppColors.textSecondary;
+const _line = AppColors.border;
+const _blue = AppColors.accentEnd;
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key, required this.repository});
@@ -129,7 +131,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: error ? const Color(0xFFB42318) : null,
+        backgroundColor: error ? AppColors.danger : null,
       ),
     );
   }
@@ -389,8 +391,8 @@ class _OrderCard extends StatelessWidget {
                   ),
                   FilledButton.tonalIcon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFEF3F2),
-                      foregroundColor: const Color(0xFFB42318),
+                      backgroundColor: AppColors.dangerSurface,
+                      foregroundColor: AppColors.danger,
                     ),
                     onPressed: onReject,
                     icon: const Icon(Icons.close, size: 18),
@@ -531,7 +533,7 @@ class _OrderDetailDialogState extends State<_OrderDetailDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: error ? const Color(0xFFB42318) : null,
+        backgroundColor: error ? AppColors.danger : null,
       ),
     );
   }
@@ -662,12 +664,12 @@ class _OrderDetailBody extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF3F2),
+              color: AppColors.dangerSurface,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               'Motivo da rejeição: ${order.rejectionReason}',
-              style: const TextStyle(color: Color(0xFFB42318)),
+              style: const TextStyle(color: AppColors.danger),
             ),
           ),
         if (order.rejectionReason != null) const SizedBox(height: 14),
@@ -803,8 +805,8 @@ class _OrderDetailBody extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: busy ? null : onReject,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFFEF3F2),
-                  foregroundColor: const Color(0xFFB42318),
+                  backgroundColor: AppColors.dangerSurface,
+                  foregroundColor: AppColors.danger,
                 ),
                 icon: const Icon(Icons.close),
                 label: const Text('Rejeitar pedido'),
@@ -826,7 +828,7 @@ class _OrderDetailBody extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: busy ? null : () => onChangeStatus('cancelled'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFB42318),
+                  foregroundColor: AppColors.danger,
                 ),
                 icon: const Icon(Icons.cancel_outlined),
                 label: const Text('Cancelar pedido'),
@@ -849,7 +851,7 @@ class _Section extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFFF9FAFB),
+      color: AppColors.subtleSurface,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: _line),
     ),
@@ -986,11 +988,11 @@ class PaymentPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (status) {
-      'paid' => (const Color(0xFFE8F8F1), const Color(0xFF12805C)),
-      'failed' => (const Color(0xFFFEF3F2), const Color(0xFFB42318)),
+      'paid' => (AppColors.successSurface, AppColors.success),
+      'failed' => (AppColors.dangerSurface, AppColors.danger),
       'refund_required' ||
-      'refunded' => (const Color(0xFFF3E8FF), const Color(0xFF7A3EAE)),
-      _ => (const Color(0xFFFFF3E8), const Color(0xFFB54708)),
+      'refunded' => (AppColors.accentSurface, AppColors.accentEnd),
+      _ => (AppColors.warningSurface, AppColors.warning),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -1035,12 +1037,12 @@ String deliveryLabel(String method) => switch (method) {
 };
 
 (Color, Color) statusColors(String status) => switch (status) {
-  'pending' => (const Color(0xFFFFF3E8), const Color(0xFFB54708)),
-  'accepted' || 'preparing' => (const Color(0xFFEAF0FF), _blue),
-  'ready_for_pickup' => (const Color(0xFFEAF7FB), const Color(0xFF087E8B)),
-  'out_for_delivery' => (const Color(0xFFF3E8FF), const Color(0xFF7A3EAE)),
-  'completed' => (const Color(0xFFE8F8F1), const Color(0xFF12805C)),
-  _ => (const Color(0xFFFEF3F2), const Color(0xFFB42318)),
+  'pending' => (AppColors.warningSurface, AppColors.warning),
+  'accepted' || 'preparing' => (AppColors.accentSurfaceBlue, _blue),
+  'ready_for_pickup' => (AppColors.infoSurface, AppColors.info),
+  'out_for_delivery' => (AppColors.accentSurface, AppColors.accentEnd),
+  'completed' => (AppColors.successSurface, AppColors.success),
+  _ => (AppColors.dangerSurface, AppColors.danger),
 };
 
 List<String> allowedAdminTransitions(AdminOrder order) {
@@ -1129,8 +1131,8 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
       ),
       FilledButton.tonalIcon(
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFFFEF3F2),
-          foregroundColor: const Color(0xFFB42318),
+          backgroundColor: AppColors.dangerSurface,
+          foregroundColor: AppColors.danger,
         ),
         onPressed: () {
           if (!_formKey.currentState!.validate()) return;

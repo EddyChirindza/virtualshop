@@ -86,15 +86,16 @@ async function login({ identifier, password }, meta) {
 }
 
 async function issueTokenPair(user, meta = {}) {
-  const accessToken = generateAccessToken(user);
   const { token: refreshToken, tokenHash, expiresAt } = generateRefreshToken();
 
-  await query(
+  const { rows } = await query(
     `INSERT INTO refresh_tokens (user_id, token_hash, user_agent, ip_address, expires_at)
-     VALUES ($1, $2, $3, $4, $5)`,
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
     [user.id, tokenHash, meta.userAgent || null, meta.ip || null, expiresAt]
   );
 
+  const accessToken = generateAccessToken(user, rows[0].id);
   return { accessToken, refreshToken };
 }
 

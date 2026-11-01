@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+
 import '../../data/admin_notifications_repository.dart';
 
-const _ink = Color(0xFF182230);
-const _muted = Color(0xFF667085);
-const _line = Color(0xFFEAECF0);
+const _ink = AppColors.textPrimary;
+const _muted = AppColors.textSecondary;
+const _line = AppColors.border;
 
 class AdminNotificationsScreen extends StatefulWidget {
   const AdminNotificationsScreen({super.key, required this.repository});
@@ -67,7 +69,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: error ? const Color(0xFFB42318) : null,
+        backgroundColor: error ? AppColors.danger : null,
       ),
     );
   }
@@ -160,7 +162,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                     children: [
                       const Icon(
                         Icons.notifications_none_rounded,
-                        color: Color(0xFF3157D5),
+                        color: AppColors.accentEnd,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

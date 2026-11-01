@@ -26,21 +26,20 @@ async function requireAuth(req, res, next) {
   const userId = Number(payload.sub);
   if (
     !Number.isSafeInteger(userId) || userId <= 0 ||
-    typeof payload.sid !== 'string' ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.sid)
+    !Number.isSafeInteger(payload.sid) || payload.sid <= 0
   ) {
     return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
   }
 
   try {
     const { rows } = await query(
-      `SELECT us.id, u.role
-       FROM user_sessions us
-       JOIN users u ON u.id = us.user_id
-       WHERE us.id = $1
-         AND us.user_id = $2
-         AND us.revoked_at IS NULL
-         AND us.expires_at > now()
+      `SELECT rt.id, u.role
+       FROM refresh_tokens rt
+       JOIN users u ON u.id = rt.user_id
+       WHERE rt.id = $1
+         AND rt.user_id = $2
+         AND rt.revoked_at IS NULL
+         AND rt.expires_at > now()
          AND u.is_active = true`,
       [payload.sid, userId]
     );

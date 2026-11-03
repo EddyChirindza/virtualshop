@@ -46,8 +46,10 @@ async function login(req, res, next) {
 
 async function refresh(req, res, next) {
   try {
-    const { refreshToken } = refreshSchema.parse(req.body);
-    const result = await authService.refresh(refreshToken, requestMeta(req));
+    const { refreshToken, adminOnly } = refreshSchema.parse(req.body);
+    const result = await authService.refresh(refreshToken, requestMeta(req), {
+      adminOnly,
+    });
     res.json({
       success: true,
       message: 'Token renovado.',

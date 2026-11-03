@@ -7,6 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY migrations ./migrations
+COPY test-support ./test-support
 COPY src ./src
 COPY server.js ./server.js
 COPY seed.sql ./seed.sql

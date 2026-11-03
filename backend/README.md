@@ -32,13 +32,39 @@ production credentials. No database migration or cleanup should be run against
 the main application database. There is no `.env.example`; do not copy
 production credentials into a test configuration.
 
+## Database migrations
+
+Run all pending migrations in filename order with:
+
+```sh
+npm run migrate
+```
+
+To apply exactly one migration, pass its filename from `backend/migrations`:
+
+```sh
+npm run migrate -- --only 018_create_user_sessions.sql
+```
+
+The selected migration is still checked against `schema_migrations`; an
+already-applied migration is skipped. When selecting one migration, the runner
+refuses to apply it if any earlier migration in filename order is still
+pending. Each migration runs in its own transaction, and a PostgreSQL
+transaction-level advisory lock serializes concurrent migration runners.
+Applying one migration does not apply any other pending migration.
+
+If `COMMIT` reports an error, the transaction outcome may be ambiguous. Check
+`schema_migrations` and the schema before attempting that migration again; the
+runner does not retry it automatically.
+
 ## Product images
 
 Products store an ordered `image_urls` array and retain `image_url` as the
 primary image for older clients. Migration `014_add_product_images.sql` adds
 the array and copies each existing primary image into it. Apply it with
-`npm run migrate` after configuring a database; do not run migrations against a
-database unless it is the intended environment. Product image uploads are
+`npm run migrate -- --only 014_add_product_images.sql` after configuring a
+database; do not run migrations against a database unless it is the intended
+environment. Product image uploads are
 written to `backend/uploads/products`, so deployments must keep that directory
 on persistent storage and serve `/uploads`. The admin accepts up to 20 images
 per product, with a 5 MB per-image upload limit.

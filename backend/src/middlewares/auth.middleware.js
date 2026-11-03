@@ -24,24 +24,41 @@ async function requireAuth(req, res, next) {
   }
 
   const userId = Number(payload.sub);
-  if (
-    !Number.isSafeInteger(userId) || userId <= 0 ||
-    !Number.isSafeInteger(payload.sid) || payload.sid <= 0
-  ) {
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+  }
+
+  const sessionId =
+    typeof payload.sid === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.sid)
+      ? payload.sid
+      : null;
+  const legacyTokenId =
+    Number.isSafeInteger(payload.sid) && payload.sid > 0 ? payload.sid : null;
+  if (!sessionId && !legacyTokenId) {
     return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
   }
 
   try {
     const { rows } = await query(
-      `SELECT rt.id, u.role
-       FROM refresh_tokens rt
-       JOIN users u ON u.id = rt.user_id
-       WHERE rt.id = $1
-         AND rt.user_id = $2
-         AND rt.revoked_at IS NULL
-         AND rt.expires_at > now()
-         AND u.is_active = true`,
-      [payload.sid, userId]
+      `SELECT u.role
+       FROM user_sessions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.user_id = $1
+         AND s.revoked_at IS NULL
+         AND s.expires_at > now()
+         AND u.is_active = true
+         AND (
+           s.id = $2::uuid
+           OR EXISTS (
+             SELECT 1
+             FROM refresh_tokens rt
+             WHERE rt.id = $3
+               AND rt.user_id = s.user_id
+               AND rt.session_id = s.id
+           )
+         )`,
+      [userId, sessionId, legacyTokenId]
     );
     if (!rows[0]) {
       return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });

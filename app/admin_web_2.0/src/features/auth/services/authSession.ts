@@ -1,18 +1,29 @@
+import axios from 'axios'
 import type { AuthPayload, AuthTokens } from '../types/auth'
+import { AuthenticationError } from '../types/auth'
 
 interface AuthSessionTransport {
-  refresh: (refreshToken: string) => Promise<AuthPayload>
-  logout: (refreshToken: string) => Promise<void>
+  refresh: () => Promise<AuthPayload>
+  logout: () => Promise<void>
+}
+
+type RefreshResult = AuthPayload | null
+
+function isAuthenticationFailure(error: unknown): boolean {
+  if (error instanceof AuthenticationError) return true
+  return (
+    axios.isAxiosError(error) &&
+    (error.response?.status === 401 || error.response?.status === 403)
+  )
 }
 
 export class AuthSession {
   private readonly transport: AuthSessionTransport
   private accessToken: string | null = null
-  private refreshToken: string | null = null
   private generation = 0
   private refreshOperation: {
     generation: number
-    promise: Promise<boolean>
+    promise: Promise<RefreshResult>
   } | null = null
   private readonly listeners = new Set<() => void>()
 
@@ -44,72 +55,63 @@ export class AuthSession {
 
   start(tokens: AuthTokens): void {
     this.generation += 1
-    this.setTokens(tokens)
+    this.setAccessToken(tokens.accessToken)
   }
 
   startIfCurrent(tokens: AuthTokens, generation: number): boolean {
     if (generation !== this.generation) return false
 
-    this.setTokens(tokens)
+    this.setAccessToken(tokens.accessToken)
     return true
   }
 
-  refresh(): Promise<boolean> {
+  refresh(): Promise<RefreshResult> {
     if (this.refreshOperation?.generation === this.generation) {
       return this.refreshOperation.promise
     }
 
     const generation = this.generation
-    const refreshToken = this.refreshToken
-    if (!refreshToken) {
-      this.invalidateIfCurrent(generation)
-      return Promise.resolve(false)
-    }
-
     const operation = {
       generation,
-      promise: this.performRefresh(refreshToken, generation),
+      promise: this.performRefresh(generation),
     }
     this.refreshOperation = operation
-    void operation.promise.then(() => {
-      if (this.refreshOperation === operation) this.refreshOperation = null
-    })
+    void operation.promise
+      .catch(() => undefined)
+      .then(() => {
+        if (this.refreshOperation === operation) this.refreshOperation = null
+      })
     return operation.promise
   }
 
   async logout(): Promise<void> {
-    const refreshToken = this.refreshToken
     this.invalidate()
-
-    if (refreshToken) {
-      await this.transport.logout(refreshToken)
-    }
+    await this.transport.logout()
   }
 
-  private async performRefresh(
-    refreshToken: string,
-    generation: number,
-  ): Promise<boolean> {
+  private async performRefresh(generation: number): Promise<RefreshResult> {
     try {
-      const payload = await this.transport.refresh(refreshToken)
-      if (generation !== this.generation || refreshToken !== this.refreshToken) {
-        return false
-      }
+      const payload = await this.transport.refresh()
+      if (generation !== this.generation) return null
       if (payload.user.role !== 'admin') {
-        throw new Error('A conta já não tem acesso ao painel administrativo.')
+        throw new AuthenticationError(
+          'A conta já não tem acesso ao painel administrativo.',
+        )
       }
 
-      this.setTokens(payload)
-      return true
-    } catch {
-      this.invalidateIfCurrent(generation)
-      return false
+      this.setAccessToken(payload.accessToken)
+      return payload
+    } catch (error) {
+      if (isAuthenticationFailure(error)) {
+        this.invalidateIfCurrent(generation)
+        return null
+      }
+      throw error
     }
   }
 
-  private setTokens(tokens: AuthTokens): void {
-    this.accessToken = tokens.accessToken
-    this.refreshToken = tokens.refreshToken
+  private setAccessToken(accessToken: string): void {
+    this.accessToken = accessToken
   }
 
   private invalidateIfCurrent(generation: number): void {
@@ -117,10 +119,9 @@ export class AuthSession {
   }
 
   private invalidate(): void {
-    const hadSession = this.isAuthenticated || this.refreshToken !== null
+    const hadSession = this.isAuthenticated
     this.generation += 1
     this.accessToken = null
-    this.refreshToken = null
     this.refreshOperation = null
 
     if (hadSession) {

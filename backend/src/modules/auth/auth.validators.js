@@ -32,7 +32,11 @@ const loginSchema = z.object({
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(10, 'Refresh token inválido.'),
+  refreshToken: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().trim().min(10, 'Refresh token inválido.').optional(),
+  ),
   adminOnly: z.boolean().optional().default(false),
 });
 

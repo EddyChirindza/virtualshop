@@ -1,32 +1,70 @@
-# React + TypeScript + Vite
+# VirtualShop Admin Web (React)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Painel administrativo React + TypeScript + Vite. Toda a leitura e escrita de
+dados passa pela API Express existente; o browser não se liga directamente ao
+PostgreSQL.
 
-Currently, two official plugins are available:
+## Executar localmente
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Inicie o PostgreSQL e a API conforme as instruções em
+   [`backend/README.md`](../../backend/README.md). Por omissão, a API está em
+   `http://localhost:3000/api`.
+2. Na pasta `app/admin_web_2.0`, crie a configuração local a partir do exemplo:
 
-## React Compiler
+   ```sh
+   cp .env.example .env.local
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+   `VITE_API_URL` deve apontar para a API e incluir o prefixo `/api`. Não
+   coloque passwords, segredos JWT ou refresh tokens nesta variável. O URL é
+   público e fica incluído no bundle do frontend.
+3. Instale dependências e inicie o Vite:
 
-## Expanding the Oxlint configuration
+   ```sh
+   npm ci
+   npm run dev
+   ```
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+   Abra o endereço indicado pelo Vite (normalmente `http://localhost:5173`).
+   No desenvolvimento, o backend aceita origens `localhost`; em produção,
+   configure `CORS_ORIGINS` com a origem exacta do painel.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+Use uma conta existente cujo papel seja `admin`. Não existem credenciais
+universais no repositório.
+
+## Sessão administrativa
+
+O painel envia o access token no cabeçalho `Authorization: Bearer ...` e
+mantém-no apenas em memória. O refresh é feito através do cookie HttpOnly
+emitido pelo backend; o Axios usa `withCredentials` para enviar/receber esse
+cookie. Após recarregar a página, o painel tenta recuperar a sessão no endpoint
+de refresh e valida o papel administrativo no servidor. O logout revoga a
+sessão no backend.
+
+Em produção, a origem do painel e as opções `AUTH_COOKIE_*` têm de ser
+compatíveis com HTTPS, CORS com credenciais e a política `SameSite` escolhida.
+Não altere a configuração da sessão para guardar refresh tokens no browser.
+
+## Módulos ligados à API
+
+- Dashboard: `/api/admin/dashboard`.
+- Produtos: `/api/products`, detalhes por ID, operações de escrita para admin
+  e upload através de `/api/admin/products/image`.
+- Categorias: `/api/categories` (escrita apenas para admin).
+- Encomendas: `/api/admin/orders`, detalhes, aceitação, rejeição e transições
+  de estado validadas pelo backend.
+- Clientes: `/api/admin/customers`.
+- Notificações: listagem, criação e arquivo em `/api/admin/notifications`.
+
+O backend não expõe actualmente endpoints administrativos para gestão de
+contas de administradores, configuração da loja, histórico individual de
+encomendas de clientes, estado activo de clientes, ou contagem/marcação como
+lida de notificações administrativas. O painel não simula esses dados.
+
+## Verificação
+
+```sh
+npm test
+npm run lint
+npm run build
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.

@@ -1,13 +1,28 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { useAuth } from '../context/useAuth'
+import { SessionRecovery } from './SessionRecovery'
 
 export function ProtectedRoute() {
-  const { user, isLoading } = useAuth()
+  const {
+    user,
+    sessionStatus,
+    sessionError,
+    retrySessionRestore,
+  } = useAuth()
   const location = useLocation()
 
-  if (isLoading) {
-    return <LoadingState label="A validar a sessão..." />
+  if (sessionStatus === 'initializing') {
+    return <LoadingState label="A recuperar a sessão..." />
+  }
+
+  if (sessionStatus === 'unavailable') {
+    return (
+      <SessionRecovery
+        message={sessionError}
+        onRetry={retrySessionRestore}
+      />
+    )
   }
 
   if (!user || user.role !== 'admin') {

@@ -3,7 +3,12 @@
 // ─────────────────────────────────────────────
 const authService = require('./auth.service');
 const { registerSchema, loginSchema, refreshSchema } = require('./auth.validators');
-const logger = require('../../utils/logger');
+const { ApiError } = require('../../middlewares/error.middleware');
+const {
+  clearRefreshCookie,
+  getRefreshTokenFromRequest,
+  setRefreshCookie,
+} = require('../../utils/auth_cookie');
 
 function requestMeta(req) {
   return { userAgent: req.headers['user-agent'], ip: req.ip };
@@ -13,6 +18,7 @@ async function register(req, res, next) {
   try {
     const input = registerSchema.parse(req.body);
     const { user, accessToken, refreshToken } = await authService.register(input, requestMeta(req));
+    setRefreshCookie(res, refreshToken);
     res.status(201).json({
       success: true,
       message: 'Conta criada com sucesso!',
@@ -34,6 +40,7 @@ async function login(req, res, next) {
   try {
     const input = loginSchema.parse(req.body);
     const { user, accessToken, refreshToken } = await authService.login(input, requestMeta(req));
+    setRefreshCookie(res, refreshToken);
     res.json({
       success: true,
       message: 'Login efectuado!',
@@ -46,10 +53,16 @@ async function login(req, res, next) {
 
 async function refresh(req, res, next) {
   try {
-    const { refreshToken, adminOnly } = refreshSchema.parse(req.body);
+    const { refreshToken: bodyToken, adminOnly } = refreshSchema.parse(req.body ?? {});
+    const refreshToken = bodyToken || getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      throw new ApiError(401, 'Sessão inválida. Autentica-te novamente.');
+    }
+
     const result = await authService.refresh(refreshToken, requestMeta(req), {
       adminOnly,
     });
+    setRefreshCookie(res, result.refreshToken);
     res.json({
       success: true,
       message: 'Token renovado.',
@@ -62,10 +75,13 @@ async function refresh(req, res, next) {
 
 async function logout(req, res, next) {
   try {
-    const { refreshToken } = refreshSchema.parse(req.body);
-    await authService.logout(refreshToken);
+    const { refreshToken: bodyToken } = refreshSchema.parse(req.body ?? {});
+    const refreshToken = bodyToken || getRefreshTokenFromRequest(req);
+    if (refreshToken) await authService.logout(refreshToken);
+    clearRefreshCookie(res);
     res.json({ success: true, message: 'Sessão terminada.' });
   } catch (err) {
+    clearRefreshCookie(res);
     next(err);
   }
 }

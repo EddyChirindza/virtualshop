@@ -9,21 +9,24 @@ import { parseAuthPayload } from '../../features/auth/types/auth'
 import { AuthSession } from '../../features/auth/services/authSession'
 
 const baseURL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://localhost:3000/api'
 
 const defaultOptions: CreateAxiosDefaults = {
   baseURL,
   timeout: 15_000,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 }
 
 const sessionTransport = axios.create(defaultOptions)
 
 export const authSession = new AuthSession({
-  refresh: async (refreshToken) => {
+  refresh: async () => {
     const response = await sessionTransport.post<ApiEnvelope<AuthPayload>>(
       '/auth/refresh',
-      { refreshToken, adminOnly: true },
+      { adminOnly: true },
     )
     const payload = parseAuthPayload(response.data)
     if (payload.user.role !== 'admin') {
@@ -31,8 +34,8 @@ export const authSession = new AuthSession({
     }
     return payload
   },
-  logout: async (refreshToken) => {
-    await sessionTransport.post('/auth/logout', { refreshToken })
+  logout: async () => {
+    await sessionTransport.post('/auth/logout', {})
   },
 })
 

@@ -134,7 +134,6 @@ export function Header({
           to="/notifications"
         >
           <Bell aria-hidden="true" className="h-5 w-5" />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-brand-start ring-2 ring-white" />
         </Link>
 
         <div className="relative shrink-0" ref={profileRef}>

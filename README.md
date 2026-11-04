@@ -62,6 +62,7 @@ virtual_shop/
 ├── app/
 │   ├── customer_app/  Flutter/Dart para Android e iOS
 │   ├── customer_web/  React + TypeScript + Vite para navegador
+│   ├── admin_web_2.0/ React + TypeScript + Vite para o painel administrativo
 │   ├── admin_web/     painel administrativo Flutter, também compilável para Web
 │   └── delivery_app/  Flutter; actualmente contém apenas o ecrã de demonstração inicial
 ├── backend/           API REST Node.js/Express, migrations, seed e testes
@@ -112,6 +113,26 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api
 ```
 
 O comando do Compose `docker compose --profile admin up --build -d` compila o painel e serve-o na porta 8081. Não há credenciais universais documentadas aqui; use uma conta de administrador configurada no ambiente de desenvolvimento.
+
+### Admin Web React — `app/admin_web_2.0`
+
+Painel administrativo React + TypeScript que usa a mesma API e base PostgreSQL
+do VirtualShop. Com a API em execução, configure a URL pública (incluindo
+`/api`) e inicie o Vite:
+
+```sh
+cd app/admin_web_2.0
+cp .env.example .env.local
+npm ci
+npm run dev
+```
+
+O exemplo aponta para `http://localhost:3000/api`; ajuste `VITE_API_URL` em
+`.env.local` quando necessário. O painel usa access tokens em memória e cookie
+HttpOnly para refresh. Não configure segredos no frontend. Em produção, permita
+a origem do painel em `CORS_ORIGINS` e configure cookies seguros no backend.
+Consulte [o README do painel React](./app/admin_web_2.0/README.md) para módulos
+integrados, limitações de API e comandos de validação.
 
 ### Delivery App — `app/delivery_app`
 
@@ -183,6 +204,7 @@ Para um dispositivo físico na mesma rede, troque `10.0.2.2` pelo IP LAN da máq
 - `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL e ligação da API.
 - `JWT_SECRET`: assinatura dos tokens; use um segredo aleatório privado.
 - `VITE_API_BASE_URL`: URL pública da API para o bundle React.
+- `VITE_API_URL`: URL pública da API para o painel React Admin Web 2.0.
 - `ADMIN_API_BASE_URL`: URL pública da API embutida no build Flutter Web admin.
 - `CORS_ORIGINS`: origens web aceites pelo backend. Em desenvolvimento, o backend também permite origens localhost.
 - `API_BASE_URL`: define a URL da API nas builds Flutter através de `--dart-define`.

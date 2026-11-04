@@ -8,7 +8,6 @@ export interface AdminUser {
 
 export interface AuthTokens {
   accessToken: string
-  refreshToken: string
 }
 
 export interface AuthPayload extends AuthTokens {
@@ -57,21 +56,14 @@ export function parseAuthPayload(response: unknown): AuthPayload {
 
   const { data } = response
   const accessToken = data.token
-  const refreshToken = data.refreshToken
 
-  if (
-    typeof accessToken !== 'string' ||
-    accessToken.length === 0 ||
-    typeof refreshToken !== 'string' ||
-    refreshToken.length === 0
-  ) {
+  if (typeof accessToken !== 'string' || accessToken.length === 0) {
     throw new AuthenticationError('A resposta de autenticação é inválida.')
   }
 
   return {
     user: parseAdminUser(data.user),
     accessToken,
-    refreshToken,
   }
 }
 

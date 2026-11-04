@@ -42,6 +42,11 @@ export class AuthService {
     return payload.user
   }
 
+  async restoreSession(): Promise<AdminUser | null> {
+    const payload = await this.session.refresh()
+    return payload?.user ?? null
+  }
+
   async getCurrentUser(): Promise<AdminUser> {
     const response = await this.client.get<unknown>('/auth/me')
     if (!isRecord(response.data) || !isRecord(response.data.data)) {

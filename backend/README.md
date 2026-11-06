@@ -107,9 +107,10 @@ and the database should not be exposed to mobile devices.
 ## Customer Web and Flutter targets
 
 The browser customer storefront is React at `app/customer_web`. Flutter
-`app/customer_app` is for Android and iOS. Run Admin Web separately with
-Flutter or through the optional Docker Compose `admin` profile. See the root
-README for setup and commands. Keep `/api` at the end of each API base URL.
+`app/customer_app` is for Android and iOS. Run the React Admin Web
+(`app/admin_web_2.0`) locally with Vite or through the optional Docker Compose
+`admin` profile. See the root README for setup and commands. Keep `/api` at the
+end of each API base URL.
 
 Find the PC's current LAN IPv4 address on Linux with:
 

@@ -35,7 +35,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-30}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080,http://localhost:8081}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080,http://localhost:8082}
     ports:
       - "127.0.0.1:3001:3000"
     volumes:
@@ -56,7 +56,7 @@ services:
       context: ./app/customer_web
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
     restart: unless-stopped
     ports:
       - "8080:80"
@@ -64,16 +64,16 @@ services:
       backend:
         condition: service_healthy
 
-  admin_web:
+  admin_web_2:
     profiles: ["admin"]
     build:
-      context: ./app/admin_web
+      context: ./app/admin_web_2.0
       dockerfile: Dockerfile
       args:
-        API_BASE_URL: ${ADMIN_API_BASE_URL:-http://localhost:3000/api}
+        VITE_API_URL: ${ADMIN_WEB_2_API_URL:-http://localhost:3001/api}
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "8082:80"
     depends_on:
       backend:
         condition: service_healthy

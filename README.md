@@ -2,6 +2,8 @@
 
 Monorepo de uma loja virtual. O backend e a base de dados são partilhados pelas aplicações cliente e pelo painel administrativo.
 
+A base de dados de desenvolvimento é o serviço PostgreSQL do Docker Compose. Não é necessário instalar nem usar uma PostgreSQL local; o projeto deve ligar-se sempre à base do serviço `db`.
+
 ## Começar com Docker
 
 Requisitos: Docker Engine e Docker Compose v2 (`docker compose`). O Compose é a forma recomendada de iniciar a API, PostgreSQL e o Customer Web em conjunto.
@@ -27,18 +29,22 @@ URLs locais:
 | Serviço | URL |
 |---|---|
 | Customer Web (React) | http://localhost:8080 |
-| API | http://localhost:3000/api |
-| Health da API | http://localhost:3000/api/health |
-| Readiness (inclui PostgreSQL) | http://localhost:3000/api/health/ready |
-| PostgreSQL | `127.0.0.1:5432` no host; não é exposto à rede |
+| API | http://localhost:3001/api |
+| Health da API | http://localhost:3001/api/health |
+| Readiness (inclui PostgreSQL) | http://localhost:3001/api/health/ready |
+| PostgreSQL | `127.0.0.1:5437` no host (`DB_PORT_FORWARD`); não é exposto à rede |
 
-O painel `admin_web` é opcional e é compilado como Flutter Web dentro do Docker:
+O backend do Compose usa `db:5432` internamente. A partir do host, use a porta publicada `5437`; não use a porta `5432`, que pode pertencer a uma PostgreSQL local alheia ao projeto.
+
+O painel administrativo React é opcional no Compose e fica disponível no perfil `admin`:
 
 ```sh
 docker compose --profile admin up --build -d
 ```
 
-Fica disponível em http://localhost:8081. O `API_BASE_URL` do painel e o `VITE_API_BASE_URL` do Customer Web são valores embutidos nos respectivos builds e devem ser URLs acessíveis pelo navegador. Os valores padrão servem para desenvolvimento local.
+- Admin React (`admin_web_2`) em http://localhost:8082.
+
+O `VITE_API_URL` do Admin React e o `VITE_API_BASE_URL` do Customer Web são valores embutidos nos respectivos builds e devem ser URLs acessíveis pelo navegador. Os valores padrão servem para desenvolvimento local.
 
 Comandos úteis:
 
@@ -51,7 +57,7 @@ docker compose down                     # parar e remover containers/rede; prese
 docker compose down -v                  # APAGA a base de dados e uploads persistidos
 ```
 
-As migrations pendentes correm ao iniciar o serviço `backend`. O volume `postgres_data` guarda a base de dados e `backend_uploads` guarda imagens de produtos e avatares. `docker compose down` preserva os volumes; só use `down -v` quando quiser eliminar os dados locais.
+As migrations pendentes correm ao iniciar o serviço `backend`. O volume `postgres_data` guarda a base de dados e `backend_uploads` guarda imagens de produtos e avatares. `docker compose down` preserva os volumes; só use `down -v` quando quiser eliminar os dados do Docker.
 
 Este Compose destina-se a desenvolvimento local. Não publique estes serviços diretamente na Internet; para produção configure TLS, segredos de deployment, política de CORS e armazenamento persistente apropriado.
 
@@ -63,7 +69,6 @@ virtual_shop/
 │   ├── customer_app/  Flutter/Dart para Android e iOS
 │   ├── customer_web/  React + TypeScript + Vite para navegador
 │   ├── admin_web_2.0/ React + TypeScript + Vite para o painel administrativo
-│   ├── admin_web/     painel administrativo Flutter, também compilável para Web
 │   └── delivery_app/  Flutter; actualmente contém apenas o ecrã de demonstração inicial
 ├── backend/           API REST Node.js/Express, migrations, seed e testes
 ├── docker-compose.yml PostgreSQL + API + Customer Web; perfil opcional admin
@@ -102,19 +107,7 @@ npm run preview
 
 O checkout disponível no backend cria uma encomenda, mas a API ainda não expõe histórico/listagem de encomendas nem contratos para gateways ou métodos de pagamento. A consulta de encomenda existente requer o respectivo número (`GET /orders/:id`).
 
-### Admin Web — `app/admin_web`
-
-Painel administrativo Flutter com autenticação de administrador, dashboard, gestão de produtos/imagens e categorias, consulta de clientes e notificações. Pode ser executado em Chrome fora do Docker:
-
-```sh
-cd app/admin_web
-flutter pub get
-flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api
-```
-
-O comando do Compose `docker compose --profile admin up --build -d` compila o painel e serve-o na porta 8081. Não há credenciais universais documentadas aqui; use uma conta de administrador configurada no ambiente de desenvolvimento.
-
-### Admin Web React — `app/admin_web_2.0`
+### Admin Web — `app/admin_web_2.0`
 
 Painel administrativo React + TypeScript que usa a mesma API e base PostgreSQL
 do VirtualShop. Com a API em execução, configure a URL pública (incluindo
@@ -127,11 +120,14 @@ npm ci
 npm run dev
 ```
 
-O exemplo aponta para `http://localhost:3000/api`; ajuste `VITE_API_URL` em
+O exemplo aponta para `http://localhost:3001/api`; ajuste `VITE_API_URL` em
 `.env.local` quando necessário. O painel usa access tokens em memória e cookie
 HttpOnly para refresh. Não configure segredos no frontend. Em produção, permita
 a origem do painel em `CORS_ORIGINS` e configure cookies seguros no backend.
-Consulte [o README do painel React](./app/admin_web_2.0/README.md) para módulos
+Também pode ser servido pelo Compose em `http://localhost:8082` através de
+`docker compose --profile admin up --build -d`; o URL da API é configurado por
+`ADMIN_WEB_2_API_URL` no build. Consulte
+[o README do painel React](./app/admin_web_2.0/README.md) para módulos
 integrados, limitações de API e comandos de validação.
 
 ### Delivery App — `app/delivery_app`
@@ -144,7 +140,7 @@ flutter pub get
 flutter run
 ```
 
-O Compose não inicia apps móveis: Android/iOS precisam de um emulador ou dispositivo. O painel admin é a única outra app Flutter incluída como imagem Web no Docker.
+O Compose não inicia apps móveis: Android/iOS precisam de um emulador ou dispositivo. O Admin Web é servido separadamente como imagem Web React no perfil `admin` do Compose.
 
 ## Backend e API
 
@@ -154,7 +150,7 @@ Rotas base: `/api/auth`, `/api/users`, `/api/products`, `/api/categories`, `/api
 
 As migrations SQL em `backend/migrations/` são numeradas e aplicadas uma vez pela tabela `schema_migrations`. A API serve imagens enviadas em `/uploads`; o Compose persiste estes ficheiros no volume `backend_uploads`.
 
-Para executar a API localmente sem colocar Node no Docker, inicie PostgreSQL e configure as variáveis requeridas no ambiente do backend (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`). `backend/src/config/env.js` valida esses valores. As instruções principais de desenvolvimento são:
+Para executar a API localmente sem colocar Node no Docker, mantenha a base de dados no Docker e configure o backend para se ligar à porta publicada no host (`DB_HOST=localhost`, `DB_PORT=5437`). O `backend/.env` deve usar as mesmas credenciais (`DB_NAME`, `DB_USER`, `DB_PASSWORD`) que o `.env` da raiz. `backend/src/config/env.js` valida esses valores. As instruções principais de desenvolvimento são:
 
 ```sh
 docker compose up -d db
@@ -164,7 +160,7 @@ npm run migrate
 npm run dev
 ```
 
-Se executar a API fora de Compose, use `DB_HOST=localhost`. A API fica em `http://localhost:3000` por padrão.
+Não aponte o backend para uma PostgreSQL local na porta `5432`; a base do projeto é a do serviço `db`. Com a API fora do Compose, esta fica em `http://localhost:3000` por padrão.
 
 ### Testes do backend
 
@@ -184,7 +180,7 @@ Instale Flutter, Android SDK e/ou Xcode conforme a plataforma. Use o endereço d
 # Android Emulator — executar Customer App
 cd app/customer_app
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3001/api
 
 # Testes do Customer App
 flutter test
@@ -201,11 +197,13 @@ Para um dispositivo físico na mesma rede, troque `10.0.2.2` pelo IP LAN da máq
 ## Variáveis e configuração
 
 - `.env.example`: modelo de configuração para Docker Compose; copie para `.env` na raiz.
-- `DB_NAME`, `DB_USER`, `DB_PASSWORD`: PostgreSQL e ligação da API.
+- `DB_HOST`, `DB_PORT`: ligação do backend à base do Docker quando o Node corre fora do Compose; no host, `localhost:5437`.
+- `DB_PORT_FORWARD`: porta do PostgreSQL publicada pelo Compose no host (neste projeto, `5437`).
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`: credenciais da base PostgreSQL do serviço `db`, usadas pela API.
 - `JWT_SECRET`: assinatura dos tokens; use um segredo aleatório privado.
 - `VITE_API_BASE_URL`: URL pública da API para o bundle React.
 - `VITE_API_URL`: URL pública da API para o painel React Admin Web 2.0.
-- `ADMIN_API_BASE_URL`: URL pública da API embutida no build Flutter Web admin.
+- `ADMIN_WEB_2_API_URL`: URL pública da API embutida no build Docker do Admin React (`VITE_API_URL`).
 - `CORS_ORIGINS`: origens web aceites pelo backend. Em desenvolvimento, o backend também permite origens localhost.
 - `API_BASE_URL`: define a URL da API nas builds Flutter através de `--dart-define`.
 

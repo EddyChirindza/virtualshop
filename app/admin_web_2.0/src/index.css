@@ -5,16 +5,16 @@
     'Poppins', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
     sans-serif;
 
-  --color-brand-start: #d946ef;
-  --color-brand-end: #7c3aed;
-  --color-brand-50: #f6f0fe;
-  --color-brand-100: #eee2fc;
-  --color-brand-200: #ddc6f9;
-  --color-brand-300: #c69df5;
-  --color-brand-400: #a86aee;
-  --color-brand-500: #8b3fe4;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6926c4;
+  --color-brand-start: #3b82f6;
+  --color-brand-end: #1e3a8a;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1e3a8a;
 
   --color-ink: #202232;
   --color-muted: #8a8fa3;

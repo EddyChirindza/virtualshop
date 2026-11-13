@@ -76,6 +76,34 @@ export interface AdminOrder {
   rejectionReason: string | null
   createdAt: string
   updatedAt: string
+  address: {
+    id: number
+    label: string | null
+    province: string | null
+    city: string | null
+    neighborhood: string | null
+    street: string | null
+    number: string | null
+    reference: string | null
+    geoLat: number | null
+    geoLng: number | null
+    isDefault: boolean | null
+  } | null
+  paymentMethod: {
+    id: number
+    type: string
+    label: string | null
+    provider: string | null
+    cardBrand: string | null
+    cardLast4: string | null
+    phone: string | null
+  } | null
+  couponCode: string | null
+  acceptedAt: string | null
+  rejectedAt: string | null
+  completedAt: string | null
+  cancelledAt: string | null
+  itemCount?: number
   customer?: {
     id: number
     name: string
@@ -100,6 +128,31 @@ export interface Customer {
   phone: string
   avatarUrl: string | null
   createdAt: string
+}
+
+export interface Administrator {
+  id: number
+  full_name: string
+  phone: string
+  email: string | null
+  role: string
+  is_active: boolean
+  created_at: string
+  last_login_at: string | null
+}
+
+export interface AdministratorFields {
+  full_name: string
+  phone: string
+  email: string | null
+  password: string
+}
+
+export interface AdministratorUpdateFields {
+  full_name?: string
+  phone?: string
+  email?: string | null
+  is_active?: boolean
 }
 
 export interface AdminNotification {
@@ -136,6 +189,18 @@ export const adminApi = {
       { params: { period } },
     )
     return response.data.data
+  },
+
+  async createProductNotification(product: Product) {
+    return this.createNotification({
+      title: 'Novo produto disponível',
+      message: `Novo produto disponível: ${product.name}`,
+      type: 'new_product',
+      product_id: product.id,
+      recipient_scope: 'all_customers',
+      status: 'published',
+      idempotency_key: `product:${product.id}:new_product`,
+    })
   },
 
   async listProducts(params: {
@@ -216,6 +281,8 @@ export const adminApi = {
   async listOrders(params: {
     status?: string
     search?: string
+    from?: string
+    to?: string
     page: number
     limit: number
   }) {
@@ -259,6 +326,29 @@ export const adminApi = {
   async listCustomers() {
     const response = await apiClient.get<ApiEnvelope<Customer[]>>(
       '/admin/customers',
+    )
+    return response.data.data
+  },
+
+  async listAdministrators() {
+    const response = await apiClient.get<ApiEnvelope<Administrator[]>>(
+      '/admin/administrators',
+    )
+    return response.data.data
+  },
+
+  async createAdministrator(fields: AdministratorFields) {
+    const response = await apiClient.post<ApiEnvelope<Administrator>>(
+      '/admin/administrators',
+      fields,
+    )
+    return response.data.data
+  },
+
+  async updateAdministrator(id: number, fields: AdministratorUpdateFields) {
+    const response = await apiClient.patch<ApiEnvelope<Administrator>>(
+      `/admin/administrators/${id}`,
+      fields,
     )
     return response.data.data
   },
@@ -316,7 +406,26 @@ export interface NotificationFields {
     | 'order_update'
   recipient_scope: 'all_customers' | 'user'
   recipient_user_id?: number
+  product_id?: number | null
   status: 'draft' | 'published'
+  idempotency_key?: string
+  starts_at?: string | null
+  expires_at?: string | null
+}
+
+export async function createProductWithOptionalNotification(
+  fields: ProductFields,
+  notifyCustomers: boolean,
+): Promise<{ product: Product; notificationError?: unknown }> {
+  const product = await adminApi.createProduct(fields)
+  if (!notifyCustomers) return { product }
+
+  try {
+    await adminApi.createProductNotification(product)
+    return { product }
+  } catch (notificationError) {
+    return { product, notificationError }
+  }
 }
 
 export function resolveAssetUrl(path: string | null): string | null {

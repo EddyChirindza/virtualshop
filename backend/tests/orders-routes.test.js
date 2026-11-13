@@ -2,15 +2,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 
-const { query } = require('../src/config/db');
+const { pool, query } = require('../src/config/db');
 const { generateAccessToken } = require('../src/utils/tokens');
 const cartService = require('../src/modules/cart/cart.service');
 const orderService = require('../src/modules/orders/order.service');
 const app = require('../src/app');
-const { assertIsolatedTestDatabase } = require('../test-support/assert-test-database');
+const { assertConnectedTestDatabase } = require('../test-support/assert-test-database');
 
 async function resetDb() {
-  assertIsolatedTestDatabase();
+  await assertConnectedTestDatabase(pool);
   await query('DELETE FROM notifications');
   await query('DELETE FROM favorites');
   await query('DELETE FROM cart_items');

@@ -2,6 +2,8 @@ import {
   ArrowRight,
   CircleAlert,
   CircleCheck,
+  Eye,
+  EyeOff,
   LoaderCircle,
   ShieldCheck,
 } from 'lucide-react'
@@ -14,6 +16,7 @@ import { useAuth } from '../context/useAuth'
 interface RedirectState {
   from?: Location
   logoutError?: string
+  message?: string
 }
 
 const inputClassName =
@@ -25,7 +28,9 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const redirectState = location.state as RedirectState | null
+  const successMessage = redirectState?.message
   const [errorMessage, setErrorMessage] = useState<string | null>(
     redirectState?.logoutError ?? null,
   )
@@ -51,7 +56,7 @@ export function LoginPage() {
 
   return (
     <main className="grid min-h-screen bg-canvas lg:grid-cols-[1.05fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-brand-start via-brand-end to-[#4167e8] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-brand-start via-brand-600 to-brand-end p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl"
@@ -86,23 +91,7 @@ export function LoginPage() {
             Encomendas, catálogo, clientes e equipa administrativa num único
             espaço, desenhado para o trabalho diário.
           </p>
-          <ul className="mt-8 space-y-3">
-            {[
-              'Visão centralizada da operação',
-              'Acesso protegido por autenticação',
-              'Interface responsiva em qualquer dispositivo',
-            ].map((feature) => (
-              <li className="flex items-center gap-3 text-sm" key={feature}>
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15">
-                  <CircleCheck
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5"
-                  />
-                </span>
-                <span className="text-white/85">{feature}</span>
-              </li>
-            ))}
-          </ul>
+
         </div>
 
         <p className="relative z-10 text-xs text-white/60">
@@ -139,6 +128,16 @@ export function LoginPage() {
               Usa as tuas credenciais de administrador para aceder ao painel.
             </p>
 
+            {successMessage && (
+              <p
+                className="mt-5 flex items-start gap-2 rounded-xl border border-success/20 bg-success-surface px-3.5 py-3 text-sm text-success"
+                role="status"
+              >
+                <CircleCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                {successMessage}
+              </p>
+            )}
+
             <div className="mt-7 space-y-5">
               <div>
                 <label
@@ -167,18 +166,34 @@ export function LoginPage() {
                 >
                   Password
                 </label>
-                <input
-                  aria-invalid={errorMessage ? true : undefined}
-                  autoComplete="current-password"
-                  className={`${inputClassName} mt-1.5`}
-                  id="password"
-                  name="password"
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Introduz a tua password"
-                  required
-                  type="password"
-                  value={password}
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    aria-invalid={errorMessage ? true : undefined}
+                    autoComplete="current-password"
+                    className={`${inputClassName} pr-11`}
+                    id="password"
+                    name="password"
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Introduz a tua password"
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                  />
+                  <button
+                    aria-label={
+                      showPassword ? 'Ocultar password' : 'Mostrar password'
+                    }
+                    className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-muted transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-end/40"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showPassword ? (
+                      <EyeOff aria-hidden="true" className="h-4 w-4" />
+                    ) : (
+                      <Eye aria-hidden="true" className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {errorMessage && (

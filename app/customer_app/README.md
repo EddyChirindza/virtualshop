@@ -6,13 +6,19 @@ Aplicação móvel Android/iOS. Para estrutura do monorepo, inicialização da A
 flutter pub get
 
 # Android Emulator
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3001/api
 
 # Testes
 flutter test
 ```
 
-Para um dispositivo físico, use o IP da máquina que executa a API em vez de `10.0.2.2`. A aplicação Web do cliente é a implementação React independente em `app/customer_web`.
+Com o Docker Compose, a API é publicada na porta `3001` do host. Se iniciares o backend diretamente no host, usa a porta `3000`:
+
+```sh
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
+```
+
+Num dispositivo físico, substitui `10.0.2.2` pelo IP da máquina que executa a API e mantém a porta correspondente ao modo de execução (`3001` no Compose ou `3000` no backend local). A aplicação Web do cliente é a implementação React independente em `app/customer_web`.
 
 ## Android release
 

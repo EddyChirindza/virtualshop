@@ -40,9 +40,9 @@ class ApiConstants {
       );
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000/api';
+      return 'http://10.0.2.2:3001/api';
     }
-    return 'http://localhost:3000/api';
+    return 'http://localhost:3001/api';
   }
 
   /// Falha cedo (no arranque) se a configuração de release estiver em falta.

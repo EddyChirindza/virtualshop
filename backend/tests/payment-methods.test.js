@@ -1,12 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { query } = require('../src/config/db');
+const { pool, query } = require('../src/config/db');
 const paymentMethodsService = require('../src/modules/payment_methods/payment_methods.service');
-const { assertIsolatedTestDatabase } = require('../test-support/assert-test-database');
+const { assertConnectedTestDatabase } = require('../test-support/assert-test-database');
 
 async function resetDb() {
-  assertIsolatedTestDatabase();
+  await assertConnectedTestDatabase(pool);
   await query("DELETE FROM users WHERE email LIKE 'payment.methods.%@example.com'");
 
   const { rows } = await query(

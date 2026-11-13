@@ -88,7 +88,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-start via-brand-end to-[#4167e8] p-6 text-white shadow-lg shadow-brand-end/20 sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-start via-brand-600 to-brand-end p-6 text-white shadow-lg shadow-brand-end/20 sm:p-8">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10 blur-2xl"

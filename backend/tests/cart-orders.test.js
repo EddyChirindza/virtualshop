@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { query } = require('../src/config/db');
+const { pool, query } = require('../src/config/db');
 const cartService = require('../src/modules/cart/cart.service');
 const orderService = require('../src/modules/orders/order.service');
-const { assertIsolatedTestDatabase } = require('../test-support/assert-test-database');
+const { assertConnectedTestDatabase } = require('../test-support/assert-test-database');
 
 async function resetDb() {
-  assertIsolatedTestDatabase();
+  await assertConnectedTestDatabase(pool);
   await query('DELETE FROM cart_items');
   await query('DELETE FROM carts');
   await query('DELETE FROM order_items');

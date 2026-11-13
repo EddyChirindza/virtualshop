@@ -7,10 +7,7 @@ const env = require('../src/config/env');
 const app = require('../src/app');
 const authService = require('../src/modules/auth/auth.service');
 const { generateAccessToken, hashRefreshToken } = require('../src/utils/tokens');
-const {
-  assertIsolatedTestDatabase,
-  assertConnectedTestDatabase,
-} = require('../test-support/assert-test-database');
+const { assertConnectedTestDatabase } = require('../test-support/assert-test-database');
 const usersService = require('../src/modules/users/users.service');
 
 async function postJson(url, body) {
@@ -25,7 +22,6 @@ async function postJson(url, body) {
 }
 
 test('sessões isolam utilizadores, rodam refresh e revogam corridas', async (t) => {
-  assertIsolatedTestDatabase();
   await assertConnectedTestDatabase(pool);
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));

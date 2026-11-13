@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const controller = require('./admin.controller');
+const administratorController = require('./administrator.controller');
 const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
 const notificationsController = require('../notifications/notifications.controller');
 const orderController = require('../orders/order.controller');
@@ -8,6 +9,9 @@ const router = Router();
 router.use(requireAuth, requireRole('admin'));
 router.get('/dashboard', controller.dashboard);
 router.get('/customers', controller.customers);
+router.get('/administrators', administratorController.listAdministrators);
+router.post('/administrators', administratorController.createAdministrator);
+router.patch('/administrators/:id', administratorController.updateAdministrator);
 router.post('/products/image', controller.uploadProductImage);
 router.get('/orders', orderController.adminList);
 router.get('/orders/:id', orderController.adminDetail);

@@ -5,10 +5,7 @@ const { pool, query } = require('../src/config/db');
 const app = require('../src/app');
 const env = require('../src/config/env');
 const authService = require('../src/modules/auth/auth.service');
-const {
-  assertIsolatedTestDatabase,
-  assertConnectedTestDatabase,
-} = require('../test-support/assert-test-database');
+const { assertConnectedTestDatabase } = require('../test-support/assert-test-database');
 const { REFRESH_COOKIE_NAME } = require('../src/utils/auth_cookie');
 
 const ORIGIN = 'http://localhost:5173';
@@ -35,7 +32,6 @@ function findRefreshCookie(response) {
 }
 
 test('refresh token é gerido por cookie HttpOnly, com rotação e logout', async (t) => {
-  assertIsolatedTestDatabase();
   await assertConnectedTestDatabase(pool);
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));

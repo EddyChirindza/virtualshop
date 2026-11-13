@@ -7,6 +7,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { getApiErrorMessage } from '../../../lib/api/errors'
 import {
   adminApi,
+  createProductWithOptionalNotification,
   resolveAssetUrl,
   type Product,
   type ProductFields,
@@ -34,6 +35,9 @@ export function ProductsPage() {
   const [form, setForm] = useState<ProductFields>(blankProduct)
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [formOpen, setFormOpen] = useState(false)
+  const [notifyCustomers, setNotifyCustomers] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveMessageIsError, setSaveMessageIsError] = useState(false)
 
   const categories = useQuery({
     queryKey: ['admin', 'categories'],
@@ -60,10 +64,12 @@ export function ProductsPage() {
       id,
       fields,
       files,
+      notify,
     }: {
       id: number | null
       fields: ProductFields
       files: File[]
+      notify: boolean
     }) => {
       const imageUrls = [...fields.image_urls]
       if (files.length > 20) {
@@ -81,13 +87,25 @@ export function ProductsPage() {
         }
       }
       const productFields = { ...fields, image_urls: imageUrls }
-      return id
-        ? adminApi.updateProduct(id, productFields)
-        : adminApi.createProduct(productFields)
+      if (id) {
+        return { product: await adminApi.updateProduct(id, productFields) }
+      }
+      return createProductWithOptionalNotification(productFields, notify)
     },
-    onSuccess: async () => {
+    onSuccess: async (result, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'products'] })
       setFormOpen(false)
+      const notificationFailed = 'notificationError' in result && result.notificationError
+      setSaveMessageIsError(Boolean(notificationFailed))
+      setSaveMessage(
+        notificationFailed
+          ? `Produto “${result.product.name}” criado, mas a notificação falhou: ${getApiErrorMessage(result.notificationError)}`
+          : variables.id
+            ? `Produto “${result.product.name}” actualizado.`
+            : variables.notify
+              ? `Produto “${result.product.name}” criado e notificação publicada.`
+              : `Produto “${result.product.name}” criado.`,
+      )
     },
   })
   const deleteProduct = useMutation({
@@ -100,7 +118,9 @@ export function ProductsPage() {
     setEditing(null)
     setForm(blankProduct)
     setImageFiles([])
+    setNotifyCustomers(false)
     saveProduct.reset()
+    setSaveMessage('')
     setFormOpen(true)
   }
 
@@ -117,6 +137,7 @@ export function ProductsPage() {
       is_new_arrival: product.is_new_arrival,
     })
     setImageFiles([])
+    setNotifyCustomers(false)
     saveProduct.reset()
     setFormOpen(true)
   }
@@ -127,6 +148,7 @@ export function ProductsPage() {
       id: editing?.id ?? null,
       fields: form,
       files: imageFiles,
+      notify: notifyCustomers,
     }).catch(() => undefined)
   }
 
@@ -159,6 +181,14 @@ export function ProductsPage() {
         description="Consulta e organiza os produtos, o stock e a disponibilidade do catálogo."
         title="Catálogo de produtos"
       >
+        {saveMessage && (
+          <p
+            className={`mb-4 rounded-xl px-3.5 py-3 text-sm ${saveMessageIsError ? 'bg-warning-surface text-warning' : 'bg-success-surface text-success'}`}
+            role={saveMessageIsError ? 'alert' : 'status'}
+          >
+            {saveMessage}
+          </p>
+        )}
         <div className="mb-5 flex flex-wrap gap-3">
           <form className="relative min-w-56 flex-1" onSubmit={searchProducts} role="search">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -317,6 +347,22 @@ export function ProductsPage() {
                 <label className="flex items-center gap-2 text-sm text-ink"><input checked={form.is_popular} onChange={(event) => setForm({ ...form, is_popular: event.target.checked })} type="checkbox" /> Popular</label>
                 <label className="flex items-center gap-2 text-sm text-ink"><input checked={form.is_new_arrival} onChange={(event) => setForm({ ...form, is_new_arrival: event.target.checked })} type="checkbox" /> Novidade</label>
               </div>
+              {!editing && (
+                <label className="flex items-start gap-2 rounded-xl border border-line p-3 text-sm text-ink">
+                  <input
+                    checked={notifyCustomers}
+                    className="mt-0.5"
+                    onChange={(event) => setNotifyCustomers(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>
+                    Notificar os clientes quando o produto for criado
+                    <span className="mt-0.5 block text-xs font-normal text-muted">
+                      A notificação só será publicada depois de o produto ser guardado.
+                    </span>
+                  </span>
+                </label>
+              )}
               {saveProduct.isError && <p className="flex items-center gap-2 rounded-lg bg-danger-surface px-3 py-2.5 text-sm text-danger" role="alert"><CircleAlert aria-hidden="true" className="h-4 w-4" />{getApiErrorMessage(saveProduct.error)}</p>}
               <footer className="flex justify-end gap-2 border-t border-line pt-4">
                 <Button onClick={() => setFormOpen(false)}>Cancelar</Button>

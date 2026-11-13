@@ -64,8 +64,12 @@ test('perfil aceita payload camelCase para atualizar informações pessoais', ()
   );
 });
 
-test('perfil não aceita alteração de email nem identificador do utilizador', () => {
-  assert.equal(profileUpdateSchema.safeParse({ email: 'other@example.com' }).success, false);
+test('perfil aceita email válido e rejeita email inválido ou identificador do utilizador', () => {
+  assert.equal(
+    profileUpdateSchema.parse({ email: '  Other@Example.com  ' }).email,
+    'other@example.com',
+  );
+  assert.equal(profileUpdateSchema.safeParse({ email: 'not-an-email' }).success, false);
   assert.equal(profileUpdateSchema.safeParse({ user_id: 99, fullName: 'Nome' }).success, false);
 });
 

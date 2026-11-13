@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, CircleAlert, LoaderCircle, Plus, Send, Trash2, X } from 'lucide-react'
+import { Bell, CircleAlert, LoaderCircle, Plus, Search, Send, Trash2, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { getApiErrorMessage } from '../../../lib/api/errors'
 import { adminApi, type NotificationFields } from '../../admin/adminApi'
+import { hasInvalidNotificationDateRange } from '../utils/schedule'
 
 type NotificationFilter = 'all' | 'draft' | 'published' | 'archived'
 
@@ -24,6 +25,8 @@ export function NotificationsPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<NotificationFields>(emptyForm)
   const [recipientId, setRecipientId] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const notifications = useQuery({
     queryKey: ['admin', 'notifications', page],
@@ -34,13 +37,28 @@ export function NotificationsPage() {
     queryFn: adminApi.listCustomers,
     enabled: formOpen && form.recipient_scope === 'user',
   })
+  const products = useQuery({
+    queryKey: ['admin', 'notification-products', productSearch],
+    queryFn: () =>
+      adminApi.listProducts({
+        q: productSearch.trim() || undefined,
+        page: 1,
+        limit: 50,
+      }),
+    enabled: formOpen,
+  })
   const createNotification = useMutation({
     mutationFn: adminApi.createNotification,
-    onSuccess: async () => {
+    onSuccess: async (notification) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'notifications'] })
       setFormOpen(false)
       setForm(emptyForm)
       setRecipientId('')
+      setSuccessMessage(
+        notification.status === 'published'
+          ? 'Notificação publicada.'
+          : 'Notificação guardada como rascunho.',
+      )
     },
   })
   const archiveNotification = useMutation({
@@ -52,9 +70,14 @@ export function NotificationsPage() {
   const items = (notifications.data?.items ?? []).filter((item) =>
     filter === 'all' ? true : item.status === filter,
   )
+  const dateRangeError = hasInvalidNotificationDateRange(
+    form.starts_at,
+    form.expires_at,
+  )
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (dateRangeError) return
     const payload: NotificationFields = {
       ...form,
       ...(form.recipient_scope === 'user' && recipientId
@@ -78,6 +101,8 @@ export function NotificationsPage() {
               createNotification.reset()
               setForm(emptyForm)
               setRecipientId('')
+              setProductSearch('')
+              setSuccessMessage('')
               setFormOpen(true)
             }}
             variant="primary"
@@ -89,6 +114,11 @@ export function NotificationsPage() {
         description="Consulta e cria notificações enviadas aos clientes."
         title="Notificações"
       >
+        {successMessage && (
+          <p className="mb-4 rounded-xl bg-success-surface px-3.5 py-3 text-sm text-success" role="status">
+            {successMessage}
+          </p>
+        )}
         <div aria-label="Filtrar notificações" className="mb-5 flex flex-wrap items-center gap-1 rounded-xl border border-line bg-canvas p-1" role="group">
           {([
             ['all', 'Todas'],
@@ -199,6 +229,7 @@ export function NotificationsPage() {
                     <option value="discount">Desconto</option>
                     <option value="new_product">Novo produto</option>
                     <option value="product_alert">Alerta de produto</option>
+                    <option value="order_update">Actualização de encomenda</option>
                   </select>
                 </label>
                 <label className="block text-xs font-semibold text-ink">
@@ -218,6 +249,85 @@ export function NotificationsPage() {
                   </select>
                 </label>
               )}
+              <div className="space-y-3 rounded-xl border border-line p-3">
+                <p className="text-xs font-semibold text-ink">Produto associado (opcional)</p>
+                <label className="relative block">
+                  <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  <input
+                    aria-label="Pesquisar produtos para associar"
+                    className="w-full rounded-xl border border-line bg-white py-2.5 pl-9 pr-3 text-sm font-normal"
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Pesquisar produtos..."
+                    type="search"
+                    value={productSearch}
+                  />
+                </label>
+                {products.isError && (
+                  <p className="text-sm text-danger" role="alert">{getApiErrorMessage(products.error)}</p>
+                )}
+                <select
+                  aria-label="Produto associado"
+                  className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm font-normal"
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      product_id: event.target.value ? Number(event.target.value) : null,
+                    })
+                  }
+                  value={form.product_id ?? ''}
+                >
+                  <option value="">Sem produto associado</option>
+                  {products.data?.items.map((product) => (
+                    <option key={product.id} value={product.id}>{product.name}</option>
+                  ))}
+                </select>
+                {products.isLoading && <p className="text-xs text-muted">A carregar produtos...</p>}
+                {!products.isLoading && !products.isError && !products.data?.items.length && (
+                  <p className="text-xs text-muted">Não foram encontrados produtos.</p>
+                )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-xs font-semibold text-ink">
+                  Começa em (opcional)
+                  <input
+                    aria-label="Início da notificação"
+                    className="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal"
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        starts_at: event.target.value
+                          ? new Date(event.target.value).toISOString()
+                          : null,
+                      })
+                    }
+                    type="datetime-local"
+                    value={toLocalDateTime(form.starts_at)}
+                  />
+                </label>
+                <label className="block text-xs font-semibold text-ink">
+                  Expira em (opcional)
+                  <input
+                    aria-label="Expiração da notificação"
+                    className="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal"
+                    min={toLocalDateTime(form.starts_at)}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        expires_at: event.target.value
+                          ? new Date(event.target.value).toISOString()
+                          : null,
+                      })
+                    }
+                    type="datetime-local"
+                    value={toLocalDateTime(form.expires_at)}
+                  />
+                </label>
+              </div>
+              {dateRangeError && (
+                <p className="rounded-lg bg-danger-surface px-3 py-2.5 text-sm text-danger" role="alert">
+                  A data de expiração deve ser posterior à data de início.
+                </p>
+              )}
               <label className="block text-xs font-semibold text-ink">
                 Publicação
                 <select className="mt-1.5 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm font-normal" onChange={(event) => setForm({ ...form, status: event.target.value as NotificationFields['status'] })} value={form.status}>
@@ -233,7 +343,7 @@ export function NotificationsPage() {
               )}
               <footer className="flex justify-end gap-2 border-t border-line pt-4">
                 <Button onClick={() => setFormOpen(false)}>Cancelar</Button>
-                <Button disabled={createNotification.isPending || (form.recipient_scope === 'user' && customers.isLoading)} type="submit" variant="primary">
+                <Button disabled={createNotification.isPending || dateRangeError || (form.recipient_scope === 'user' && customers.isLoading)} type="submit" variant="primary">
                   {createNotification.isPending ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
                   {createNotification.isPending ? 'A guardar...' : 'Guardar'}
                 </Button>
@@ -244,6 +354,14 @@ export function NotificationsPage() {
       )}
     </>
   )
+}
+
+function toLocalDateTime(value: string | null | undefined): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  const timezoneOffset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16)
 }
 
 function notificationStatus(status: string): string {

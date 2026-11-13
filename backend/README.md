@@ -6,7 +6,7 @@ Run the validator and service tests from this directory with Node's built-in
 test runner:
 
 ```sh
-node --test tests/auth-validators.test.js tests/users-validators.test.js tests/notifications.validators.test.js
+node --test tests/auth-validators.test.js tests/users-validators.test.js tests/administrator-validators.test.js tests/notifications.validators.test.js
 node --test tests/products-search.test.js tests/notifications.service.test.js
 node --test tests/uploads-lifecycle.test.js tests/product-image-lifecycle.test.js tests/user-photo-lifecycle.test.js
 ```
@@ -19,18 +19,26 @@ notification service tests stub the database module and do not require
 PostgreSQL configuration.
 
 PostgreSQL integration tests use the normal database pool. Several suites issue
-table-wide `DELETE` statements, so the shared test helper blocks them unless
-`NODE_ENV=test`, `TEST_DB_NAME`, and `DB_NAME` all agree and the database name
-contains `test`. Create a dedicated, disposable PostgreSQL database and apply
-migrations to that database only. Configure `DB_HOST`, `DB_PORT`, `DB_NAME`,
-`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `NODE_ENV=test`, and
-`TEST_DB_NAME=<the exact test database name>` in a private test environment.
-For example, if the disposable database is `virtualshop_test`, both `DB_NAME`
-and `TEST_DB_NAME` must be `virtualshop_test`. The guard runs immediately before
-the first test database operation. Never set these variables to development or
-production credentials. No database migration or cleanup should be run against
-the main application database. There is no `.env.example`; do not copy
-production credentials into a test configuration.
+table-wide `DELETE` statements, so use a dedicated database named
+`virtualshop_test_<suffix>` (the bare name `virtualshop_test` is intentionally
+not accepted) and a non-privileged test role. The test role must not have
+`SUPERUSER`, `CREATEDB`, `CREATEROLE`, `REPLICATION`, `BYPASSRLS`, membership
+in a privileged role, or effective write permissions on `virtualshop_db`.
+
+Configure `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
+`JWT_SECRET`, `NODE_ENV=test`, and matching `TEST_DB_NAME`, `TEST_DB_HOST`,
+`TEST_DB_PORT`, `TEST_DB_USER`, and `TEST_DB_PASSWORD` in a private test
+environment. `DB_NAME` and `TEST_DB_NAME` must exactly match. The database guard
+checks the connected database and role, then inspects effective schema, table,
+column and sequence privileges, privileged-role memberships, and executable
+security-definer functions on `virtualshop_db`. The API refuses to listen in
+test mode unless those checks succeed.
+
+Several integration suites clean tables globally. Run them only against the
+isolated test database, sequentially, and never with development or production
+credentials. Do not use the existing `virtualshop_test` database unless it is
+separately reviewed and explicitly prepared; its name alone does not make it
+safe. This repository does not include a backend `.env.example`.
 
 ## Database migrations
 

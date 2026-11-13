@@ -10,8 +10,11 @@ import { AuthSession } from '../../features/auth/services/authSession'
 
 const baseURL =
   import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:3000/api'
+  import.meta.env.VITE_API_BASE_URL
+
+if (import.meta.env.PROD && !baseURL) {
+  throw new Error('Configure VITE_API_URL para o ambiente de produção.')
+}
 
 const defaultOptions: CreateAxiosDefaults = {
   baseURL,

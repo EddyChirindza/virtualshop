@@ -199,3 +199,24 @@ docker compose --profile admin --env-file .env.example config --services
 ```
 
 Se um build falhar, veja o log do serviço (`docker compose logs backend`, por exemplo). Para confirmar se a API e PostgreSQL estão prontos, consulte `/api/health/ready`. Para reiniciar o ambiente sem perder os dados, use `docker compose down` seguido de `docker compose up --build -d`.
+
+
+# A parte web 
+#  A estrtura das pasta/arquivos
+customer_web/
+├── node_modules/
+├── src/
+│   ├── components/             
+│   │   ├── Layout.tsx          
+│   │   └── ProtectedRoute.tsx  
+│   ├── pages/
+│   │   ├── Home.tsx            
+│   │   ├── Login.tsx           
+│   │   └── Dashboard.tsx       
+│   ├── services/
+│   │   └── api.ts              
+│   ├── styles/                
+│   │   └── theme.css           
+│   ├── main.tsx                
+│   ├── types.ts                
+│   └── vite-env.d.ts

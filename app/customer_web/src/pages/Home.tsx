@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Heart, ShoppingBag, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Category, Product } from '../types';
-
-const money = (v: number | string) => `${Number(v).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} MT`;
+import { money } from '../utils/format';
 
 export default function Home() {
   const nav = useNavigate();
@@ -36,7 +35,15 @@ export default function Home() {
     return () => { alive.current = false; clearTimeout(t); };
   }, [query, category]);
 
+  // O aviso fecha sozinho ao fim de 3,5 segundos.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(''), 3500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
   const needLogin = () => { nav('/login'); };
+  const openProduct = (id: number) => nav(`/produto/${id}`);
 
   const addToCart = async (p: Product) => {
     if (!session.token) return needLogin();
@@ -85,7 +92,7 @@ export default function Home() {
           {status === 'error' && (
             <div className="vs-state vs-err">
               <h3>Não foi possível carregar os produtos</h3>
-              <p>{error}. Confirme se a API está a correr e se o endereço em VITE_API_URL está certo.</p>
+              <p>{error}. Confirme se a API está a correr e se o endereço em VITE_API_BASE_URL está certo.</p>
               <button className="vs-btn" onClick={() => load()}>Tentar de novo</button>
             </div>
           )}
@@ -94,14 +101,16 @@ export default function Home() {
           )}
           {status === 'ok' && products.map(p => (
             <article className="vs-card" key={p.id}>
-              <button className="vs-card-img" aria-label={p.name}>
+              <button className="vs-card-img" aria-label={`Ver ${p.name}`} onClick={() => openProduct(p.id)}>
                 <img src={imageUrl(p.image_urls?.[0] || p.image_url || '')} alt={p.name} loading="lazy" />
               </button>
               <button className="vs-fav" aria-label="Guardar nos favoritos" aria-pressed={favs.includes(p.id)} onClick={() => toggleFav(p.id)}>
                 <Heart size={18} fill={favs.includes(p.id) ? 'currentColor' : 'none'} />
               </button>
               <div className="vs-card-cat">{p.category_name || 'Essenciais'}</div>
-              <h3 className="vs-card-title">{p.name}</h3>
+              <h3 className="vs-card-title">
+                <Link to={`/produto/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{p.name}</Link>
+              </h3>
               <div className="vs-card-foot">
                 <b>{money(p.price)}</b>
                 <button aria-label="Adicionar ao carrinho" disabled={!p.stock} onClick={() => addToCart(p)}><ShoppingBag size={17} /></button>

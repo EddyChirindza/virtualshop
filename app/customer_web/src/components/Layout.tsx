@@ -3,6 +3,7 @@ import { Search, ShoppingCart, User } from 'lucide-react';
 import { session } from '../services/api';
 import '../styles/theme.css';
 
+
 type Props = { children: React.ReactNode; query?: string; onQuery?: (v: string) => void };
 
 export default function Layout({ children, query, onQuery }: Props) {
@@ -10,7 +11,7 @@ export default function Layout({ children, query, onQuery }: Props) {
   const goAccount = () => nav(session.token ? '/dashboard' : '/login');
   return (
     <div className="vs-root">
-      <div className="vs-top">Entrega grátis em compras acima de 2.500 MT</div>
+      <div className="vs-top">Entrega grátis em compras acima de 2000 MT</div>
       <header className="vs-header">
         <div className="vs-wrap">
           <Link to="/" className="vs-brand"><b>V</b><span>virtual<em>shop</em></span></Link>

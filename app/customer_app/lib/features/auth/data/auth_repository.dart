@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/constants/api_constants.dart';
@@ -59,25 +61,43 @@ class AuthRepository {
     try {
       final response = await _dio.get(ApiConstants.me);
       // GET /auth/me -> data: { user: {...} }
-      return User.fromJson(unwrapMap(response)['user'] as Map<String, dynamic>);
+      final userJson = unwrapMap(response)['user'] as Map<String, dynamic>;
+      await _storage.saveCachedUser(jsonEncode(userJson));
+      return User.fromJson(userJson);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
   }
 
+  /// Utilizador guardado no último login/consulta bem-sucedida. Permite abrir
+  /// a app com sessão válida mesmo sem rede no arranque.
+  Future<User?> cachedUser() async {
+    final raw = await _storage.getCachedUser();
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      return User.fromJson(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> logout() async {
     final refreshToken = await _storage.getRefreshToken();
+    await _storage.clear();
+    await logoutRemote(refreshToken);
+  }
+
+  Future<void> logoutRemote(String? refreshToken) async {
+    if (refreshToken == null || refreshToken.isEmpty) return;
     try {
-      if (refreshToken != null) {
-        await _dio.post(
-          ApiConstants.logout,
-          data: {'refreshToken': refreshToken},
-        );
-      }
+      await _dio.post(
+        ApiConstants.logout,
+        data: {'refreshToken': refreshToken},
+      );
     } on DioException {
-      // Best-effort: even if the server call fails, wipe local tokens below.
-    } finally {
-      await _storage.clear();
+      // Best-effort: the local session is already gone.
     }
   }
 
@@ -95,6 +115,8 @@ class AuthRepository {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     );
-    return User.fromJson(data['user'] as Map<String, dynamic>);
+    final userJson = data['user'] as Map<String, dynamic>;
+    await _storage.saveCachedUser(jsonEncode(userJson));
+    return User.fromJson(userJson);
   }
 }

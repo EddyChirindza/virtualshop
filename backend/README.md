@@ -6,8 +6,9 @@ Run the validator and service tests from this directory with Node's built-in
 test runner:
 
 ```sh
-node --test tests/auth-validators.test.js tests/users-validators.test.js tests/notifications.validators.test.js
+node --test tests/auth-validators.test.js tests/users-validators.test.js tests/administrator-validators.test.js tests/notifications.validators.test.js
 node --test tests/products-search.test.js tests/notifications.service.test.js
+node --test tests/uploads-lifecycle.test.js tests/product-image-lifecycle.test.js tests/user-photo-lifecycle.test.js
 ```
 
 The configuration loader uses `dotenv`'s default behavior, which reads
@@ -17,28 +18,85 @@ required database and JWT variables. This repository does not include a
 notification service tests stub the database module and do not require
 PostgreSQL configuration.
 
-`tests/favorites.test.js` connects to PostgreSQL through the normal database
-pool. Its setup issues unqualified `DELETE` statements against `favorites`,
-`products`, `categories`, and `users`, then inserts fixture rows. Do not run it
-against development or production data. To run it safely, create a dedicated,
-disposable PostgreSQL database, apply the project's migrations to that database,
-and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and
-`JWT_SECRET` in a private `backend/.env` (or provide them in the process
-environment). Verify `DB_NAME` points only to that disposable test database
-before running `node --test tests/favorites.test.js`. No database is configured
-in this checkout, so the favorites tests have not been run here. There is no
-`.env.example`; do not copy production credentials into a test configuration.
+PostgreSQL integration tests use the normal database pool. Several suites issue
+table-wide `DELETE` statements, so use a dedicated database named
+`virtualshop_test_<suffix>` (the bare name `virtualshop_test` is intentionally
+not accepted) and a non-privileged test role. The test role must not have
+`SUPERUSER`, `CREATEDB`, `CREATEROLE`, `REPLICATION`, `BYPASSRLS`, membership
+in a privileged role, or effective write permissions on `virtualshop_db`.
+
+Configure `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
+`JWT_SECRET`, `NODE_ENV=test`, and matching `TEST_DB_NAME`, `TEST_DB_HOST`,
+`TEST_DB_PORT`, `TEST_DB_USER`, and `TEST_DB_PASSWORD` in a private test
+environment. `DB_NAME` and `TEST_DB_NAME` must exactly match. The database guard
+checks the connected database and role, then inspects effective schema, table,
+column and sequence privileges, privileged-role memberships, and executable
+security-definer functions on `virtualshop_db`. The API refuses to listen in
+test mode unless those checks succeed.
+
+Several integration suites clean tables globally. Run them only against the
+isolated test database, sequentially, and never with development or production
+credentials. Do not use the existing `virtualshop_test` database unless it is
+separately reviewed and explicitly prepared; its name alone does not make it
+safe. This repository does not include a backend `.env.example`.
+
+## Database migrations
+
+Run all pending migrations in filename order with:
+
+```sh
+npm run migrate
+```
+
+To apply exactly one migration, pass its filename from `backend/migrations`:
+
+```sh
+npm run migrate -- --only 018_create_user_sessions.sql
+```
+
+The selected migration is still checked against `schema_migrations`; an
+already-applied migration is skipped. When selecting one migration, the runner
+refuses to apply it if any earlier migration in filename order is still
+pending. Each migration runs in its own transaction, and a PostgreSQL
+transaction-level advisory lock serializes concurrent migration runners.
+Applying one migration does not apply any other pending migration.
+
+If `COMMIT` reports an error, the transaction outcome may be ambiguous. Check
+`schema_migrations` and the schema before attempting that migration again; the
+runner does not retry it automatically.
 
 ## Product images
 
 Products store an ordered `image_urls` array and retain `image_url` as the
 primary image for older clients. Migration `014_add_product_images.sql` adds
 the array and copies each existing primary image into it. Apply it with
-`npm run migrate` after configuring a database; do not run migrations against a
-database unless it is the intended environment. Product image uploads are
+`npm run migrate -- --only 014_add_product_images.sql` after configuring a
+database; do not run migrations against a database unless it is the intended
+environment. Product image uploads are
 written to `backend/uploads/products`, so deployments must keep that directory
 on persistent storage and serve `/uploads`. The admin accepts up to 20 images
 per product, with a 5 MB per-image upload limit.
+
+## Upload lifecycle and cleanup
+
+Updating or deleting a product releases its previous local images after the
+database change succeeds. Replacing a profile photo also releases the previous
+avatar. A file is only removed when no product, user avatar or category icon
+still references it; remote URLs are never touched.
+
+Uploads can still become orphaned when a request fails after the file is
+written. Run the cleanup command periodically, for example from cron:
+
+```sh
+npm run cleanup:uploads -- --dry-run
+npm run cleanup:uploads
+npm run cleanup:uploads -- --min-age-hours=48
+```
+
+The command scans `uploads/products` and `uploads/avatars`, compares files with
+local upload URLs stored in PostgreSQL, and deletes only unreferenced files.
+The default grace period is 24 hours so uploads still being attached to a new
+product are not removed. `--dry-run` reports candidates without deleting them.
 
 ## Start the API
 
@@ -57,9 +115,10 @@ and the database should not be exposed to mobile devices.
 ## Customer Web and Flutter targets
 
 The browser customer storefront is React at `app/customer_web`. Flutter
-`app/customer_app` is for Android and iOS. Run Admin Web separately with
-Flutter or through the optional Docker Compose `admin` profile. See the root
-README for setup and commands. Keep `/api` at the end of each API base URL.
+`app/customer_app` is for Android and iOS. Run the React Admin Web
+(`app/admin_web_2.0`) locally with Vite or through the optional Docker Compose
+`admin` profile. See the root README for setup and commands. Keep `/api` at the
+end of each API base URL.
 
 Find the PC's current LAN IPv4 address on Linux with:
 

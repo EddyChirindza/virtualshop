@@ -1,11 +1,35 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseSigningProperties = Properties()
+val releaseSigningFile = rootProject.file("key.properties")
+val hasReleaseSigning = releaseSigningFile.exists() && run {
+    releaseSigningFile.inputStream().use { releaseSigningProperties.load(it) }
+    val requiredKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    requiredKeys.all { !releaseSigningProperties.getProperty(it).isNullOrBlank() } &&
+        rootProject.file(releaseSigningProperties.getProperty("storeFile")).isFile
+}
+
+gradle.taskGraph.whenReady {
+    val releaseBuildRequested = allTasks.any { task ->
+        (task.name.startsWith("assemble") || task.name.startsWith("bundle")) &&
+            task.name.endsWith("Release")
+    }
+    if (releaseBuildRequested && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is not configured. Create android/key.properties " +
+                "with storeFile, storePassword, keyAlias and keyPassword.",
+        )
+    }
+}
+
 android {
-    namespace = "com.example.customer_app"
+    namespace = "mz.co.virtualshop.customer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +39,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.customer_app"
+        applicationId = "mz.co.virtualshop.customer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -29,11 +52,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(
+                    releaseSigningProperties.getProperty("storeFile"),
+                )
+                storePassword = releaseSigningProperties.getProperty("storePassword")
+                keyAlias = releaseSigningProperties.getProperty("keyAlias")
+                keyPassword = releaseSigningProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

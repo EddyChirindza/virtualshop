@@ -122,10 +122,16 @@ class ProfileRepository {
 
   Future<ProfileAddress> createAddress(Map<String, dynamic> fields) async {
     try {
+      final isDefault = fields['is_default'] == true;
+      final payload = Map<String, dynamic>.from(fields)..remove('is_default');
       final data = unwrapMap(
-        await _dio.post(ApiConstants.userAddresses, data: fields),
+        await _dio.post(ApiConstants.userAddresses, data: payload),
       );
-      return ProfileAddress.fromJson(_addressFrom(data));
+      final address = ProfileAddress.fromJson(_addressFrom(data));
+      if (isDefault && !address.isDefault) {
+        await _dio.patch(ApiConstants.userAddressDefault(address.id));
+      }
+      return address;
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
     }
@@ -136,10 +142,16 @@ class ProfileRepository {
     Map<String, dynamic> fields,
   ) async {
     try {
+      final isDefault = fields['is_default'] == true;
+      final payload = Map<String, dynamic>.from(fields)..remove('is_default');
       final data = unwrapMap(
-        await _dio.patch(ApiConstants.userAddress(id), data: fields),
+        await _dio.patch(ApiConstants.userAddress(id), data: payload),
       );
-      return ProfileAddress.fromJson(_addressFrom(data));
+      final address = ProfileAddress.fromJson(_addressFrom(data));
+      if (isDefault && !address.isDefault) {
+        await _dio.patch(ApiConstants.userAddressDefault(id));
+      }
+      return address;
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
     }

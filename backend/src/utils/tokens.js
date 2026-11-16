@@ -10,9 +10,10 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 
-function generateAccessToken(user) {
+function generateAccessToken(user, sessionId) {
+  if (!sessionId) throw new TypeError('sessionId é obrigatório para gerar um access token.');
   return jwt.sign(
-    { sub: user.id, role: user.role },
+    { sub: user.id, role: user.role, sid: sessionId },
     env.jwt.secret,
     { expiresIn: env.jwt.accessExpiresIn }
   );

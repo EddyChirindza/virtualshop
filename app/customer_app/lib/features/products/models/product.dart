@@ -35,8 +35,13 @@ class Product {
 
   bool get inStock => stock > 0;
 
-  String get availability => stockStatus ??
-      (stock <= 0 ? 'out_of_stock' : stock <= 5 ? 'low_stock' : 'in_stock');
+  String get availability =>
+      stockStatus ??
+      (stock <= 0
+          ? 'out_of_stock'
+          : stock <= 5
+          ? 'low_stock'
+          : 'in_stock');
 
   /// A API devolve `price` e `rating` como TEXTO ("150.00", "4.5") porque o
   /// PostgreSQL serializa NUMERIC assim — parseDouble aceita texto ou número.

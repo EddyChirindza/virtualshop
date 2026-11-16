@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/session/session_controller.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../products/models/product.dart';
 import '../data/favorites_repository.dart';
@@ -18,8 +19,16 @@ final favoritesProvider =
 class FavoritesController extends AsyncNotifier<List<Favorite>> {
   @override
   Future<List<Favorite>> build() async {
-    if (ref.watch(authControllerProvider).valueOrNull == null) return const [];
-    return ref.read(favoritesRepositoryProvider).list();
+    final auth = ref.watch(authControllerProvider);
+    final session = ref.watch(sessionControllerProvider);
+    if (auth.valueOrNull == null) return const <Favorite>[];
+    if (!session.isActive) return const <Favorite>[];
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
+    final favorites = await ref.read(favoritesRepositoryProvider).list();
+    if (!sessionController.isCurrent(generation)) return const <Favorite>[];
+    return favorites;
   }
 
   bool isFavorite(int productId) {
@@ -34,6 +43,10 @@ class FavoritesController extends AsyncNotifier<List<Favorite>> {
 
   Future<bool> toggleFavorite(Product product) async {
     if (ref.read(authControllerProvider).valueOrNull == null) return false;
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) return false;
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
 
     final previous = state.valueOrNull ?? const <Favorite>[];
     final alreadyFavorite = previous.any(
@@ -54,6 +67,7 @@ class FavoritesController extends AsyncNotifier<List<Favorite>> {
       }
       return true;
     } catch (error, stackTrace) {
+      if (!sessionController.isCurrent(generation)) return false;
       state = AsyncError<List<Favorite>>(
         error,
         stackTrace,
@@ -63,9 +77,18 @@ class FavoritesController extends AsyncNotifier<List<Favorite>> {
   }
 
   Future<void> reload() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(<Favorite>[]);
+      return;
+    }
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => ref.read(favoritesRepositoryProvider).list(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 }

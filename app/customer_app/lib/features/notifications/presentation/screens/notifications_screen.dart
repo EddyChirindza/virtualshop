@@ -5,6 +5,7 @@ import '../../../../core/app_text.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/widgets/error_retry.dart';
+import '../../../orders/presentation/screens/order_detail_screen.dart';
 import '../../../products/screens/product_detail_screen.dart';
 import '../../domain/notification.dart';
 import '../providers/notification_providers.dart';
@@ -68,7 +69,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             .markAsRead(notification.id);
       }
       if (!mounted) return;
-      if (notification.productId != null) {
+      if (notification.orderId != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            settings: RouteSettings(
+              name: '/orders/${notification.orderId}',
+            ),
+            builder: (_) =>
+                OrderDetailScreen(orderId: notification.orderId!),
+          ),
+        );
+      } else if (notification.productId != null) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             settings: RouteSettings(
@@ -123,17 +134,34 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final notifications = ref.watch(notificationsProvider);
     final unreadCount =
         ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final compactHeader = MediaQuery.sizeOf(context).width < 420 ||
+        textScale >= 1.3;
     return Scaffold(
       appBar: AppBar(
         title: Text(appText(context, 'Notificações', 'Notifications')),
         actions: [
           if (unreadCount > 0)
-            TextButton(
-              onPressed: _markAll,
-              child: Text(
-                appText(context, 'Marcar todas como lidas', 'Mark all read'),
-              ),
-            ),
+            compactHeader
+                ? IconButton(
+                    tooltip: appText(
+                      context,
+                      'Marcar todas como lidas',
+                      'Mark all read',
+                    ),
+                    onPressed: _markAll,
+                    icon: const Icon(Icons.mark_email_read_outlined),
+                  )
+                : TextButton(
+                    onPressed: _markAll,
+                    child: Text(
+                      appText(
+                        context,
+                        'Marcar todas como lidas',
+                        'Mark all read',
+                      ),
+                    ),
+                  ),
         ],
       ),
       body: notifications.when(
@@ -285,6 +313,7 @@ class _NotificationTile extends StatelessWidget {
     'new_product' || 'product' => Icons.inventory_2_outlined,
     'promotion' || 'discount' => Icons.local_offer_outlined,
     'product_alert' || 'alert' => Icons.notifications_active_outlined,
+    'order_update' => Icons.receipt_long_outlined,
     _ => Icons.info_outline,
   };
 

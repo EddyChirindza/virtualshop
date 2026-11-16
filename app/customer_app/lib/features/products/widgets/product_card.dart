@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
@@ -8,7 +7,6 @@ import '../../../theme/app_theme.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../../auth/screens/login_screen.dart';
-import '../../auth/providers/auth_providers.dart';
 import '../models/product.dart';
 import 'product_image_carousel.dart';
 
@@ -198,19 +196,7 @@ class ProductCard extends ConsumerWidget {
                           ),
                           onPressed: !canAdd
                               ? null
-                              : () async {
-                                  if (kIsWeb &&
-                                      ref
-                                              .read(authControllerProvider)
-                                              .valueOrNull ==
-                                          null) {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => const LoginScreen(),
-                                      ),
-                                    );
-                                    return;
-                                  }
+                              : () {
                                   ref
                                       .read(cartControllerProvider.notifier)
                                       .addProduct(product);

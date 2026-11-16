@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../core/session/session_controller.dart';
 import '../../data/notification_repository.dart';
 import '../../domain/notification.dart';
 
@@ -27,36 +28,64 @@ class NotificationsController extends AsyncNotifier<List<ShopNotification>> {
 
   @override
   Future<List<ShopNotification>> build() async {
+    final session = ref.watch(sessionControllerProvider);
     _page = 1;
     _hasMore = true;
+    if (!session.isActive) return const <ShopNotification>[];
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final result = await ref
         .read(notificationRepositoryProvider)
         .fetchNotifications(page: _page, limit: _pageSize);
+    if (!sessionController.isCurrent(generation)) {
+      return const <ShopNotification>[];
+    }
     _hasMore = result.hasMore;
     return result.items;
   }
 
   Future<void> refresh() async {
+    final session = ref.read(sessionControllerProvider);
     _page = 1;
     _hasMore = true;
-    state = await AsyncValue.guard(() async {
-      final result = await ref
+    if (!session.isActive) {
+      state = const AsyncData(<ShopNotification>[]);
+      return;
+    }
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
+    final result = await AsyncValue.guard(() async {
+      final page = await ref
           .read(notificationRepositoryProvider)
           .fetchNotifications(page: _page, limit: _pageSize);
-      _hasMore = result.hasMore;
-      return result.items;
+      if (!sessionController.isCurrent(generation)) {
+        return const <ShopNotification>[];
+      }
+      _hasMore = page.hasMore;
+      return page.items;
     });
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
     ref.invalidate(unreadNotificationCountProvider);
   }
 
   Future<void> loadMore() async {
-    if (!_hasMore || state.isLoading) return;
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive || !_hasMore || state.isLoading) {
+      return;
+    }
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull ?? const <ShopNotification>[];
     final nextPage = _page + 1;
     try {
       final result = await ref
           .read(notificationRepositoryProvider)
           .fetchNotifications(page: nextPage, limit: _pageSize);
+      if (!sessionController.isCurrent(generation)) return;
       final ids = current.map((item) => item.id).toSet();
       state = AsyncData([
         ...current,
@@ -65,12 +94,17 @@ class NotificationsController extends AsyncNotifier<List<ShopNotification>> {
       _page = nextPage;
       _hasMore = result.hasMore;
     } catch (_) {
+      if (!sessionController.isCurrent(generation)) return;
       state = AsyncData(current);
       rethrow;
     }
   }
 
   Future<void> markAsRead(String id) async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) return;
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull ?? const <ShopNotification>[];
     final old = state;
     state = AsyncData([
@@ -80,8 +114,10 @@ class NotificationsController extends AsyncNotifier<List<ShopNotification>> {
     ref.invalidate(unreadNotificationCountProvider);
     try {
       await ref.read(notificationRepositoryProvider).markAsRead(id);
+      if (!sessionController.isCurrent(generation)) return;
       ref.invalidate(unreadNotificationCountProvider);
     } catch (_) {
+      if (!sessionController.isCurrent(generation)) return;
       state = old;
       ref.invalidate(unreadNotificationCountProvider);
       rethrow;
@@ -89,6 +125,10 @@ class NotificationsController extends AsyncNotifier<List<ShopNotification>> {
   }
 
   Future<void> markAllAsRead() async {
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) return;
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     final current = state.valueOrNull ?? const <ShopNotification>[];
     final old = state;
     state = AsyncData([
@@ -97,8 +137,10 @@ class NotificationsController extends AsyncNotifier<List<ShopNotification>> {
     ref.invalidate(unreadNotificationCountProvider);
     try {
       await ref.read(notificationRepositoryProvider).markAllAsRead();
+      if (!sessionController.isCurrent(generation)) return;
       ref.invalidate(unreadNotificationCountProvider);
     } catch (_) {
+      if (!sessionController.isCurrent(generation)) return;
       state = old;
       ref.invalidate(unreadNotificationCountProvider);
       rethrow;
@@ -111,14 +153,37 @@ class UnreadNotificationCountController extends AsyncNotifier<int> {
 
   @override
   Future<int> build() async {
+    final session = ref.watch(sessionControllerProvider);
+    _timer?.cancel();
     ref.onDispose(() => _timer?.cancel());
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => refresh());
-    return ref.read(notificationRepositoryProvider).fetchUnreadCount();
+    if (!session.isActive) return 0;
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (sessionController.isCurrent(generation)) refresh();
+    });
+
+    final count = await ref
+        .read(notificationRepositoryProvider)
+        .fetchUnreadCount();
+    if (!sessionController.isCurrent(generation)) return 0;
+    return count;
   }
 
   Future<void> refresh() async {
-    state = await AsyncValue.guard(
+    final session = ref.read(sessionControllerProvider);
+    if (!session.isActive) {
+      state = const AsyncData(0);
+      return;
+    }
+
+    final generation = session.generation;
+    final sessionController = ref.read(sessionControllerProvider.notifier);
+    final result = await AsyncValue.guard(
       () => ref.read(notificationRepositoryProvider).fetchUnreadCount(),
     );
+    if (!sessionController.isCurrent(generation)) return;
+    state = result;
   }
 }

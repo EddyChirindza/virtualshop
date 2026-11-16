@@ -3,6 +3,7 @@ const profilePhotoService = require('./profile_photo.service');
 const { pool, query } = require('../../config/db');
 const env = require('../../config/env');
 const { ApiError } = require('../../middlewares/error.middleware');
+const { removeUnreferencedUploadsSafely } = require('../../services/upload_files.service');
 
 const profileColumns = {
   fullName: 'full_name',
@@ -123,6 +124,13 @@ async function updateProfile(userId, input) {
 }
 
 async function updateProfilePhoto(userId, base64) {
+  const { rows: currentRows } = await query(
+    'SELECT avatar_url FROM users WHERE id = $1',
+    [userId]
+  );
+  if (!currentRows[0]) throw new ApiError(404, 'Utilizador não encontrado.');
+  const previousAvatarUrl = currentRows[0].avatar_url;
+
   const photo = await profilePhotoService.saveProfilePhoto({ base64 });
   try {
     const { rows } = await query(
@@ -134,7 +142,7 @@ async function updateProfilePhoto(userId, base64) {
     );
     const user = rows[0];
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
-    return {
+    const profile = {
       id: user.id,
       fullName: user.full_name,
       email: user.email,
@@ -146,6 +154,8 @@ async function updateProfilePhoto(userId, base64) {
       lastLoginAt: user.last_login_at,
       createdAt: user.created_at,
     };
+    await removeUnreferencedUploadsSafely([previousAvatarUrl]);
+    return profile;
   } catch (err) {
     await profilePhotoService.removeProfilePhoto(photo.avatar_url);
     throw err;
@@ -153,18 +163,40 @@ async function updateProfilePhoto(userId, base64) {
 }
 
 async function updatePassword(userId, { currentPassword, newPassword }) {
-  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
-  const user = rows[0];
-  if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT password_hash FROM users WHERE id = $1 FOR UPDATE',
+      [userId]
+    );
+    const user = rows[0];
+    if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
 
-  const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!passwordMatches) throw new ApiError(400, 'A password atual está incorreta.');
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!passwordMatches) throw new ApiError(400, 'A password atual está incorreta.');
 
-  const passwordHash = await bcrypt.hash(newPassword, env.bcryptSaltRounds);
-  await query(
-    'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
-    [passwordHash, userId]
-  );
+    const passwordHash = await bcrypt.hash(newPassword, env.bcryptSaltRounds);
+    await client.query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [passwordHash, userId]
+    );
+    await client.query(
+      'UPDATE user_sessions SET revoked_at = COALESCE(revoked_at, now()) WHERE user_id = $1',
+      [userId]
+    );
+    await client.query(
+      `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, now())
+       WHERE user_id = $1`,
+      [userId]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function getStats(userId) {

@@ -28,10 +28,16 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   identifier: z.string().trim().min(3, 'Indica o email ou telemóvel.'),
   password: z.string().min(1, 'Password obrigatória.'),
+  adminOnly: z.boolean().optional().default(false),
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(10, 'Refresh token inválido.'),
+  refreshToken: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().trim().min(10, 'Refresh token inválido.').optional(),
+  ),
+  adminOnly: z.boolean().optional().default(false),
 });
 
 module.exports = { registerSchema, loginSchema, refreshSchema };

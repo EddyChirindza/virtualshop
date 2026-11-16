@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   registerSchema,
   loginSchema,
+  refreshSchema,
 } = require('../src/modules/auth/auth.validators');
 
 const validRegistration = {
@@ -38,6 +39,32 @@ test('login aceita número internacional no campo identifier', () => {
       password: 'Password1',
     }).identifier,
     '+258841234567',
+  );
+});
+
+test('login e refresh mantêm o contrato genérico e aceitam intenção admin opcional', () => {
+  assert.equal(
+    loginSchema.parse({ identifier: 'cliente@example.com', password: 'Password1' }).adminOnly,
+    false,
+  );
+  assert.equal(
+    loginSchema.parse({
+      identifier: 'admin@example.com',
+      password: 'Password1',
+      adminOnly: true,
+    }).adminOnly,
+    true,
+  );
+  assert.equal(
+    refreshSchema.parse({ refreshToken: 'refresh-token-value' }).adminOnly,
+    false,
+  );
+  assert.equal(
+    refreshSchema.parse({
+      refreshToken: 'refresh-token-value',
+      adminOnly: true,
+    }).adminOnly,
+    true,
   );
 });
 

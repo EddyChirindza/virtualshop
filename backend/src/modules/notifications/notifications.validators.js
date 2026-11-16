@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-const notificationTypes = ['new_product', 'promotion', 'discount', 'product_alert', 'general'];
+const notificationTypes = ['new_product', 'promotion', 'discount', 'product_alert', 'general', 'order_update'];
 const positiveInt = z.preprocess(
   (value) => typeof value === 'string' && value.trim() !== '' ? Number(value) : value,
   z.number().int().positive()

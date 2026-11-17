@@ -9,6 +9,7 @@ const router = Router();
 router.use(requireAuth, requireRole('admin'));
 router.get('/dashboard', controller.dashboard);
 router.get('/customers', controller.customers);
+router.get('/customers/:id', controller.customerDetails);
 router.get('/administrators', administratorController.listAdministrators);
 router.post('/administrators', administratorController.createAdministrator);
 router.patch('/administrators/:id', administratorController.updateAdministrator);

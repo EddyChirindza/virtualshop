@@ -86,4 +86,73 @@ async function getDashboard(requestedPeriod = '30d') {
   };
 }
 
-module.exports = { getDashboard, getCustomers };
+
+async function getCustomerDetails(id) {
+  const { ApiError } = require('../../middlewares/error.middleware');
+  const customerId = Number(id);
+  if (!Number.isSafeInteger(customerId) || customerId <= 0) {
+    throw new ApiError(400, 'Id de cliente inválido.');
+  }
+
+  const { rows } = await query(
+    `SELECT u.id,
+            u.full_name AS "fullName",
+            u.email,
+            u.phone,
+            u.avatar_url AS "avatarUrl",
+            u.created_at AS "createdAt",
+            COALESCE(stats.order_count, 0) AS "orderCount",
+            COALESCE(stats.total_spent, 0) AS "totalSpent",
+            stats.last_order_at AS "lastOrderAt"
+     FROM users u
+     LEFT JOIN (
+       SELECT user_id,
+              COUNT(*)::int AS order_count,
+              COALESCE(SUM(total) FILTER (WHERE status NOT IN ('cancelled','rejected')), 0) AS total_spent,
+              MAX(created_at) AS last_order_at
+       FROM orders
+       GROUP BY user_id
+     ) stats ON stats.user_id = u.id
+     WHERE u.id = $1 AND u.role = 'customer'`,
+    [customerId]
+  );
+  const customer = rows[0];
+  if (!customer) throw new ApiError(404, 'Cliente não encontrado.');
+
+  const ordersRes = await query(
+    `SELECT o.id, o.status, o.payment_status AS "paymentStatus",
+            o.delivery_method AS "deliveryMethod",
+            o.total, o.created_at AS "createdAt",
+            (SELECT COUNT(*)::int FROM order_items oi WHERE oi.order_id = o.id) AS "itemCount"
+     FROM orders o
+     WHERE o.user_id = $1
+     ORDER BY o.created_at DESC, o.id DESC
+     LIMIT 50`,
+    [customerId]
+  );
+
+  return {
+    id: Number(customer.id),
+    fullName: customer.fullName,
+    email: customer.email,
+    phone: customer.phone,
+    avatarUrl: customer.avatarUrl,
+    createdAt: customer.createdAt,
+    stats: {
+      orderCount: Number(customer.orderCount),
+      totalSpent: Number(customer.totalSpent),
+      lastOrderAt: customer.lastOrderAt,
+    },
+    orders: ordersRes.rows.map((row) => ({
+      id: Number(row.id),
+      status: row.status,
+      paymentStatus: row.paymentStatus,
+      deliveryMethod: row.deliveryMethod,
+      total: Number(row.total),
+      itemCount: Number(row.itemCount),
+      createdAt: row.createdAt,
+    })),
+  };
+}
+
+module.exports = { getDashboard, getCustomers, getCustomerDetails };

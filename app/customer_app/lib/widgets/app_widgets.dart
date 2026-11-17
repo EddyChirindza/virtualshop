@@ -462,6 +462,7 @@ class FloatingBottomNav extends StatelessWidget {
     (Icons.home_outlined, Icons.home_rounded, 'Início', 'Home'),
     (Icons.search_rounded, Icons.search_rounded, 'Pesquisar', 'Search'),
     (Icons.shopping_cart_outlined, Icons.shopping_cart, 'Carrinho', 'Cart'),
+    (Icons.receipt_long_outlined, Icons.receipt_long, 'Pedidos', 'Orders'),
     (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil', 'Profile'),
   ];
 
@@ -536,7 +537,7 @@ class _NavItem extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           height: 48,
-          padding: EdgeInsets.symmetric(horizontal: selected ? 18 : 12),
+          padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 8),
           decoration: BoxDecoration(
             color: selected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.pill),

@@ -164,7 +164,7 @@ export const api = {
 
   /* Catálogo */
   products: async (q = '', category?: number) => {
-    const params = new URLSearchParams({ limit: '60' });
+    const params = new URLSearchParams({ limit: '50' });
     if (q) params.set('q', q);
     if (category) params.set('category', String(category));
     return fetchData<Product[]>(`/products?${params}`);

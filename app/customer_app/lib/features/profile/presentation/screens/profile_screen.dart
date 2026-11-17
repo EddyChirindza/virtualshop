@@ -11,7 +11,6 @@ import '../../../../theme/app_theme.dart';
 import '../../../auth/providers/auth_providers.dart';
 import '../../../favorites/screens/favorites_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
-import '../../../orders/presentation/screens/orders_screen.dart';
 import '../../../payment_methods/domain/models/payment_method.dart';
 import '../../../payment_methods/presentation/providers/payment_methods_provider.dart';
 import '../../../payment_methods/presentation/screens/payment_method_form_screen.dart';
@@ -442,18 +441,6 @@ class ProfileScreen extends ConsumerWidget {
               builder: (_) => const NotificationsScreen(),
             ),
           ),
-        ),
-        _OptionTile(
-          icon: Icons.receipt_long_outlined,
-          title: appText(context, 'Meus pedidos', 'My orders'),
-          subtitle: appText(
-            context,
-            'Acompanha o estado das tuas compras',
-            'Track the status of your purchases',
-          ),
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute<void>(builder: (_) => const OrdersScreen())),
         ),
         _OptionTile(
           icon: Icons.favorite_border,

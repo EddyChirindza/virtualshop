@@ -1,0 +1,49 @@
+import type { ReactNode } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Bell, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
+import Layout from './Layout';
+import { session } from '../services/api';
+
+const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
+  {
+    title: 'Compras',
+    links: [
+      ['/dashboard', 'Resumo', <LayoutDashboard size={18} />],
+      ['/pedidos', 'Os meus pedidos', <Package size={18} />],
+      ['/favoritos', 'Favoritos', <Heart size={18} />],
+    ],
+  },
+  {
+    title: 'Conta',
+    links: [
+      ['/perfil', 'Dados pessoais', <User size={18} />],
+      ['/enderecos', 'Endereços', <MapPin size={18} />],
+      ['/notificacoes', 'Notificações', <Bell size={18} />],
+    ],
+  },
+];
+
+// Moldura comum a todas as páginas da conta: menu lateral + conteúdo.
+export default function AccountLayout({ children }: { children: ReactNode }) {
+  const nav = useNavigate();
+  const logout = () => { session.clear(); nav('/', { replace: true }); };
+
+  return (
+    <Layout>
+      <div className="vs-wrap vs-acc">
+        <nav className="vs-acc-side" aria-label="A minha conta">
+          {GROUPS.map(g => (
+            <div key={g.title}>
+              <h4>{g.title}</h4>
+              {g.links.map(([to, label, icon]) => (
+                <NavLink key={to} to={to}>{icon}<span>{label}</span></NavLink>
+              ))}
+            </div>
+          ))}
+          <button className="vs-acc-out" onClick={logout}><LogOut size={18} /><span>Terminar sessão</span></button>
+        </nav>
+        <div className="vs-acc-main">{children}</div>
+      </div>
+    </Layout>
+  );
+}

@@ -21,6 +21,13 @@ const notificationRoutes = require('./modules/notifications/notifications.routes
 
 const app = express();
 
+const { UPLOAD_ROOT } = require('./modules/users/avatar.routes'); // ajusta o caminho se o app.js estiver noutra pasta
+
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // sem isto o browser bloqueia a imagem (site em :5173, API em :3000)
+  next();
+}, express.static(UPLOAD_ROOT));
+
 // ── Segurança / infra base ───────────────────
 // ── Segurança / infra base ───────────────────
 app.set('trust proxy', 1);

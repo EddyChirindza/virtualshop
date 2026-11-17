@@ -11,6 +11,7 @@ node_modules/
 **/node_modules/
 **/dist/
 npm-debug.log*
+uploads/
 
 # Flutter / Dart generated files
 **/.dart_tool/

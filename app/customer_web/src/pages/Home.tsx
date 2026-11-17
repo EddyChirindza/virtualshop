@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Heart, ShoppingBag, X } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Heart, ShieldCheck, ShoppingBag, Truck, X, MapPin } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Category, Product } from '../types';
@@ -8,14 +8,18 @@ import { money } from '../utils/format';
 
 export default function Home() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params.get('q') ?? '');
   const [category, setCategory] = useState<number>();
   const [favs, setFavs] = useState<number[]>([]);
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  // Vindo de outra página com /?q=termo
+  useEffect(() => { setQuery(params.get('q') ?? ''); }, [params]);
 
   const load = async (alive = { current: true }) => {
     setStatus('loading');
@@ -58,33 +62,44 @@ export default function Home() {
     catch (e) { setNotice((e as Error).message); }
   };
 
+  const title = query
+    ? `Resultados para “${query}”`
+    : category ? categories.find(c => c.id === category)?.name : 'Os mais procurados';
+
   return (
     <Layout query={query} onQuery={setQuery}>
-      <div className="vs-cats">
-        <div className="vs-wrap">
-          <button aria-current={!category} onClick={() => setCategory(undefined)}>Todas as categorias</button>
-          {categories.map(c => (
-            <button key={c.id} aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button>
-          ))}
+      <div className="vs-wrap" id="inicio">
+        <div className="vs-front">
+          <nav className="vs-catside" aria-label="Categorias">
+            <h3>Categorias</h3>
+            <ul>
+              <li><button aria-current={!category} onClick={() => setCategory(undefined)}>Todas as categorias</button></li>
+              {categories.map(c => (
+                <li key={c.id}><button aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
+              ))}
+            </ul>
+          </nav>
+
+          <section className="vs-banner">
+            <span className="vs-pill">Entrega grátis acima de 2000 MT</span>
+            <h1>Tudo o que precisa, entregue em casa.</h1>
+            <p>Milhares de produtos com os melhores preços, escolhidos a pensar em si.</p>
+            <button className="vs-btn vs-light" onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}>
+              Ver produtos <ArrowRight size={18} />
+            </button>
+          </section>
+        </div>
+
+        <div className="vs-perks">
+          <div className="vs-perk"><i><Truck size={20} /></i><div><b>Entrega grátis</b><small>Em compras acima de 2000 MT</small></div></div>
+          <div className="vs-perk"><i><ShieldCheck size={20} /></i><div><b>Compra segura</b><small>Os seus dados protegidos</small></div></div>
+          <div className="vs-perk"><i><MapPin size={20} /></i><div><b>Feito em Moçambique</b><small>Entregamos em todo o país</small></div></div>
         </div>
       </div>
 
-      <section className="vs-hero">
-        <div className="vs-wrap">
-          <div>
-            <h1>Pequenas escolhas.<span>Grandes descobertas.</span></h1>
-            <p>Produtos que facilitam o seu dia, escolhidos a pensar em si.</p>
-            <button className="vs-btn" onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}>
-              Ver produtos <ArrowRight size={18} />
-            </button>
-          </div>
-          <img className="vs-hero-img" alt="" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85" />
-        </div>
-      </section>
-
       <section className="vs-wrap" id="catalogo">
         <div className="vs-section-head">
-          <h2>{query ? `Resultados para “${query}”` : category ? categories.find(c => c.id === category)?.name : 'Os mais procurados'}</h2>
+          <h2>{title}</h2>
           <span>{status === 'ok' ? `${products.length} produtos` : ''}</span>
         </div>
         <div className="vs-grid">
@@ -99,24 +114,29 @@ export default function Home() {
           {status === 'ok' && !products.length && (
             <div className="vs-state"><h3>Nenhum produto encontrado</h3><p>Experimente outro termo ou escolha outra categoria.</p></div>
           )}
-          {status === 'ok' && products.map(p => (
-            <article className="vs-card" key={p.id}>
-              <button className="vs-card-img" aria-label={`Ver ${p.name}`} onClick={() => openProduct(p.id)}>
-                <img src={imageUrl(p.image_urls?.[0] || p.image_url || '')} alt={p.name} loading="lazy" />
-              </button>
-              <button className="vs-fav" aria-label="Guardar nos favoritos" aria-pressed={favs.includes(p.id)} onClick={() => toggleFav(p.id)}>
-                <Heart size={18} fill={favs.includes(p.id) ? 'currentColor' : 'none'} />
-              </button>
-              <div className="vs-card-cat">{p.category_name || 'Essenciais'}</div>
-              <h3 className="vs-card-title">
-                <Link to={`/produto/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{p.name}</Link>
-              </h3>
-              <div className="vs-card-foot">
-                <b>{money(p.price)}</b>
-                <button aria-label="Adicionar ao carrinho" disabled={!p.stock} onClick={() => addToCart(p)}><ShoppingBag size={17} /></button>
-              </div>
-            </article>
-          ))}
+          {status === 'ok' && products.map(p => {
+            const stock = Number(p.stock);
+            return (
+              <article className="vs-card" key={p.id}>
+                <button className="vs-card-img" aria-label={`Ver ${p.name}`} onClick={() => openProduct(p.id)}>
+                  <img src={imageUrl(p.image_urls?.[0] || p.image_url || '')} alt={p.name} loading="lazy" />
+                </button>
+                {!stock && <span className="vs-tag vs-tag-off">Esgotado</span>}
+                {stock > 0 && stock <= 5 && <span className="vs-tag">Restam {stock}</span>}
+                <button className="vs-fav" aria-label="Guardar nos favoritos" aria-pressed={favs.includes(p.id)} onClick={() => toggleFav(p.id)}>
+                  <Heart size={17} fill={favs.includes(p.id) ? 'currentColor' : 'none'} />
+                </button>
+                <div className="vs-card-cat">{p.category_name || 'Essenciais'}</div>
+                <h3 className="vs-card-title">
+                  <Link to={`/produto/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{p.name}</Link>
+                </h3>
+                <div className="vs-card-foot">
+                  <b>{money(p.price)}</b>
+                  <button aria-label="Adicionar ao carrinho" disabled={!stock} onClick={() => addToCart(p)}><ShoppingBag size={17} /></button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

@@ -13,7 +13,23 @@ const REFRESH_KEY = 'vs.refresh';
 type TokenPayload = { token?: string; accessToken?: string; refreshToken?: string };
 type AuthPayload = TokenPayload & { user: User };
 type CartResponse = { items: CartItem[]; discount?: number; deliveryFee?: number };
-type NotificationsResponse = { items?: Notice[] };
+type NotificationsResponse = { items?: Notice[]; page?: number; totalPages?: number; total?: number };
+
+export type AddressInput = {
+  label: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  province: string;
+};
+export type ProfileInput = { fullName: string; phone: string; email?: string };
+export type CheckoutInput = {
+  addressId: number;
+  payment: 'cash' | 'mpesa' | 'emola';
+  phone?: string;
+  notes?: string;
+};
 
 /* ───────────────────────── Imagens ───────────────────────── */
 
@@ -61,6 +77,24 @@ const unwrap = <T>(body: unknown): T => {
   return (envelope?.data ?? body) as T;
 };
 
+/** O backend devolve o perfil em camelCase (fullName, avatarUrl); o site usa snake_case. Aceita os dois. */
+const normalizeUser = (u: any) =>
+  u ? { ...u, full_name: u.full_name ?? u.fullName, avatar_url: u.avatar_url ?? u.avatarUrl ?? null, birth_date: u.birth_date ?? u.birthDate } : u;
+
+/** Aceita uma lista directa ou `{ items: [...] }`. */
+const asList = <T>(body: unknown): T[] => {
+  if (Array.isArray(body)) return body as T[];
+  const items = (body as { items?: T[] } | null)?.items;
+  return Array.isArray(items) ? items : [];
+};
+
+/** Sessão sem renovação possível: limpa-a e, em páginas privadas, leva ao login. */
+const PUBLIC_PATHS = /^\/($|login|produto\/)/;
+function expireSession() {
+  session.clear();
+  if (!PUBLIC_PATHS.test(window.location.pathname)) window.location.replace('/login');
+}
+
 /** Pede um novo token de acesso com o refresh token. Devolve true se renovou. */
 async function refreshSession(): Promise<boolean> {
   const refreshToken = session.refreshToken;
@@ -86,8 +120,12 @@ async function request<T = unknown>(path: string, init: RequestInit = {}): Promi
     return fetch(`${API_URL}${path}`, { ...init, headers, credentials: 'include' });
   };
 
+  const hadToken = !!session.token;
   let response = await send();
-  if (response.status === 401 && (await refreshSession())) response = await send();
+  if (response.status === 401 && !path.startsWith('/auth/')) {
+    if (await refreshSession()) response = await send();
+    else if (hadToken) expireSession();
+  }
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -135,6 +173,7 @@ export const api = {
   categories: () => fetchData<Category[]>('/categories'),
 
   /* Favoritos */
+  favorites: async () => asList<Product>(unwrap(await request('/favorites'))),
   favorite: (productId: number, enabled: boolean) =>
     enabled
       ? post('/favorites', { productId })
@@ -147,11 +186,43 @@ export const api = {
   remove: (id: number) => request(`/cart/items/${id}`, { method: 'DELETE' }),
 
   /* Encomendas */
-  checkout: () => post('/orders', {}),
+  checkout: (input: Partial<CheckoutInput> = {}) =>
+    fetchData<Order>('/orders', { method: 'POST', body: JSON.stringify(input) }),
+  orders: async () => asList<Order>(unwrap(await request('/orders'))),
   order: (id: number) => fetchData<Order>(`/orders/${id}`),
 
   /* Conta */
-  profile: () => fetchData<User>('/users/me'),
+  profile: async () => normalizeUser(await fetchData<any>('/users/me')) as User & { avatar_url?: string | null },
+  updateProfile: async (input: ProfileInput) =>
+    normalizeUser(await fetchData<any>('/users/me', { method: 'PATCH', body: JSON.stringify(input) })) as User & { avatar_url?: string | null },
+
+  /**
+   * Muda a palavra-passe. O backend termina todas as sessões ao mudá-la; devolve true só se
+   * enviar tokens novos (sessão mantida), caso contrário é preciso entrar de novo.
+   */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    const r = await fetchData<TokenPayload | null>('/users/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (r && (r.token || r.accessToken)) { saveTokens(r); return true; }
+    return false;
+  },
+  /** Envia a fotografia (campo multipart "avatar"). Devolve o utilizador ou { avatar_url }. */
+  uploadAvatar: (file: Blob) => {
+    const form = new FormData();
+    form.append('avatar', file, 'avatar.jpg');
+    return fetchData<{ avatar_url?: string | null }>('/users/me/avatar', { method: 'POST', body: form });
+  },
+  deleteAvatar: () => request('/users/me/avatar', { method: 'DELETE' }),
+
   addresses: () => fetchData<Address[]>('/users/me/addresses'),
-  notifications: () => fetchData<NotificationsResponse>('/notifications'),
+  addAddress: (input: AddressInput) => post('/users/me/addresses', input),
+  updateAddress: (id: number, input: AddressInput) => patch(`/users/me/addresses/${id}`, input),
+  deleteAddress: (id: number) => request(`/users/me/addresses/${id}`, { method: 'DELETE' }),
+
+  notifications: (page = 1) => fetchData<NotificationsResponse>(`/notifications?page=${page}&limit=30`),
+  unreadCount: () => fetchData<{ count: number }>('/notifications/unread-count'),
+  markRead: (id: number) => patch(`/notifications/${id}/read`, {}),
+  markAllRead: () => patch('/notifications/read-all', {}),
 };

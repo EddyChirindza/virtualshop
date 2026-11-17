@@ -1,0 +1,35 @@
+/* ===== Acrescentar ao FIM do styles/theme.css ===== */
+
+/* duas colunas: conteúdo + resumo (Cart, Checkout, OrderDetail) */
+.vs-split{display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start}
+.vs-split > aside{position:sticky;top:96px;margin-bottom:0}
+
+/* espaçamento das páginas simples */
+.vs-wrap > h1{margin:32px 0 24px;font-size:clamp(30px,4vw,40px)}
+.vs-root > .vs-wrap:not(#catalogo){padding-bottom:72px}
+
+/* links com aspecto de botão */
+a.vs-btn,a.vs-link{text-decoration:none}
+
+/* botões só com ícone (quantidade, editar, apagar) */
+.vs-inline > button:not(.vs-btn):not(.vs-link){width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--vs-line);background:#fff;border-radius:var(--vs-radius);color:var(--vs-ink)}
+.vs-inline > button:not(.vs-btn):not(.vs-link):hover:not(:disabled){background:var(--vs-stone)}
+.vs-inline > button:not(.vs-btn):not(.vs-link):disabled{opacity:.4;cursor:not-allowed}
+
+/* select e radios */
+.vs-field select{height:46px;border:1px solid var(--vs-line);border-radius:var(--vs-radius);padding:0 14px;font:inherit;background:#fff;color:var(--vs-ink)}
+.vs-field select:focus{border-color:var(--vs-forest);outline:0;box-shadow:0 0 0 3px rgba(30,90,70,.15)}
+.vs-root input[type=radio]{accent-color:var(--vs-forest)}
+.vs-form.vs-panel{max-width:520px}
+
+/* estado actual na linha do tempo da encomenda */
+.vs-list li[aria-current=true]{color:var(--vs-forest)}
+
+@media(max-width:860px){
+  .vs-split{grid-template-columns:1fr}
+  .vs-split > aside{position:static}
+}
+
+/* contador de avisos por ler no menu (usa <i> porque .vs-nav span some no telemóvel) */
+.vs-nav button{position:relative}
+.vs-badge{position:absolute;top:2px;right:2px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--vs-danger);color:#fff;font-style:normal;font-size:11px;font-weight:600;line-height:18px;text-align:center}

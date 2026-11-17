@@ -47,11 +47,11 @@ function normalizeAddress(row) {
 
 async function getProfile(userId) {
   const { rows } = await query(
-    `SELECT id, full_name, email, phone, birth_date, gender, avatar_url,
-            COALESCE(is_verified, false) AS is_verified, last_login_at, created_at
-     FROM users WHERE id = $1`,
-    [userId]
-  );
+  `SELECT id, full_name, email, phone, birth_date, gender, avatar_url,
+          COALESCE(is_verified, false) AS is_verified, last_login_at, created_at
+   FROM users WHERE id = $1`,
+  [userId]
+);
 
   const user = rows[0];
   if (!user) throw new ApiError(404, 'Utilizador não encontrado.');

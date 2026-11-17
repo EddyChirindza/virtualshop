@@ -5,6 +5,7 @@ const { requireAuth } = require('../../middlewares/auth.middleware');
 
 const router = Router();
 
+router.use('/me/avatar', require('./avatar.routes'));
 router.use(requireAuth);
 router.use('/me/payment-methods', paymentMethodRoutes);
 router.get('/me', controller.getProfile);

@@ -3,8 +3,9 @@ const path = require('node:path');
 const UPLOAD_ROOT = path.join(__dirname, '../../uploads');
 const PRODUCT_UPLOAD_DIR = path.join(UPLOAD_ROOT, 'products');
 const AVATAR_UPLOAD_DIR = path.join(UPLOAD_ROOT, 'avatars');
+const BANNER_UPLOAD_DIR = path.join(UPLOAD_ROOT, 'banners');
 const UPLOAD_URL_PREFIX = '/uploads/';
-const UPLOAD_FOLDERS = new Set(['products', 'avatars']);
+const UPLOAD_FOLDERS = new Set(['products', 'avatars', 'banners']);
 const SAFE_FILENAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 function normalizeUploadUrl(url) {
@@ -34,6 +35,7 @@ module.exports = {
   UPLOAD_ROOT,
   PRODUCT_UPLOAD_DIR,
   AVATAR_UPLOAD_DIR,
+  BANNER_UPLOAD_DIR,
   UPLOAD_URL_PREFIX,
   normalizeUploadUrl,
   localUploadPath,

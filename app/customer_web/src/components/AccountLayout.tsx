@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
 import Layout from './Layout';
 import { api } from '../services/api';
+import { usePreferences } from '../preferences';
 
 const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
   {
@@ -27,15 +28,16 @@ const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
 // Moldura comum a todas as páginas da conta: menu lateral + conteúdo.
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const nav = useNavigate();
+  const { t } = usePreferences();
   const logout = async () => {
     try {
       await api.logout();
       nav('/', { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro desconhecido.';
+      const message = error instanceof Error ? error.message : t('Erro desconhecido.');
       nav('/login', {
         replace: true,
-        state: { notice: `Sessão terminada neste dispositivo, mas a API não confirmou o logout: ${message}` },
+        state: { notice: `${t('Sessão terminada neste dispositivo, mas a API não confirmou o logout:')} ${message}` },
       });
     }
   };
@@ -43,16 +45,16 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   return (
     <Layout>
       <div className="vs-wrap vs-acc">
-        <nav className="vs-acc-side" aria-label="A minha conta">
+        <nav className="vs-acc-side" aria-label={t('A minha conta')}>
           {GROUPS.map(g => (
             <div key={g.title}>
-              <h4>{g.title}</h4>
+              <h4>{t(g.title)}</h4>
               {g.links.map(([to, label, icon]) => (
-                <NavLink key={to} to={to}>{icon}<span>{label}</span></NavLink>
+                <NavLink key={to} to={to}>{icon}<span>{t(label)}</span></NavLink>
               ))}
             </div>
           ))}
-          <button className="vs-acc-out" onClick={() => void logout()}><LogOut size={18} /><span>Terminar sessão</span></button>
+          <button className="vs-acc-out" onClick={() => void logout()}><LogOut size={18} /><span>{t('Terminar sessão')}</span></button>
         </nav>
         <div className="vs-acc-main">{children}</div>
       </div>

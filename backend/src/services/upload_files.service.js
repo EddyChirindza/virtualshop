@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const {
   PRODUCT_UPLOAD_DIR,
   AVATAR_UPLOAD_DIR,
+  BANNER_UPLOAD_DIR,
   normalizeUploadUrl,
   localUploadPath,
   uploadUrl,
@@ -14,6 +15,7 @@ const DEFAULT_MIN_AGE_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DIRECTORIES = [
   { name: 'products', path: PRODUCT_UPLOAD_DIR },
   { name: 'avatars', path: AVATAR_UPLOAD_DIR },
+  { name: 'banners', path: BANNER_UPLOAD_DIR },
 ];
 
 async function removeUploadedFile(url) {
@@ -54,8 +56,12 @@ async function removeUnreferencedUploads(urls, {
        UNION
        SELECT avatar_url AS url FROM users WHERE avatar_url = ANY($1::text[])
        UNION
-       SELECT icon_url AS url FROM categories WHERE icon_url = ANY($1::text[])
-     ) refs
+        SELECT icon_url AS url FROM categories WHERE icon_url = ANY($1::text[])
+        UNION
+        SELECT image_url AS url FROM banners WHERE image_url = ANY($1::text[])
+        UNION
+        SELECT mobile_image_url AS url FROM banners WHERE mobile_image_url = ANY($1::text[])
+      ) refs
      WHERE refs.url IS NOT NULL`,
     [candidates]
   );
@@ -94,7 +100,11 @@ async function listReferencedUploads({ queryFn = query } = {}) {
      UNION
      SELECT avatar_url AS url FROM users WHERE avatar_url LIKE '/uploads/%'
      UNION
-     SELECT icon_url AS url FROM categories WHERE icon_url LIKE '/uploads/%'`
+      SELECT icon_url AS url FROM categories WHERE icon_url LIKE '/uploads/%'
+      UNION
+      SELECT image_url AS url FROM banners WHERE image_url LIKE '/uploads/%'
+      UNION
+      SELECT mobile_image_url AS url FROM banners WHERE mobile_image_url LIKE '/uploads/%'`
   );
 
   return new Set(

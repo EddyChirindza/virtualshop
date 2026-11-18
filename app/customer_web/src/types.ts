@@ -2,6 +2,32 @@ export type Product = { id: number; name: string; description?: string; price: n
 export type ProductSort = 'relevance' | 'price_asc' | 'price_desc' | 'newest';
 export type ProductPage = { items: Product[]; page: number; limit: number; total: number; totalPages: number };
 export type Category = { id: number; name: string; slug?: string };
+export type Banner = {
+  id: number;
+  title: { pt: string | null; en: string | null };
+  subtitle: { pt: string | null; en: string | null };
+  image_url: string;
+  mobile_image_url: string;
+  style: {
+    background_color: string;
+    title_color: string;
+    subtitle_color: string | null;
+    button_color: string | null;
+    button_text_color: string | null;
+    alignment: 'left' | 'center' | 'right';
+    overlay_opacity: number;
+  };
+  button_text: { pt: string | null; en: string | null };
+  banner_type: 'promotion' | 'category' | 'product' | 'announcement';
+  destination: {
+    type: 'none' | 'product' | 'category' | 'url' | 'product_list';
+    product?: Product;
+    category?: Category;
+    url?: string | null;
+    products?: Product[];
+  };
+  sort_order: number;
+};
 export type CartItem = { id: number; product_id: number; quantity: number; unit_price: number | string; name: string; image_url?: string | null; image_urls?: string[]; stock?: number };
 export type Cart = { items: CartItem[]; subtotal?: number; discount?: number; deliveryFee?: number; total?: number };
 export type Address = { id: number; label?: string; province: string; city: string; neighborhood: string; street: string; number: string; reference?: string | null; is_default?: boolean };

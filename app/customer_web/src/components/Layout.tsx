@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Heart, Home, Search, ShoppingCart, SlidersHorizontal, User } from 'lucide-react';
 import { api, session } from '../services/api';
 import type { ProductSort } from '../types';
+import { usePreferences } from '../preferences';
+import PreferenceControls from './PreferenceControls';
 import '../styles/theme.css';
 
 type SearchFilters = {
@@ -27,6 +29,7 @@ type Props = {
 export default function Layout({ children, query, onQuery, searchFilters }: Props) {
   const nav = useNavigate();
   const { pathname } = useLocation();
+  const { t } = usePreferences();
   const logged = !!session.token;
   const [unread, setUnread] = useState(0);
   const [cartCount, setCartCount] = useState(0);
@@ -82,10 +85,10 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
   }, [logged]);
 
   const tabs: [string, string, React.ReactNode, boolean, number][] = [
-    ['/', 'Início', <Home size={22} />, pathname === '/', 0],
-    ['/favoritos', 'Favoritos', <Heart size={22} />, pathname.startsWith('/favoritos'), 0],
-    ['/carrinho', 'Carrinho', <ShoppingCart size={22} />, /^\/(carrinho|checkout)/.test(pathname), cartCount],
-    [logged ? '/dashboard' : '/login', logged ? 'Conta' : 'Entrar', <User size={22} />,
+    ['/', t('Início'), <Home size={22} />, pathname === '/', 0],
+    ['/favoritos', t('Favoritos'), <Heart size={22} />, pathname.startsWith('/favoritos'), 0],
+    ['/carrinho', t('Carrinho'), <ShoppingCart size={22} />, /^\/(carrinho|checkout)/.test(pathname), cartCount],
+    [logged ? '/dashboard' : '/login', t(logged ? 'Conta' : 'Entrar'), <User size={22} />,
       /^\/(dashboard|pedidos|encomenda|enderecos|metodos-pagamento|perfil|notificacoes|login)/.test(pathname), unread],
   ];
 
@@ -93,64 +96,66 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
 
   return (
     <div className="vs-root">
-      <div className="vs-top">Entrega ao domicílio: 50 MT · Levantamento na loja: grátis</div>
+      <div className="vs-top">{t('Entrega ao domicílio: 50 MT · Levantamento na loja: grátis')}</div>
       <header className="vs-header">
         <div className="vs-wrap">
           <Link to="/" className="vs-brand"><b>V</b><span>virtual<em>shop</em></span></Link>
 
           <div className="vs-search-area">
             <form className="vs-search" role="search" onSubmit={submit}>
-              <input value={value} onChange={e => change(e.target.value)} placeholder="Pesquisar produtos, marcas e categorias" aria-label="Pesquisar produtos" />
+              <input value={value} onChange={e => change(e.target.value)} placeholder={t('Pesquisar produtos, marcas e categorias')} aria-label={t('Pesquisar produtos')} />
               {searchFilters && (
                 <button
                   type="button"
                   className="vs-search-filter-toggle"
-                  aria-label="Filtros de pesquisa"
+                  aria-label={t('Filtros de pesquisa')}
                   aria-expanded={filtersOpen}
                   aria-controls="vs-search-filters"
                   onClick={() => setFiltersOpen(open => !open)}
                 >
-                  <SlidersHorizontal size={18} /><span>Filtros</span>
+                  <SlidersHorizontal size={18} /><span>{t('Filtros')}</span>
                 </button>
               )}
-              <button type="submit" className="vs-search-submit"><Search size={18} /><span>Pesquisar</span></button>
+              <button type="submit" className="vs-search-submit"><Search size={18} /><span>{t('Pesquisar')}</span></button>
             </form>
             {searchFilters && filtersOpen && (
-              <form id="vs-search-filters" className="vs-search-popover" aria-label="Filtros de pesquisa" onSubmit={applyFilters}>
+              <form id="vs-search-filters" className="vs-search-popover" aria-label={t('Filtros de pesquisa')} onSubmit={applyFilters}>
                 <div className="vs-search-filter-fields">
-                  <label className="vs-field" htmlFor="vs-min-price">Preço mínimo
+                  <label className="vs-field" htmlFor="vs-min-price">{t('Preço mínimo')}
                     <input id="vs-min-price" type="number" min="0" step="0.01" value={searchFilters.minPrice} onChange={event => searchFilters.onMinPriceChange(event.target.value)} />
                   </label>
-                  <label className="vs-field" htmlFor="vs-max-price">Preço máximo
+                  <label className="vs-field" htmlFor="vs-max-price">{t('Preço máximo')}
                     <input id="vs-max-price" type="number" min={searchFilters.minPrice || 0} step="0.01" value={searchFilters.maxPrice} onChange={event => searchFilters.onMaxPriceChange(event.target.value)} />
                   </label>
-                  <label className="vs-field" htmlFor="vs-sort">Relevância
+                  <label className="vs-field" htmlFor="vs-sort">{t('Relevância')}
                     <select id="vs-sort" value={searchFilters.sort} onChange={event => searchFilters.onSortChange(event.target.value as ProductSort)}>
-                      <option value="relevance">Mais relevantes</option>
-                      <option value="newest">Mais recentes</option>
-                      <option value="price_asc">Menor preço</option>
-                      <option value="price_desc">Maior preço</option>
+                      <option value="relevance">{t('Mais relevantes')}</option>
+                      <option value="newest">{t('Mais recentes')}</option>
+                      <option value="price_asc">{t('Menor preço')}</option>
+                      <option value="price_desc">{t('Maior preço')}</option>
                     </select>
                   </label>
                 </div>
                 <div className="vs-search-filter-actions">
-                  <button type="button" className="vs-link" onClick={clearFilters}>Limpar filtros</button>
-                  <button type="submit" className="vs-btn">Pesquisar</button>
+                  <button type="button" className="vs-link" onClick={clearFilters}>{t('Limpar filtros')}</button>
+                  <button type="submit" className="vs-btn">{t('Pesquisar')}</button>
                 </div>
               </form>
             )}
           </div>
 
+          <PreferenceControls />
+
           <nav className="vs-nav">
-            <button onClick={goAccount}><User size={22} /><span>{logged ? 'Conta' : 'Entrar'}</span></button>
-            <button onClick={() => nav('/favoritos')}><Heart size={22} /><span>Favoritos</span></button>
+            <button onClick={goAccount}><User size={22} /><span>{t(logged ? 'Conta' : 'Entrar')}</span></button>
+            <button onClick={() => nav('/favoritos')}><Heart size={22} /><span>{t('Favoritos')}</span></button>
             {logged && (
-              <button onClick={() => nav('/notificacoes')} aria-label={unread ? `Avisos, ${unread} por ler` : 'Avisos'}>
-                <Bell size={22} /><span>Avisos</span>{badge(unread)}
+              <button onClick={() => nav('/notificacoes')} aria-label={unread ? `${t('Avisos')}, ${unread} ${t('por ler')}` : t('Avisos')}>
+                <Bell size={22} /><span>{t('Avisos')}</span>{badge(unread)}
               </button>
             )}
-            <button onClick={() => nav('/carrinho')} aria-label={cartCount ? `Carrinho, ${cartCount} artigos` : 'Carrinho'}>
-              <ShoppingCart size={22} /><span>Carrinho</span>{badge(cartCount)}
+            <button onClick={() => nav('/carrinho')} aria-label={cartCount ? `${t('Carrinho')}, ${cartCount} ${t('artigos')}` : t('Carrinho')}>
+              <ShoppingCart size={22} /><span>{t('Carrinho')}</span>{badge(cartCount)}
             </button>
           </nav>
         </div>
@@ -159,7 +164,7 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
       {headerError && <p className="vs-error" role="alert" style={{ margin: '8px auto', maxWidth: 1200 }}>{headerError}</p>}
       {children}
 
-      <nav className="vs-tabbar" aria-label="Navegação principal">
+      <nav className="vs-tabbar" aria-label={t('Navegação principal')}>
         {tabs.map(([to, label, icon, active, count]) => (
           <Link key={to} to={to} aria-current={active ? 'page' : undefined}>{icon}<span>{label}</span>{badge(count)}</Link>
         ))}
@@ -168,13 +173,13 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
       <footer className="vs-footer">
         <div className="vs-wrap">
           <div>
-            <Link to="/">Loja</Link>
-            <Link to="/dashboard">A minha conta</Link>
-            <Link to="/pedidos">Os meus pedidos</Link>
-            <Link to="/favoritos">Favoritos</Link>
-            <Link to="/perfil">Perfil</Link>
+            <Link to="/">{t('Loja')}</Link>
+            <Link to="/dashboard">{t('A minha conta')}</Link>
+            <Link to="/pedidos">{t('Os meus pedidos')}</Link>
+            <Link to="/favoritos">{t('Favoritos')}</Link>
+            <Link to="/perfil">{t('Perfil')}</Link>
           </div>
-          <div>Feito em Moçambique. © VirtualShop</div>
+          <div>{t('Feito em Moçambique. © VirtualShop')}</div>
         </div>
       </footer>
     </div>

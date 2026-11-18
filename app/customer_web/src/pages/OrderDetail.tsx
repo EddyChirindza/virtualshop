@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api } from '../services/api';
 import { money } from '../utils/format';
+import { usePreferences } from '../preferences';
 
 const ORDER_STEPS: [string, string][] = [
   ['pending', 'Recebida'],
@@ -12,6 +13,7 @@ const ORDER_STEPS: [string, string][] = [
 ];
 
 export default function OrderDetail() {
+  const { t, language } = usePreferences();
   const { id } = useParams();
   const [order, setOrder] = useState<any>();
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
@@ -38,31 +40,31 @@ export default function OrderDetail() {
   return (
     <Layout>
       <div className="vs-wrap">
-        <Link to="/pedidos" className="vs-link"><ArrowLeft size={16} /> Os meus pedidos</Link>
+        <Link to="/pedidos" className="vs-link"><ArrowLeft size={16} /> {t('Os meus pedidos')}</Link>
 
-        {status === 'loading' && <div className="vs-state">A carregar encomenda…</div>}
+        {status === 'loading' && <div className="vs-state">{t('A carregar encomenda…')}</div>}
         {status === 'error' && (
           <div className="vs-state vs-err">
-            <h3>Não foi possível abrir a encomenda</h3><p>{error}</p>
-            <button className="vs-btn" onClick={load}>Tentar de novo</button>
+            <h3>{t('Não foi possível abrir a encomenda')}</h3><p>{error}</p>
+            <button className="vs-btn" onClick={load}>{t('Tentar de novo')}</button>
           </div>
         )}
 
         {status === 'ok' && order && (
           <div className="vs-split">
             <section>
-              <h1>Encomenda #{order.id}</h1>
-              {order.created_at && <p><small>Feita em {new Date(order.created_at).toLocaleDateString('pt-MZ')}</small></p>}
+              <h1>{t('Encomenda')} #{order.id}</h1>
+              {order.created_at && <p><small>{t('Feita em')} {new Date(order.created_at).toLocaleDateString(language === 'pt' ? 'pt-PT' : 'en-GB')}</small></p>}
 
               <div className="vs-panel">
-                <h3>Estado</h3>
-                {cancelled ? <p><b>Encomenda cancelada</b></p> : rejected ? (
-                  <p><b>Encomenda rejeitada.</b>{order.rejectionReason ? ` Motivo: ${order.rejectionReason}` : ''}</p>
+                <h3>{t('Estado')}</h3>
+                {cancelled ? <p><b>{t('Encomenda cancelada')}</b></p> : rejected ? (
+                  <p><b>{t('Encomenda rejeitada.')}</b>{order.rejectionReason ? ` ${t('Motivo:')} ${order.rejectionReason}` : ''}</p>
                 ) : currentStep >= 0 ? (
                   <ol className="vs-list">
                     {steps.map(([k, label], i) => (
                       <li key={k} aria-current={i === currentStep}>
-                        {i <= currentStep ? '✓ ' : '○ '}{i === currentStep ? <b>{label}</b> : label}
+                        {i <= currentStep ? '✓ ' : '○ '}{i === currentStep ? <b>{t(label)}</b> : t(label)}
                       </li>
                     ))}
                   </ol>
@@ -71,7 +73,7 @@ export default function OrderDetail() {
 
               {Array.isArray(order.items) && order.items.length > 0 && (
                 <div className="vs-panel" style={{ marginTop: 16 }}>
-                  <h3>Produtos</h3>
+                  <h3>{t('Produtos')}</h3>
                   <ul className="vs-list">
                     {order.items.map((i: any, n: number) => (
                       <li key={i.id ?? n}>
@@ -85,12 +87,12 @@ export default function OrderDetail() {
             </section>
 
             <aside className="vs-panel">
-              <h3>Resumo</h3>
+              <h3>{t('Resumo')}</h3>
               <ul className="vs-list">
-                {order.delivery_fee != null && <li>Entrega <b>{Number(order.delivery_fee) ? money(order.delivery_fee) : 'Grátis'}</b></li>}
-                {order.address && <li>Endereço <b>{[order.address.street, order.address.number, order.address.city].filter(Boolean).join(', ')}</b></li>}
-                {order.paymentMethod && <li>Pagamento <b>{order.paymentMethod.label || order.paymentMethod.type}</b></li>}
-                <li>Total <b>{money(order.total)}</b></li>
+                {order.delivery_fee != null && <li>{t('Entrega')} <b>{Number(order.delivery_fee) ? money(order.delivery_fee) : t('Grátis')}</b></li>}
+                {order.address && <li>{t('Endereço')} <b>{[order.address.street, order.address.number, order.address.city].filter(Boolean).join(', ')}</b></li>}
+                {order.paymentMethod && <li>{t('Pagamento')} <b>{order.paymentMethod.label || order.paymentMethod.type}</b></li>}
+                <li>{t('Total')} <b>{money(order.total)}</b></li>
               </ul>
             </aside>
           </div>

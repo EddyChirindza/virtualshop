@@ -70,11 +70,15 @@ async function update(id, fields) {
 async function remove(id) {
   const { rows } = await query(
     `SELECT EXISTS(SELECT 1 FROM categories WHERE parent_id = $1) AS has_children,
-            EXISTS(SELECT 1 FROM products WHERE category_id = $1) AS has_products`, [id]
+            EXISTS(SELECT 1 FROM products WHERE category_id = $1) AS has_products,
+            EXISTS(SELECT 1 FROM banners WHERE category_id = $1) AS has_banners`, [id]
   );
   if (!rows[0]) throw new ApiError(404, 'Categoria não encontrada.');
   if (rows[0].has_children || rows[0].has_products) {
     throw new ApiError(409, 'Move ou elimina primeiro as subcategorias e produtos associados.');
+  }
+  if (rows[0].has_banners) {
+    throw new ApiError(409, 'Esta categoria está associada a um ou mais banners e não pode ser eliminada.');
   }
   const deleted = await query('DELETE FROM categories WHERE id = $1 RETURNING id', [id]);
   if (!deleted.rows[0]) throw new ApiError(404, 'Categoria não encontrada.');

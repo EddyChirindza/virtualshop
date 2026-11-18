@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, X, MapPin } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShoppingBag, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Banner, Category, Product, ProductSort } from '../types';
@@ -281,7 +281,7 @@ export default function Home() {
 
           {activeBanner ? (
             <section
-              className={`vs-banner vs-banner--image vs-banner-${bannerAlignment}`}
+              className={`vs-banner vs-banner--image${activeBanner.starts_at || activeBanner.expires_at ? ' vs-banner--timed' : ''} vs-banner-${bannerAlignment}`}
               aria-label={t('Banner promocional')}
               style={{ backgroundColor: activeBanner.style.background_color }}
               onMouseEnter={() => setIsBannerHovered(true)}
@@ -380,11 +380,6 @@ export default function Home() {
         </div>
         {bannerError && <p className="vs-error" role="alert">{t('Não foi possível carregar os banners:')} {bannerError}</p>}
 
-        <div className="vs-perks">
-          <div className="vs-perk"><i><Truck size={20} /></i><div><b>{t('Entrega ao domicílio')}</b><small>{t('Taxa fixa de 50 MT · levantamento grátis')}</small></div></div>
-          <div className="vs-perk"><i><ShieldCheck size={20} /></i><div><b>{t('Compra segura')}</b><small>{t('Os seus dados protegidos')}</small></div></div>
-          <div className="vs-perk"><i><MapPin size={20} /></i><div><b>{t('Feito em Moçambique')}</b><small>{t('Entregamos em todo o país')}</small></div></div>
-        </div>
       </div>
 
       {status === 'ok' && showFeatured && (popular.length > 0 || newArrivals.length > 0 || featuredError) && (

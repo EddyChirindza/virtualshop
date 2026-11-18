@@ -50,6 +50,8 @@ html[data-theme=dark],html[data-theme=dark] body,html[data-theme=dark] #root{bac
 .vs-root > .vs-wrap{width:100%}
 .vs-wrap > h1{margin:24px 0 18px;font-size:clamp(24px,3.4vw,30px)}
 .vs-root > .vs-wrap:not(#catalogo):not(#inicio){padding-bottom:56px}
+.vs-about-intro{margin:0 0 20px;color:var(--vs-muted)}
+.vs-about .vs-perks{margin-bottom:28px}
 
 /* ───── botões ───── */
 .vs-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border:1px solid var(--vs-forest);background:var(--vs-forest);color:#fff;border-radius:999px;font-weight:600;text-decoration:none;transition:background .15s,transform .05s}
@@ -125,6 +127,8 @@ html[data-theme=dark],html[data-theme=dark] body,html[data-theme=dark] #root{bac
 .vs-banner-dates{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px}
 .vs-banner-countdown{margin:0!important;color:#fff!important;font-size:14px!important;font-variant-numeric:tabular-nums}
 .vs-banner--image{padding-top:112px}
+.vs-banner--image.vs-banner--timed{padding-top:36px}
+.vs-banner--timed .vs-banner-timing{position:relative;top:auto;right:auto;align-self:flex-end;max-width:100%;order:-1}
 .vs-banner--image .vs-banner-timing{z-index:3}
 .vs-banner--image .vs-banner-media{animation:vs-banner-enter .55s cubic-bezier(.2,.75,.3,1) both}
 .vs-banner--image .vs-banner-media img{animation:vs-banner-image-zoom 6s ease-out both}
@@ -370,6 +374,7 @@ a.vs-stat:hover{box-shadow:var(--vs-shadow);transform:translateY(-2px)}
   .vs-search button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .vs-banner{min-height:240px;padding:28px 22px}
   .vs-banner--image{padding-top:100px}
+  .vs-banner--image.vs-banner--timed{padding-top:28px}
   .vs-banner p{font-size:15px}
   .vs-perks{grid-template-columns:1fr;gap:10px}
   .vs-stats{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -411,6 +416,10 @@ a.vs-stat:hover{box-shadow:var(--vs-shadow);transform:translateY(-2px)}
   .vs-list li.vs-row{flex-wrap:wrap}
   .vs-row-end{width:100%;justify-content:space-between}
   .vs-banner h1{font-size:28px}
+}
+
+@media(max-width:360px){
+  .vs-grid{grid-template-columns:1fr}
 }
 
 /* ecrãs tácteis: alvos de toque maiores */

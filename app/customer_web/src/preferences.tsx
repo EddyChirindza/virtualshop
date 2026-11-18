@@ -15,6 +15,8 @@ const messages: Record<string, string> = {
   'Mais recentes': 'Newest', 'Menor preço': 'Lowest price', 'Maior preço': 'Highest price',
   'Limpar filtros': 'Clear filters', 'Pesquisar': 'Search', 'Os meus pedidos': 'My orders',
   'Loja': 'Shop', 'A minha conta': 'My account', 'Perfil': 'Profile',
+  'Sobre nós': 'About us', 'Conheça os nossos compromissos com a sua experiência de compra.': 'Learn about our commitments to your shopping experience.',
+  'Os nossos compromissos': 'Our commitments',
   'Entrega ao domicílio: 50 MT · Levantamento na loja: grátis': 'Home delivery: 50 MT · Free in-store pickup',
   'Entrega ao domicílio: 50 MT · Levantamento grátis': 'Home delivery: 50 MT · Free pickup',
   'Entrega ao domicílio': 'Home delivery', 'Taxa fixa de 50 MT · levantamento grátis': 'Flat fee of 50 MT · free pickup',

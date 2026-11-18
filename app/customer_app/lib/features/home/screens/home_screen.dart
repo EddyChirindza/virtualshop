@@ -9,6 +9,7 @@ import '../../categories/providers/category_providers.dart';
 import '../../categories/screens/category_products_screen.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../cart/screens/cart_screen.dart';
+import '../../orders/presentation/screens/orders_screen.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/widgets/products_section.dart';
 import '../../profile/presentation/screens/profile_screen.dart';
@@ -91,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appText(context, 'VirtualShop', 'VirtualShop'),
       appText(context, 'Pesquisar', 'Search'),
       appText(context, 'Carrinho', 'Cart'),
+      appText(context, 'Pedidos', 'Orders'),
       appText(context, 'Perfil', 'Profile'),
     ];
     final pages = [
@@ -100,6 +102,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         isActive: _selectedIndex == 1,
       ),
       const CartScreen(),
+      const OrdersScreen(showAppBar: false),
       const ProfileScreen(),
     ];
 

@@ -1,11 +1,20 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../../admin/adminApi'
 import { CustomerDetailsDialog } from './CustomersPage'
 
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}))
+
 describe('CustomerDetailsDialog', () => {
-  it('renders customer data and photo from the existing list response', () => {
+  it('renders customer data and photo from fallback while details load', () => {
     const customer: Customer = {
       id: 25,
       fullName: 'Maria Exemplo',
@@ -17,7 +26,8 @@ describe('CustomerDetailsDialog', () => {
 
     const markup = renderToStaticMarkup(
       createElement(CustomerDetailsDialog, {
-        customer,
+        customerId: customer.id,
+        fallback: customer,
         onClose: () => undefined,
       }),
     )
@@ -29,6 +39,7 @@ describe('CustomerDetailsDialog', () => {
     expect(markup).toContain('Fotografia de Maria Exemplo')
     expect(markup).toContain('https://images.example.test/customer.jpg')
     expect(markup).toContain('Registado em')
+    expect(markup).toContain('Histórico de encomendas')
   })
 
   it('shows safe fallbacks when customer fields are missing', () => {
@@ -43,13 +54,14 @@ describe('CustomerDetailsDialog', () => {
 
     const markup = renderToStaticMarkup(
       createElement(CustomerDetailsDialog, {
-        customer,
+        customerId: customer.id,
+        fallback: customer,
         onClose: () => undefined,
       }),
     )
 
     expect(markup).toContain('Sem nome')
     expect(markup).toContain('Cliente #26')
-    expect(markup.match(/—/g)).toHaveLength(3)
+    expect(markup).toContain('Este cliente ainda não tem encomendas.')
   })
 })

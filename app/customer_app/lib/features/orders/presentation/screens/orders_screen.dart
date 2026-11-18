@@ -12,22 +12,26 @@ import '../providers/order_providers.dart';
 import 'order_detail_screen.dart';
 
 class OrdersScreen extends ConsumerWidget {
-  const OrdersScreen({super.key});
+  const OrdersScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orders = ref.watch(ordersProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(appText(context, 'Meus pedidos', 'My orders')),
-        actions: [
-          IconButton(
-            tooltip: appText(context, 'Atualizar', 'Refresh'),
-            onPressed: () => ref.read(ordersProvider.notifier).refresh(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              title: Text(appText(context, 'Pedidos', 'Orders')),
+              actions: [
+                IconButton(
+                  tooltip: appText(context, 'Atualizar', 'Refresh'),
+                  onPressed: () => ref.read(ordersProvider.notifier).refresh(),
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            )
+          : null,
       body: orders.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorRetry(

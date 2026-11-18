@@ -218,6 +218,9 @@ export const api = {
     const limit = Math.min(50, Math.max(1, Math.floor(filters.limit ?? 50)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  products: async (q = '', category?: number) => {
+    const params = new URLSearchParams({ limit: '50' });
+    main
     if (q) params.set('q', q);
     if (category) params.set('category', String(category));
     if (filters.minPrice !== undefined) params.set('minPrice', String(filters.minPrice));

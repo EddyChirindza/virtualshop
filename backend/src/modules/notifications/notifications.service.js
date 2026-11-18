@@ -5,7 +5,18 @@ const VISIBLE_WHERE = `n.status = 'published'
   AND n.published_at <= now()
   AND (n.starts_at IS NULL OR n.starts_at <= now())
   AND (n.expires_at IS NULL OR n.expires_at > now())
-  AND (n.recipient_scope = 'all_customers' OR n.recipient_user_id = $1)`;
+  AND (
+    n.recipient_user_id = $1
+    OR (
+      n.recipient_scope = 'all_customers'
+      AND (
+        n.include_new_users = true
+        OR n.published_at >= (
+          SELECT u.created_at FROM users u WHERE u.id = $1
+        )
+      )
+    )
+  )`;
 
 async function listForUser(userId, { page = 1, limit = 30 } = {}) {
   const offset = (page - 1) * limit;
@@ -91,9 +102,11 @@ async function markAllAsRead(userId) {
 }
 
 function sameIdempotentRequest(row, fields) {
+  const includeNewUsers = fields.recipient_scope === 'all_customers' ? Boolean(fields.include_new_users) : false;
   return row.type === fields.type &&
     Number(row.product_id || 0) === Number(fields.product_id || 0) &&
-    row.title === fields.title && row.message === fields.message;
+    row.title === fields.title && row.message === fields.message &&
+    Boolean(row.include_new_users) === includeNewUsers;
 }
 
 async function createByAdmin(fields, adminId) {
@@ -108,7 +121,7 @@ async function createByAdmin(fields, adminId) {
   if (fields.idempotency_key) {
     const existing = await query(
       `SELECT id, title, message, type, product_id, status, recipient_scope,
-              recipient_user_id, starts_at, expires_at, created_at
+              recipient_user_id, include_new_users, starts_at, expires_at, created_at
        FROM notifications WHERE idempotency_key = $1`,
       [fields.idempotency_key]
     );
@@ -120,19 +133,21 @@ async function createByAdmin(fields, adminId) {
     }
   }
 
+  const includeNewUsers = fields.recipient_scope === 'all_customers' ? Boolean(fields.include_new_users) : false;
   const { rows } = await query(
     `INSERT INTO notifications
        (title, message, type, product_id, recipient_scope, recipient_user_id,
-        status, idempotency_key, starts_at, expires_at, created_by, published_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        status, idempotency_key, starts_at, expires_at, created_by, published_at, include_new_users)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (idempotency_key) DO NOTHING
      RETURNING id, title, message, type, product_id, status, recipient_scope,
-               recipient_user_id, starts_at, expires_at, created_at`,
+               recipient_user_id, include_new_users, starts_at, expires_at, created_at`,
     [fields.title, fields.message, fields.type, fields.product_id ?? null,
       fields.recipient_scope, fields.recipient_user_id ?? null, fields.status,
       fields.idempotency_key ?? null, fields.starts_at ?? null,
       fields.expires_at ?? null, adminId,
-      fields.status === 'published' ? new Date() : null]
+      fields.status === 'published' ? new Date() : null,
+      includeNewUsers]
   );
   if (rows[0]) return rows[0];
 
@@ -155,7 +170,7 @@ async function listForAdmin({ page = 1, limit = 50 } = {}) {
     query('SELECT COUNT(*)::int AS total FROM notifications'),
     query(
       `SELECT n.id, n.title, n.message, n.type, n.product_id, n.order_id, n.status,
-              n.recipient_scope, n.recipient_user_id, n.starts_at, n.expires_at,
+              n.recipient_scope, n.recipient_user_id, n.include_new_users, n.starts_at, n.expires_at,
               n.published_at, n.created_at, p.name AS product_name
        FROM notifications n
        LEFT JOIN products p ON p.id = n.product_id

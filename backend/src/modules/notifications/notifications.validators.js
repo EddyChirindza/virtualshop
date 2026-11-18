@@ -22,6 +22,7 @@ const createNotificationSchema = z.object({
   product_id: positiveInt.nullable().optional(),
   recipient_scope: z.enum(['all_customers', 'user']).default('all_customers'),
   recipient_user_id: positiveInt.nullable().optional(),
+  include_new_users: z.boolean().optional().default(false),
   status: z.enum(['draft', 'published']).default('draft'),
   idempotency_key: z.string().trim().min(1).max(200).optional(),
   starts_at: nullableDate,
@@ -32,6 +33,9 @@ const createNotificationSchema = z.object({
   }
   if (value.recipient_scope === 'all_customers' && value.recipient_user_id != null) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['recipient_user_id'], message: 'Notificações globais não podem ter um destinatário individual.' });
+  }
+  if (value.recipient_scope === 'user' && value.include_new_users) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['include_new_users'], message: 'Notificações individuais não podem incluir novos utilizadores.' });
   }
   if (value.starts_at && value.expires_at && new Date(value.expires_at) <= new Date(value.starts_at)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['expires_at'], message: 'A validade deve terminar depois do início.' });

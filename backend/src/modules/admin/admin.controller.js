@@ -15,6 +15,13 @@ async function customers(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function customerDetails(req, res, next) {
+  try {
+    const data = await adminService.getCustomerDetails(req.params.id);
+    res.json({ success: true, message: 'OK', data });
+  } catch (err) { next(err); }
+}
+
 async function uploadProductImage(req, res, next) {
   try {
     const data = await productImageService.saveProductImage(req.body);
@@ -22,4 +29,4 @@ async function uploadProductImage(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { dashboard, customers, uploadProductImage };
+module.exports = { dashboard, customers, customerDetails, uploadProductImage };

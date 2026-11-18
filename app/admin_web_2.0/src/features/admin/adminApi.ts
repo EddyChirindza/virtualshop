@@ -130,6 +130,25 @@ export interface Customer {
   createdAt: string
 }
 
+export interface CustomerOrderSummary {
+  id: number
+  status: string
+  paymentStatus: string
+  deliveryMethod: 'home_delivery' | 'store_pickup'
+  total: number
+  itemCount: number
+  createdAt: string
+}
+
+export interface CustomerDetails extends Customer {
+  stats: {
+    orderCount: number
+    totalSpent: number
+    lastOrderAt: string | null
+  }
+  orders: CustomerOrderSummary[]
+}
+
 export interface Administrator {
   id: number
   full_name: string
@@ -326,6 +345,13 @@ export const adminApi = {
   async listCustomers() {
     const response = await apiClient.get<ApiEnvelope<Customer[]>>(
       '/admin/customers',
+    )
+    return response.data.data
+  },
+
+  async getCustomer(id: number) {
+    const response = await apiClient.get<ApiEnvelope<CustomerDetails>>(
+      `/admin/customers/${id}`,
     )
     return response.data.data
   },

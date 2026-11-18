@@ -5,6 +5,7 @@ import { Camera, Check, Circle, Eye, EyeOff } from 'lucide-react';
 import AccountLayout from '../components/AccountLayout';
 import { api, imageUrl, session } from '../services/api';
 import { initials, toSquareBlob } from '../utils/avatar';
+import { usePreferences } from '../preferences';
 
 const MAX_FILE = 10 * 1024 * 1024;
 
@@ -45,6 +46,7 @@ function PasswordField(props: { id: string; label: string; value: string; onChan
 
 export default function Profile() {
   const nav = useNavigate();
+  const { language, theme, setLanguage, setTheme, t } = usePreferences();
   const [user, setUser] = useState<any>();
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [error, setError] = useState('');
@@ -100,7 +102,7 @@ export default function Profile() {
         ...(get('birthDate') ? { birthDate: get('birthDate') } : {}),
       });
       setUser((u: any) => ({ ...u, ...updated }));
-      setNotice('Dados actualizados.');
+      setNotice(t('Dados actualizados.'));
     } catch (err) {
       setFormError((err as Error).message);
     } finally {
@@ -114,14 +116,14 @@ export default function Profile() {
     e.target.value = '';
     if (!file) return;
     setPhotoError('');
-    if (!file.type.startsWith('image/')) return setPhotoError('Escolha um ficheiro de imagem.');
-    if (file.size > MAX_FILE) return setPhotoError('A imagem é demasiado grande (máximo 10 MB).');
+    if (!file.type.startsWith('image/')) return setPhotoError(t('Escolha um ficheiro de imagem.'));
+    if (file.size > MAX_FILE) return setPhotoError(t('A imagem é demasiado grande (máximo 10 MB).'));
     try {
       const out = await toSquareBlob(file);
       setBlob(out);
       setPreview(URL.createObjectURL(out));
     } catch {
-      setPhotoError('Não foi possível ler esta imagem. Experimente um ficheiro JPG ou PNG.');
+      setPhotoError(t('Não foi possível ler esta imagem. Experimente um ficheiro JPG ou PNG.'));
     }
   };
 
@@ -135,7 +137,7 @@ export default function Profile() {
       const fresh = r?.avatar_url ? { ...user, avatar_url: r.avatar_url } : await api.profile();
       setUser(fresh);
       cancelPhoto();
-      setNotice('Fotografia actualizada.');
+      setNotice(t('Fotografia actualizada.'));
     } catch (err) {
       setPhotoError((err as Error).message);
     } finally {
@@ -144,18 +146,18 @@ export default function Profile() {
   };
 
   const removePhoto = async () => {
-    if (!window.confirm('Remover a sua fotografia?')) return;
+    if (!window.confirm(t('Remover a sua fotografia?'))) return;
     setBusyPhoto(true); setPhotoError('');
-    try { await api.deleteAvatar(); setUser((u: any) => ({ ...u, avatar_url: null })); setNotice('Fotografia removida.'); }
+    try { await api.deleteAvatar(); setUser((u: any) => ({ ...u, avatar_url: null })); setNotice(t('Fotografia removida.')); }
     catch (err) { setPhotoError((err as Error).message); }
     finally { setBusyPhoto(false); }
   };
 
   /* ── palavra-passe ── */
   const rules: [string, boolean][] = [
-    ['Pelo menos 8 caracteres', next.length >= 8],
-    ['Uma letra maiúscula', /[A-Z]/.test(next)],
-    ['Uma letra minúscula', /[a-z]/.test(next)],
+    [t('Pelo menos 8 caracteres'), next.length >= 8],
+    [t('Uma letra maiúscula'), /[A-Z]/.test(next)],
+    [t('Uma letra minúscula'), /[a-z]/.test(next)],
   ];
   const rulesOk = rules.every(r => r[1]);
   const score = !next ? 0 : rules.filter(r => r[1]).length + (/\d|[^A-Za-z0-9]/.test(next) ? 1 : 0);
@@ -170,7 +172,7 @@ export default function Profile() {
     try {
       const keptSession = await api.changePassword(current, next);
       setCurrent(''); setNext(''); setConfirm('');
-      if (keptSession) { setNotice('Palavra-passe alterada com sucesso.'); return; }
+      if (keptSession) { setNotice(t('Palavra-passe alterada com sucesso.')); return; }
       // Por segurança o backend terminou todas as sessões: é preciso entrar de novo.
       session.clear();
       nav('/login', { replace: true, state: { from: '/perfil', notice: 'Palavra-passe alterada. Entre com a nova palavra-passe.' } });
@@ -187,84 +189,116 @@ export default function Profile() {
   return (
     <AccountLayout>
       <div>
-        <h1>Dados pessoais</h1>
+        <h1>{t('Dados pessoais')}</h1>
+
+        <section className="vs-panel vs-preferences" aria-labelledby="vs-preferences-title">
+          <h3 id="vs-preferences-title">{t('Preferências')}</h3>
+          <div className="vs-preference-row">
+            <div>
+              <b>{t('Idioma')}</b>
+              <small>{t('Seleccione o idioma da loja.')}</small>
+            </div>
+            <div className="vs-preference-options" role="group" aria-label={t('Idioma')}>
+              <button type="button" className={language === 'pt' ? 'is-selected' : ''} aria-pressed={language === 'pt'} onClick={() => setLanguage('pt')}>
+                <span aria-hidden="true">🇵🇹</span> Português
+              </button>
+              <button type="button" className={language === 'en' ? 'is-selected' : ''} aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>
+                <span aria-hidden="true">🇬🇧</span> English
+              </button>
+            </div>
+          </div>
+          <div className="vs-preference-row">
+            <div>
+              <b>{t('Tema')}</b>
+              <small>{t('Escolha o tema visual da loja.')}</small>
+            </div>
+            <div className="vs-preference-options" role="group" aria-label={t('Tema')}>
+              <button type="button" className={theme === 'light' ? 'is-selected' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>
+                ☀️ {t('Claro')}
+              </button>
+              <button type="button" className={theme === 'dark' ? 'is-selected' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>
+                🌙 {t('Escuro')}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {status === 'loading' && (
           <div aria-busy="true"><div className="vs-skel" style={{ height: 300, marginBottom: 16 }} /><div className="vs-skel" style={{ height: 260 }} /></div>
         )}
         {status === 'error' && (
           <div className="vs-state vs-err">
-            <h3>Não foi possível abrir o perfil</h3><p>{error}</p>
-            <button className="vs-btn" onClick={load}>Tentar de novo</button>
+            <h3>{t('Não foi possível abrir o perfil')}</h3><p>{error}</p>
+            <button className="vs-btn" onClick={load}>{t('Tentar de novo')}</button>
           </div>
         )}
 
         {status === 'ok' && <>
           <div className="vs-prof">
             <section className="vs-panel vs-photo">
-              <h3>Fotografia</h3>
+              <h3>{t('Fotografia')}</h3>
               <div className="vs-photo-box">
-                {shown ? <img src={shown} alt="A sua fotografia" /> : <span aria-hidden>{initials(name)}</span>}
+                {shown ? <img src={shown} alt={t('A sua fotografia')} /> : <span aria-hidden>{initials(name)}</span>}
               </div>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
 
               {!blob ? <>
                 <button className="vs-btn vs-ghost vs-block" disabled={busyPhoto} onClick={() => fileRef.current?.click()}>
-                  <Camera size={18} /> {user?.avatar_url ? 'Alterar fotografia' : 'Adicionar fotografia'}
+                  <Camera size={18} /> {t(user?.avatar_url ? 'Alterar fotografia' : 'Adicionar fotografia')}
                 </button>
-                {user?.avatar_url && <button className="vs-link vs-danger-link" disabled={busyPhoto} onClick={removePhoto}>Remover fotografia</button>}
+                {user?.avatar_url && <button className="vs-link vs-danger-link" disabled={busyPhoto} onClick={removePhoto}>{t('Remover fotografia')}</button>}
               </> : <>
-                <button className="vs-btn vs-block" disabled={busyPhoto} onClick={savePhoto}>{busyPhoto ? 'A enviar…' : 'Guardar fotografia'}</button>
-                <button className="vs-link" disabled={busyPhoto} onClick={cancelPhoto}>Cancelar</button>
+                <button className="vs-btn vs-block" disabled={busyPhoto} onClick={savePhoto}>{busyPhoto ? t('A enviar…') : t('Guardar fotografia')}</button>
+                <button className="vs-link" disabled={busyPhoto} onClick={cancelPhoto}>{t('Cancelar')}</button>
               </>}
 
               {photoError && <div className="vs-error" role="alert">{photoError}</div>}
-              <small>JPG, PNG ou WebP. A imagem é cortada em quadrado.</small>
+              <small>{t('JPG, PNG ou WebP. A imagem é cortada em quadrado.')}</small>
             </section>
 
             <form className="vs-panel" onSubmit={submit}>
-              <h3>Informação da conta</h3>
+              <h3>{t('Informação da conta')}</h3>
               <div className="vs-fgrid">
                 {formError && <div className="vs-error" role="alert">{formError}</div>}
-                <label className="vs-field">Nome completo
+                <label className="vs-field">{t('Nome completo')}
                   <input name="name" required minLength={3} autoComplete="name" defaultValue={user?.full_name || user?.name || ''} />
                 </label>
-                <label className="vs-field">Telemóvel
+                <label className="vs-field">{t('Telemóvel')}
                   <input name="phone" type="tel" inputMode="tel" required pattern="(?:[0-9]{9,15}|\+[1-9][0-9]{7,14})" autoComplete="tel" defaultValue={user?.phone || ''} />
                 </label>
-                <label className="vs-field">Email{user?.email ? '' : ' (opcional)'}
+                <label className="vs-field">{t(user?.email ? 'Email' : 'Email (opcional)')}
                   <input name="email" type="email" autoComplete="email" defaultValue={user?.email || ''} disabled={!!user?.email} />
-                  {user?.email && <small>O email não pode ser alterado depois de guardado.</small>}
+                  {user?.email && <small>{t('O email não pode ser alterado depois de guardado.')}</small>}
                 </label>
                 <div className="vs-two">
-                  <label className="vs-field">Género
+                  <label className="vs-field">{t('Género')}
                     <select name="gender" defaultValue={user?.gender ?? ''}>
-                      <option value="">Seleccionar</option>
-                      {GENDERS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      <option value="">{t('Seleccionar')}</option>
+                      {GENDERS.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
                       {/* valor já guardado que não está na lista: mantém-no visível */}
                       {user?.gender && !GENDERS.some(([v]) => v === user.gender) && <option value={user.gender}>{String(user.gender)}</option>}
                     </select>
                   </label>
-                  <label className="vs-field">Data de nascimento
+                  <label className="vs-field">{t('Data de nascimento')}
                     <input name="birthDate" type="date" min="1900-01-01" max={fmt(new Date())} autoComplete="bday"
                       defaultValue={toDateInput(user?.birth_date)} />
                   </label>
                 </div>
-                <div><button className="vs-btn" disabled={busy}>{busy ? 'A guardar…' : 'Guardar alterações'}</button></div>
+                <div><button className="vs-btn" disabled={busy}>{busy ? t('A guardar…') : t('Guardar alterações')}</button></div>
               </div>
             </form>
           </div>
 
           <form className="vs-panel" onSubmit={savePassword}>
-            <h3>Segurança e palavra-passe</h3>
+            <h3>{t('Segurança e palavra-passe')}</h3>
             <div className="vs-fgrid">
               {passError && <div className="vs-error" role="alert">{passError}</div>}
-              <PasswordField id="vs-cur" label="Palavra-passe actual" value={current} onChange={setCurrent} autoComplete="current-password" />
-              <PasswordField id="vs-new" label="Nova palavra-passe" value={next} onChange={setNext} autoComplete="new-password" />
+              <PasswordField id="vs-cur" label={t('Palavra-passe actual')} value={current} onChange={setCurrent} autoComplete="current-password" />
+              <PasswordField id="vs-new" label={t('Nova palavra-passe')} value={next} onChange={setNext} autoComplete="new-password" />
 
               {next && <>
                 <div className="vs-meter" data-level={score} aria-hidden><i /><i /><i /><i /></div>
-                <small className="vs-meter-label">Força: <b>{['', 'Fraca', 'Razoável', 'Boa', 'Forte'][score]}</b></small>
+                <small className="vs-meter-label">{t('Força:')} <b>{t(['', 'Fraca', 'Razoável', 'Boa', 'Forte'][score])}</b></small>
               </>}
               <ul className="vs-rules">
                 {rules.map(([text, ok]) => (
@@ -272,11 +306,11 @@ export default function Profile() {
                 ))}
               </ul>
 
-              <PasswordField id="vs-conf" label="Confirmar nova palavra-passe" value={confirm} onChange={setConfirm} autoComplete="new-password" />
-              {confirm && !match && <div className="vs-error" role="alert">As palavras-passe não coincidem.</div>}
-              {same && <div className="vs-error" role="alert">A nova palavra-passe tem de ser diferente da actual.</div>}
+              <PasswordField id="vs-conf" label={t('Confirmar nova palavra-passe')} value={confirm} onChange={setConfirm} autoComplete="new-password" />
+              {confirm && !match && <div className="vs-error" role="alert">{t('As palavras-passe não coincidem.')}</div>}
+              {same && <div className="vs-error" role="alert">{t('A nova palavra-passe tem de ser diferente da actual.')}</div>}
 
-              <div><button className="vs-btn" disabled={!canSave}>{busyPass ? 'A alterar…' : 'Alterar palavra-passe'}</button></div>
+              <div><button className="vs-btn" disabled={!canSave}>{busyPass ? t('A alterar…') : t('Alterar palavra-passe')}</button></div>
             </div>
           </form>
         </>}

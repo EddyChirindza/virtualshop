@@ -5,10 +5,12 @@ import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Product } from '../types';
 import { money } from '../utils/format';
+import { usePreferences } from '../preferences';
 
 type ProductWithDetails = Product & { description?: string };
 
 export default function ProductDetail() {
+  const { t } = usePreferences();
   const { id } = useParams();
   const nav = useNavigate();
   const [product, setProduct] = useState<ProductWithDetails>();
@@ -57,7 +59,7 @@ export default function ProductDetail() {
     setBusy(true);
     try {
       await api.add(product.id, quantity);
-      setNotice('Produto adicionado ao carrinho.');
+      setNotice(t('Produto adicionado ao carrinho.'));
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -79,13 +81,13 @@ export default function ProductDetail() {
   return (
     <Layout>
       <div className="vs-wrap">
-        <Link to="/" className="vs-link"><ArrowLeft size={16} /> Voltar aos produtos</Link>
+        <Link to="/" className="vs-link"><ArrowLeft size={16} /> {t('Voltar aos produtos')}</Link>
 
-        {status === 'loading' && <div className="vs-state">A carregar produto…</div>}
+        {status === 'loading' && <div className="vs-state">{t('A carregar produto…')}</div>}
         {status === 'error' && (
           <div className="vs-state vs-err">
-            <h3>Não foi possível carregar o produto</h3><p>{error}</p>
-            <button className="vs-btn" onClick={load}>Tentar de novo</button>
+            <h3>{t('Não foi possível carregar o produto')}</h3><p>{error}</p>
+            <button className="vs-btn" onClick={load}>{t('Tentar de novo')}</button>
           </div>
         )}
 
@@ -105,22 +107,22 @@ export default function ProductDetail() {
             </div>
 
             <div>
-              <div className="vs-card-cat">{product.category_name || 'Essenciais'}</div>
+              <div className="vs-card-cat">{product.category_name || t('Essenciais')}</div>
               <h1>{product.name}</h1>
               <h2>{money(product.price)}</h2>
               {product.description && <p>{product.description}</p>}
-              <p><small>{product.stock ? `${product.stock} em stock` : 'Sem stock'}</small></p>
+              <p><small>{product.stock ? `${product.stock} ${t('em stock')}` : t('Sem stock')}</small></p>
 
               <div className="vs-inline">
                 <button className="vs-link" aria-pressed={isFavorite} onClick={() => void toggleFavorite()}>
                   <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
-                  {isFavorite ? 'Remover dos favoritos' : 'Guardar nos favoritos'}
+                  {t(isFavorite ? 'Remover dos favoritos' : 'Guardar nos favoritos')}
                 </button>
-                <button aria-label="Diminuir" disabled={quantity <= 1} onClick={() => setQuantity(q => q - 1)}><Minus size={16} /></button>
+                <button aria-label={t('Diminuir')} disabled={quantity <= 1} onClick={() => setQuantity(q => q - 1)}><Minus size={16} /></button>
                 <b>{quantity}</b>
-                <button aria-label="Aumentar" disabled={quantity >= maxQty} onClick={() => setQuantity(q => q + 1)}><Plus size={16} /></button>
+                <button aria-label={t('Aumentar')} disabled={quantity >= maxQty} onClick={() => setQuantity(q => q + 1)}><Plus size={16} /></button>
                 <button className="vs-btn" disabled={!product.stock || busy} onClick={add}>
-                  <ShoppingBag size={18} /> {busy ? 'A adicionar…' : 'Adicionar ao carrinho'}
+                  <ShoppingBag size={18} /> {busy ? t('A adicionar…') : t('Adicionar ao carrinho')}
                 </button>
               </div>
             </div>

@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Heart, ShieldCheck, ShoppingBag, Truck, X, MapPin } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, X, MapPin } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
-import type { Category, Product, ProductSort } from '../types';
+import type { Banner, Category, Product, ProductSort } from '../types';
 import { money } from '../utils/format';
+import { usePreferences } from '../preferences';
 
 export default function Home() {
+  const { t, language } = usePreferences();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [popular, setPopular] = useState<Product[]>([]);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [bannerError, setBannerError] = useState('');
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [category, setCategory] = useState<number>();
   const [minPrice, setMinPrice] = useState('');
@@ -87,6 +92,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    api.banners()
+      .then(items => {
+        if (!active) return;
+        setBanners(items);
+        setBannerIndex(0);
+      })
+      .catch(e => {
+        if (active) setBannerError((e as Error).message);
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     if (!session.token) {
       setFavs([]);
       return;
@@ -119,9 +138,27 @@ export default function Home() {
     setSort('relevance');
   };
 
+  const activateBanner = (banner: Banner) => {
+    const destination = banner.destination;
+    if (destination.type === 'product' && destination.product?.id) {
+      nav(`/produto/${destination.product.id}`);
+      return;
+    }
+    if (destination.type === 'category' && destination.category?.id) {
+      setCategory(destination.category.id);
+      document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    if (destination.type === 'url' && destination.url && /^https?:\/\//i.test(destination.url)) {
+      window.open(destination.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const addToCart = async (p: Product) => {
     if (!session.token) return needLogin();
-    try { await api.add(p.id); setNotice('Produto adicionado ao carrinho.'); }
+    try { await api.add(p.id); setNotice(t('Produto adicionado ao carrinho.')); }
     catch (e) { setNotice((e as Error).message); }
   };
 
@@ -136,30 +173,35 @@ export default function Home() {
     const stock = Number(p.stock);
     return (
       <article className="vs-card" key={p.id}>
-        <button className="vs-card-img" aria-label={`Ver ${p.name}`} onClick={() => openProduct(p.id)}>
+        <button className="vs-card-img" aria-label={`${t('Ver produto')} ${p.name}`} onClick={() => openProduct(p.id)}>
           <img src={imageUrl(p.image_urls?.[0] || p.image_url || '')} alt={p.name} loading="lazy" />
         </button>
-        {!stock && <span className="vs-tag vs-tag-off">Esgotado</span>}
-        {stock > 0 && stock <= 5 && <span className="vs-tag">Restam {stock}</span>}
-        <button className="vs-fav" aria-label="Guardar nos favoritos" aria-pressed={favs.includes(p.id)} onClick={() => toggleFav(p.id)}>
+        {!stock && <span className="vs-tag vs-tag-off">{t('Esgotado')}</span>}
+        {stock > 0 && stock <= 5 && <span className="vs-tag">{t('Restam')} {stock}</span>}
+        <button className="vs-fav" aria-label={t('Guardar nos favoritos')} aria-pressed={favs.includes(p.id)} onClick={() => toggleFav(p.id)}>
           <Heart size={17} fill={favs.includes(p.id) ? 'currentColor' : 'none'} />
         </button>
-        <div className="vs-card-cat">{p.category_name || 'Essenciais'}</div>
+        <div className="vs-card-cat">{p.category_name || t('Essenciais')}</div>
         <h3 className="vs-card-title">
           <Link to={`/produto/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{p.name}</Link>
         </h3>
         <div className="vs-card-foot">
           <b>{money(p.price)}</b>
-          <button aria-label="Adicionar ao carrinho" disabled={!stock} onClick={() => addToCart(p)}><ShoppingBag size={17} /></button>
+          <button aria-label={t('Adicionar ao carrinho')} disabled={!stock} onClick={() => addToCart(p)}><ShoppingBag size={17} /></button>
         </div>
       </article>
     );
   });
 
   const title = query
-    ? `Resultados para “${query}”`
-    : category ? categories.find(c => c.id === category)?.name : 'Os mais procurados';
+    ? `${t('Resultados para')} “${query}”`
+    : category ? categories.find(c => c.id === category)?.name : t('Os mais procurados');
   const showFeatured = !query && !category && !minPrice && !maxPrice && page === 1;
+  const activeBanner = banners[bannerIndex];
+  const bannerAlignment = activeBanner?.style.alignment ?? 'left';
+  const bannerTitle = activeBanner?.title[language] || activeBanner?.title.pt || activeBanner?.title.en || t('Destaque');
+  const bannerSubtitle = activeBanner?.subtitle[language] || activeBanner?.subtitle.pt || activeBanner?.subtitle.en;
+  const bannerButton = activeBanner?.button_text[language] || activeBanner?.button_text.pt || activeBanner?.button_text.en;
 
   return (
     <Layout
@@ -178,42 +220,102 @@ export default function Home() {
     >
       <div className="vs-wrap" id="inicio">
         <div className="vs-front">
-          <nav className="vs-catside" aria-label="Categorias">
-            <h3>Categorias</h3>
+          <nav className="vs-catside" aria-label={t('Categorias')}>
+          <h3>{t('Categorias')}</h3>
             <ul>
-              <li><button aria-current={!category} onClick={() => setCategory(undefined)}>Todas as categorias</button></li>
+              <li><button aria-current={!category} onClick={() => setCategory(undefined)}>{t('Todas as categorias')}</button></li>
               {categories.map(c => (
                 <li key={c.id}><button aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
               ))}
             </ul>
           </nav>
 
-          <section className="vs-banner">
-            <span className="vs-pill">Entrega ao domicílio: 50 MT · Levantamento grátis</span>
-            <h1>Tudo o que precisa, entregue em casa.</h1>
-            <p>Milhares de produtos com os melhores preços, escolhidos a pensar em si.</p>
-            <button className="vs-btn vs-light" onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}>
-              Ver produtos <ArrowRight size={18} />
-            </button>
-          </section>
+          {activeBanner ? (
+            <section
+              className={`vs-banner vs-banner--image vs-banner-${bannerAlignment}`}
+              aria-label={t('Banner promocional')}
+              style={{ backgroundColor: activeBanner.style.background_color }}
+            >
+              <picture className="vs-banner-media">
+                <source media="(max-width: 768px)" srcSet={imageUrl(activeBanner.mobile_image_url || activeBanner.image_url)} />
+                <img src={imageUrl(activeBanner.image_url)} alt="" />
+              </picture>
+              <span
+                className="vs-banner-overlay"
+                style={{ background: `rgba(0, 0, 0, ${activeBanner.style.overlay_opacity})` }}
+              />
+              <span className="vs-pill">
+                {t(activeBanner.banner_type === 'promotion' ? 'Promoção' :
+                  activeBanner.banner_type === 'announcement' ? 'Novidade' :
+                    activeBanner.banner_type === 'category' ? 'Categoria em destaque' : 'Produto em destaque')}
+              </span>
+              <h1 style={{ color: activeBanner.style.title_color }}>{bannerTitle}</h1>
+              {bannerSubtitle && (
+                <p style={{ color: activeBanner.style.subtitle_color || undefined }}>{bannerSubtitle}</p>
+              )}
+              <button
+                className="vs-btn vs-light"
+                style={{
+                  backgroundColor: activeBanner.style.button_color || undefined,
+                  color: activeBanner.style.button_text_color || undefined,
+                }}
+                onClick={() => activateBanner(activeBanner)}
+              >
+                {bannerButton || t('Ver produtos')} <ArrowRight size={18} />
+              </button>
+              {banners.length > 1 && (
+                <div className="vs-banner-controls" aria-label={t('Navegação dos banners')}>
+                  <button
+                    className="vs-banner-arrow"
+                    aria-label={t('Banner anterior')}
+                    onClick={() => setBannerIndex(index => (index - 1 + banners.length) % banners.length)}
+                  ><ChevronLeft size={18} /></button>
+                  {banners.map((banner, index) => (
+                    <button
+                      key={banner.id}
+                      className={`vs-banner-dot${index === bannerIndex ? ' is-active' : ''}`}
+                      aria-label={`${t('Mostrar banner')} ${index + 1}`}
+                      aria-current={index === bannerIndex ? 'true' : undefined}
+                      onClick={() => setBannerIndex(index)}
+                    />
+                  ))}
+                  <button
+                    className="vs-banner-arrow"
+                    aria-label={t('Próximo banner')}
+                    onClick={() => setBannerIndex(index => (index + 1) % banners.length)}
+                  ><ChevronRight size={18} /></button>
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="vs-banner">
+              <span className="vs-pill">{t('Entrega ao domicílio: 50 MT · Levantamento grátis')}</span>
+              <h1>{t('Tudo o que precisa, entregue em casa.')}</h1>
+              <p>{t('Milhares de produtos com os melhores preços, escolhidos a pensar em si.')}</p>
+              <button className="vs-btn vs-light" onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}>
+                {t('Ver produtos')} <ArrowRight size={18} />
+              </button>
+            </section>
+          )}
         </div>
+        {bannerError && <p className="vs-error" role="alert">{t('Não foi possível carregar os banners:')} {bannerError}</p>}
 
         <div className="vs-perks">
-          <div className="vs-perk"><i><Truck size={20} /></i><div><b>Entrega ao domicílio</b><small>Taxa fixa de 50 MT · levantamento grátis</small></div></div>
-          <div className="vs-perk"><i><ShieldCheck size={20} /></i><div><b>Compra segura</b><small>Os seus dados protegidos</small></div></div>
-          <div className="vs-perk"><i><MapPin size={20} /></i><div><b>Feito em Moçambique</b><small>Entregamos em todo o país</small></div></div>
+          <div className="vs-perk"><i><Truck size={20} /></i><div><b>{t('Entrega ao domicílio')}</b><small>{t('Taxa fixa de 50 MT · levantamento grátis')}</small></div></div>
+          <div className="vs-perk"><i><ShieldCheck size={20} /></i><div><b>{t('Compra segura')}</b><small>{t('Os seus dados protegidos')}</small></div></div>
+          <div className="vs-perk"><i><MapPin size={20} /></i><div><b>{t('Feito em Moçambique')}</b><small>{t('Entregamos em todo o país')}</small></div></div>
         </div>
       </div>
 
       {status === 'ok' && showFeatured && (popular.length > 0 || newArrivals.length > 0 || featuredError) && (
-        <section className="vs-wrap" aria-label="Destaques">
+        <section className="vs-wrap" aria-label={t('Destaques')}>
           {featuredError && <p className="vs-error" role="alert">{featuredError}</p>}
           {popular.length > 0 && <>
-            <div className="vs-section-head"><h2>Mais populares</h2></div>
+            <div className="vs-section-head"><h2>{t('Mais populares')}</h2></div>
             <div className="vs-grid">{renderProducts(popular)}</div>
           </>}
           {newArrivals.length > 0 && <>
-            <div className="vs-section-head" style={{ marginTop: 28 }}><h2>Novidades</h2></div>
+            <div className="vs-section-head" style={{ marginTop: 28 }}><h2>{t('Novidades')}</h2></div>
             <div className="vs-grid">{renderProducts(newArrivals)}</div>
           </>}
         </section>
@@ -222,34 +324,34 @@ export default function Home() {
       <section className="vs-wrap" id="catalogo">
         <div className="vs-section-head">
           <h2>{title}</h2>
-          <span>{status === 'ok' ? `${total} produtos` : ''}</span>
+          <span>{status === 'ok' ? `${total} ${t('produtos')}` : ''}</span>
         </div>
         <div className="vs-grid">
-          {status === 'loading' && <div className="vs-state">A carregar produtos…</div>}
+          {status === 'loading' && <div className="vs-state">{t('A carregar produtos…')}</div>}
           {status === 'error' && (
             <div className="vs-state vs-err">
-              <h3>Não foi possível carregar os produtos</h3>
+              <h3>{t('Não foi possível carregar os produtos')}</h3>
               <p>{error}. Confirme se a API está a correr e se o endereço em VITE_API_BASE_URL está certo.</p>
-              <button className="vs-btn" onClick={() => load()}>Tentar de novo</button>
+              <button className="vs-btn" onClick={() => load()}>{t('Tentar de novo')}</button>
             </div>
           )}
           {status === 'ok' && !products.length && (
-            <div className="vs-state"><h3>Nenhum produto encontrado</h3><p>Experimente outro termo ou escolha outra categoria.</p></div>
+            <div className="vs-state"><h3>{t('Nenhum produto encontrado')}</h3><p>{t('Experimente outro termo ou escolha outra categoria.')}</p></div>
           )}
           {status === 'ok' && renderProducts(products)}
         </div>
         {status === 'ok' && totalPages > 1 && (
           <div className="vs-inline" style={{ justifyContent: 'center', marginTop: 20 }}>
-            <button className="vs-btn vs-ghost" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button>
-            <span>Página {page} de {totalPages}</span>
-            <button className="vs-btn vs-ghost" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>Seguinte</button>
+            <button className="vs-btn vs-ghost" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>{t('Anterior')}</button>
+            <span>{t('Página')} {page} {t('de')} {totalPages}</span>
+            <button className="vs-btn vs-ghost" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>{t('Seguinte')}</button>
           </div>
         )}
       </section>
 
       {notice && (
         <div className="vs-toast" role="status">{notice}
-          <button aria-label="Fechar" onClick={() => setNotice('')}><X size={16} /></button>
+          <button aria-label={t('Fechar')} onClick={() => setNotice('')}><X size={16} /></button>
         </div>
       )}
     </Layout>

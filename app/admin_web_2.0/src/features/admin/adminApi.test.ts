@@ -104,7 +104,22 @@ describe('adminApi', () => {
         sort_order: 0,
         products: [],
       }
-      const data = config.url === '/products' && config.method === 'post'
+      const data = config.url === '/admin/reviews'
+        ? {
+            summary: {
+              total: 1,
+              average: 4,
+              reviewedProducts: 1,
+              distribution: [{ rating: 5, count: 0 }, { rating: 4, count: 1 }],
+            },
+            products: [{ id: 27, name: 'Café', image_url: null, reviewCount: 1, averageRating: 4 }],
+            reviews: [],
+            page: 2,
+            limit: 10,
+            total: 1,
+            totalPages: 1,
+          }
+        : config.url === '/products' && config.method === 'post'
         ? product
         : config.url === '/admin/administrators' && config.method === 'get'
           ? [administrator]
@@ -187,6 +202,22 @@ describe('adminApi', () => {
       total: 11,
       totalPages: 2,
       items: [{ id: 3, name: 'Café', price: '125.50' }],
+    })
+  })
+
+  it('loads the admin review balance and paginated product reviews', async () => {
+    const result = await adminApi.listProductReviews({ page: 2, limit: 10 })
+
+    expect(requests[0]).toMatchObject({
+      url: '/admin/reviews',
+      method: 'get',
+      params: { page: 2, limit: 10 },
+    })
+    expect(result).toMatchObject({
+      summary: { total: 1, average: 4, reviewedProducts: 1 },
+      products: [{ id: 27, name: 'Café', reviewCount: 1 }],
+      page: 2,
+      limit: 10,
     })
   })
 

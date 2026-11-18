@@ -10,6 +10,7 @@ import type {
   Product,
   ProductPage,
   ProductSort,
+  ProductReviews,
   User,
   UserStats,
 } from '../types';
@@ -242,6 +243,22 @@ export const api = {
   popular: () => fetchData<Product[]>('/products/popular'),
   newArrivals: () => fetchData<Product[]>('/products/new-arrivals'),
   product: (id: number) => fetchData<Product>(`/products/${id}`),
+  reviews: (productId: number) => fetchData<ProductReviews>(`/products/${productId}/reviews`),
+  saveReview: (productId: number, rating: number, comment?: string) =>
+    fetchData<ProductReviews>(`/products/${productId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment: comment?.trim() || null }),
+    }),
+  voteReview: (
+    productId: number,
+    reviewId: number,
+    vote: 'like' | 'dislike' | null,
+  ) => fetchData<{ likeCount: number; dislikeCount: number; userVote: 'like' | 'dislike' | null }>(
+    `/products/${productId}/reviews/${reviewId}/vote`,
+    vote
+      ? { method: 'POST', body: JSON.stringify({ vote }) }
+      : { method: 'DELETE' },
+  ),
   categories: () => fetchData<Category[]>('/categories'),
   banners: async () => asList<Banner>(await fetchData<{ items?: Banner[] }>('/banners')),
 

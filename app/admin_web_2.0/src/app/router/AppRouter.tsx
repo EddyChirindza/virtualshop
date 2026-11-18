@@ -12,6 +12,7 @@ import { CustomersPage } from '../../features/customers/pages/CustomersPage'
 import { NotificationsPage } from '../../features/notifications/pages/NotificationsPage'
 import { OrdersPage } from '../../features/orders/pages/OrdersPage'
 import { ProductsPage } from '../../features/products/pages/ProductsPage'
+import { ReviewsPage } from '../../features/reviews/pages/ReviewsPage'
 import { SettingsPage } from '../../features/settings/pages/SettingsPage'
 
 const DashboardPage = lazy(() =>
@@ -40,6 +41,7 @@ export function AppRouter() {
             />
             <Route element={<OrdersPage />} path="/orders" />
             <Route element={<ProductsPage />} path="/products" />
+            <Route element={<ReviewsPage />} path="/reviews" />
             <Route element={<BannersPage />} path="/banners" />
             <Route element={<CategoriesPage />} path="/categories" />
             <Route element={<CustomersPage />} path="/customers" />

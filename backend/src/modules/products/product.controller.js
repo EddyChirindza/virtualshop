@@ -54,4 +54,57 @@ async function remove(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { popular, newArrivals, detail, list, create, update, remove };
+async function reviews(req, res, next) {
+  try {
+    const data = await productService.getReviews(parseId(req.params.id), req.user?.id);
+    res.json({ success: true, message: 'OK', data });
+  } catch (err) { next(err); }
+}
+
+async function saveReview(req, res, next) {
+  try {
+    const rating = Number(req.body?.rating);
+    const comment = typeof req.body?.comment === 'string' ? req.body.comment.trim() : '';
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return next(new ApiError(400, 'A avaliação deve ser um número inteiro entre 1 e 5.'));
+    }
+    if (comment.length > 1000) {
+      return next(new ApiError(400, 'O comentário não pode ter mais de 1000 caracteres.'));
+    }
+    const data = await productService.saveReview(parseId(req.params.id), req.user.id, rating, comment || null);
+    res.json({ success: true, message: 'Avaliação guardada.', data });
+  } catch (err) { next(err); }
+}
+
+async function voteReview(req, res, next) {
+  try {
+    const vote = req.body?.vote;
+    if (vote !== 'like' && vote !== 'dislike') {
+      return next(new ApiError(400, 'O voto deve ser like ou dislike.'));
+    }
+    const data = await productService.setReviewVote(
+      parseId(req.params.id),
+      parseId(req.params.reviewId),
+      req.user.id,
+      vote
+    );
+    res.json({ success: true, message: 'Voto registado.', data });
+  } catch (err) { next(err); }
+}
+
+async function removeReviewVote(req, res, next) {
+  try {
+    const data = await productService.setReviewVote(
+      parseId(req.params.id),
+      parseId(req.params.reviewId),
+      req.user.id,
+      null
+    );
+    res.json({ success: true, message: 'Voto removido.', data });
+  } catch (err) { next(err); }
+}
+
+module.exports = {
+  popular, newArrivals, detail, list, create, update, remove,
+  reviews, saveReview, voteReview, removeReviewVote,
+};

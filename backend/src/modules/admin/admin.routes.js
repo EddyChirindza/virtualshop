@@ -9,6 +9,7 @@ const adminBannerController = require('../banners/admin_banner.controller');
 const router = Router();
 router.use(requireAuth, requireRole('admin'));
 router.get('/dashboard', controller.dashboard);
+router.get('/reviews', controller.productReviews);
 router.get('/customers', controller.customers);
 router.get('/customers/:id', controller.customerDetails);
 router.get('/administrators', administratorController.listAdministrators);

@@ -180,4 +180,119 @@ async function remove(id) {
   }
 }
 
-module.exports = { getPopular, getNewArrivals, getById, getAll, create, update, remove };
+async function getReviews(productId, userId) {
+  await getById(productId);
+  const { rows } = await query(
+    `SELECT r.id, r.rating, r.comment, r.created_at, r.updated_at,
+            r.user_id,
+            CASE
+              WHEN split_part(btrim(u.full_name), ' ', 1) LIKE '%@%' THEN 'Cliente'
+              ELSE split_part(btrim(u.full_name), ' ', 1)
+            END AS first_name,
+            COUNT(v.user_id) FILTER (WHERE v.vote = 'like')::int AS like_count,
+            COUNT(v.user_id) FILTER (WHERE v.vote = 'dislike')::int AS dislike_count,
+            MAX(v.vote) FILTER (WHERE v.user_id = $2) AS user_vote
+     FROM product_reviews r
+     JOIN users u ON u.id = r.user_id
+     LEFT JOIN product_review_votes v ON v.review_id = r.id
+     WHERE r.product_id = $1
+     GROUP BY r.id, u.full_name
+     ORDER BY r.updated_at DESC, r.id DESC`,
+    [productId, userId ?? null]
+  );
+  const reviews = rows.map((row) => ({
+    id: Number(row.id),
+    rating: Number(row.rating),
+    comment: row.comment,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    user: { id: Number(row.user_id), name: row.first_name || 'Cliente' },
+    isOwn: userId ? Number(row.user_id) === Number(userId) : false,
+    likeCount: Number(row.like_count),
+    dislikeCount: Number(row.dislike_count),
+    userVote: row.user_vote || null,
+  }));
+  const ownReview = userId
+    ? reviews.find((review) => review.user.id === Number(userId)) || null
+    : null;
+  const average = reviews.length
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
+  return {
+    average: Number(average.toFixed(1)),
+    count: reviews.length,
+    ownReview,
+    items: reviews,
+  };
+}
+
+async function saveReview(productId, userId, rating, comment) {
+  await getById(productId);
+  await query(
+    `INSERT INTO product_reviews (product_id, user_id, rating, comment)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (product_id, user_id)
+     DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, updated_at = now()`,
+    [productId, userId, rating, comment]
+  );
+  const { rows } = await query(
+    `UPDATE products
+     SET rating = (SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) FROM product_reviews r WHERE r.product_id = $1),
+         updated_at = now()
+     WHERE id = $1
+     RETURNING rating`,
+    [productId]
+  );
+  return getReviews(productId, userId);
+}
+
+async function setReviewVote(productId, reviewId, userId, vote) {
+  const { rows } = await query(
+    `SELECT user_id, comment
+     FROM product_reviews
+     WHERE id = $1 AND product_id = $2`,
+    [reviewId, productId]
+  );
+  const review = rows[0];
+  if (!review) throw new ApiError(404, 'Comentário não encontrado.');
+  if (Number(review.user_id) === Number(userId)) {
+    throw new ApiError(403, 'Não pode votar no seu próprio comentário.');
+  }
+  if (vote && !review.comment) {
+    throw new ApiError(400, 'Só é possível votar em avaliações com comentário.');
+  }
+
+  if (vote) {
+    await query(
+      `INSERT INTO product_review_votes (review_id, user_id, vote)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (review_id, user_id)
+       DO UPDATE SET vote = EXCLUDED.vote, updated_at = now()`,
+      [reviewId, userId, vote]
+    );
+  } else {
+    await query(
+      'DELETE FROM product_review_votes WHERE review_id = $1 AND user_id = $2',
+      [reviewId, userId]
+    );
+  }
+
+  const { rows: voteRows } = await query(
+    `SELECT COUNT(*) FILTER (WHERE vote = 'like')::int AS like_count,
+            COUNT(*) FILTER (WHERE vote = 'dislike')::int AS dislike_count,
+            MAX(vote) FILTER (WHERE user_id = $2) AS user_vote
+     FROM product_review_votes
+     WHERE review_id = $1`,
+    [reviewId, userId]
+  );
+  return {
+    likeCount: Number(voteRows[0].like_count),
+    dislikeCount: Number(voteRows[0].dislike_count),
+    userVote: voteRows[0].user_vote || null,
+  };
+}
+
+module.exports = {
+  getPopular, getNewArrivals, getById, getAll, create, update, remove,
+  getReviews, saveReview, setReviewVote,
+};

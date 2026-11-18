@@ -7,11 +7,14 @@
 const { verifyAccessToken } = require('../utils/tokens');
 const { query } = require('../config/db');
 
-async function requireAuth(req, res, next) {
+async function authenticate(req, res, next, optional) {
+  const reject = (message) => optional
+    ? next()
+    : res.status(401).json({ success: false, message });
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Token não fornecido.' });
+    return reject('Token não fornecido.');
   }
 
   const token = header.slice('Bearer '.length);
@@ -20,12 +23,12 @@ async function requireAuth(req, res, next) {
   try {
     payload = verifyAccessToken(token);
   } catch (err) {
-    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+    return reject('Token inválido ou expirado.');
   }
 
   const userId = Number(payload.sub);
   if (!Number.isSafeInteger(userId) || userId <= 0) {
-    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+    return reject('Token inválido ou expirado.');
   }
 
   const sessionId =
@@ -36,7 +39,7 @@ async function requireAuth(req, res, next) {
   const legacyTokenId =
     Number.isSafeInteger(payload.sid) && payload.sid > 0 ? payload.sid : null;
   if (!sessionId && !legacyTokenId) {
-    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+    return reject('Token inválido ou expirado.');
   }
 
   try {
@@ -61,13 +64,21 @@ async function requireAuth(req, res, next) {
       [userId, sessionId, legacyTokenId]
     );
     if (!rows[0]) {
-      return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+      return reject('Token inválido ou expirado.');
     }
     req.user = { id: userId, role: rows[0].role };
     return next();
   } catch (err) {
     return next(err);
   }
+}
+
+function requireAuth(req, res, next) {
+  return authenticate(req, res, next, false);
+}
+
+function optionalAuth(req, res, next) {
+  return authenticate(req, res, next, true);
 }
 
 // Restringe o acesso a determinados roles (ex: requireRole('admin'))
@@ -80,4 +91,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, optionalAuth, requireRole };

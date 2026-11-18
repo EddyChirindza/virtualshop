@@ -23,6 +23,7 @@ export default function Home() {
   const [clock, setClock] = useState(() => Date.now());
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [category, setCategory] = useState<number>();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState<ProductSort>('relevance');
@@ -257,13 +258,25 @@ export default function Home() {
       <div className="vs-wrap" id="inicio">
         <div className="vs-front">
           <nav className="vs-catside" aria-label={t('Categorias')}>
-          <h3>{t('Categorias')}</h3>
-            <ul>
-              <li><button aria-current={!category} onClick={() => setCategory(undefined)}>{t('Todas as categorias')}</button></li>
-              {categories.map(c => (
-                <li key={c.id}><button aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
-              ))}
-            </ul>
+            <h3>{t('Categorias')}</h3>
+            <button
+              aria-current={!category}
+              aria-expanded={categoriesOpen}
+              aria-controls="vs-category-list"
+              onClick={() => {
+                setCategory(undefined);
+                setCategoriesOpen(open => !open);
+              }}
+            >
+              {t('Todas as categorias')}
+            </button>
+            {categoriesOpen && (
+              <ul className="vs-category-list" id="vs-category-list">
+                {categories.map(c => (
+                  <li key={c.id}><button title={c.name} aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
+                ))}
+              </ul>
+            )}
           </nav>
 
           {activeBanner ? (

@@ -2,6 +2,7 @@ import {
   Bell,
   Image as ImageIcon,
   LayoutDashboard,
+  MessageSquareText,
   Package,
   Settings,
   ShieldCheck,
@@ -36,6 +37,12 @@ export const adminNavItems: AdminNavItem[] = [
     to: '/products',
     description: 'Organiza o catálogo e o inventário da loja.',
     icon: Package,
+  },
+  {
+    label: 'Avaliações',
+    to: '/reviews',
+    description: 'Consulta as avaliações dos clientes e o balanço por produto.',
+    icon: MessageSquareText,
   },
   {
     label: 'Banners',

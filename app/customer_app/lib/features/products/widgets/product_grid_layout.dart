@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Shared grid sizing for product cards across home, search, categories and
 /// favorites. A fixed tile height gives the card's text and actions room to

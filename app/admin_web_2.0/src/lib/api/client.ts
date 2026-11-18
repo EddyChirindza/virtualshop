@@ -10,7 +10,8 @@ import { AuthSession } from '../../features/auth/services/authSession'
 
 const baseURL =
   import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3000/api' : undefined)
 
 if (import.meta.env.PROD && !baseURL) {
   throw new Error('Configure VITE_API_URL para o ambiente de produção.')
@@ -122,7 +123,13 @@ export const apiClient = createApiClient(authSession)
 
 function isAuthRequest(url: string | undefined): boolean {
   if (!url) return false
-  const path = new URL(url, baseURL).pathname.replace(/\/+$/, '')
+  let path: string
+  try {
+    path = new URL(url, baseURL || 'http://localhost').pathname
+  } catch {
+    path = url
+  }
+  path = path.replace(/\/+$/, '')
   const route = path.split('/').slice(-2).join('/')
   return [
     'auth/login',

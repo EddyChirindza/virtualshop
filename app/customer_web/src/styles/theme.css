@@ -48,10 +48,17 @@ html,body,#root{margin:0;padding:0;max-width:none;width:100%;display:block;text-
 .vs-brand b{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--vs-forest);color:#fff;font-size:20px;font-weight:800}
 .vs-brand span{color:var(--vs-ink)}
 .vs-brand em{color:var(--vs-forest);font-style:normal}
-.vs-search{flex:1;max-width:760px;display:flex;align-items:stretch;height:46px;border:2px solid var(--vs-forest);border-radius:999px;overflow:hidden;background:#fff}
+.vs-search-area{position:relative;flex:1;max-width:760px;min-width:0}
+.vs-search{width:100%;display:flex;align-items:stretch;height:46px;border:2px solid var(--vs-forest);border-radius:999px;overflow:hidden;background:#fff}
 .vs-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;color:var(--vs-ink);padding:0 20px}
 .vs-search button{display:flex;align-items:center;gap:8px;border:0;background:var(--vs-forest);color:#fff;font-weight:600;padding:0 24px}
 .vs-search button:hover{background:var(--vs-deep)}
+.vs-search .vs-search-filter-toggle{background:#fff;color:var(--vs-forest);padding:0 14px}
+.vs-search .vs-search-filter-toggle:hover{background:var(--vs-stone)}
+.vs-search-popover{position:absolute;top:calc(100% + 10px);right:0;z-index:30;width:min(420px,calc(100vw - 24px));padding:18px;background:#fff;border:1px solid var(--vs-line);border-radius:var(--vs-radius);box-shadow:var(--vs-shadow)}
+.vs-search-filter-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.vs-search-filter-fields .vs-field:last-child{grid-column:1/-1}
+.vs-search-filter-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
 .vs-nav{display:flex;gap:2px;margin-left:auto}
 .vs-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:0;padding:6px 12px;border-radius:var(--vs-radius);color:var(--vs-ink);font-size:12px;font-weight:500}
 .vs-nav button:hover{background:var(--vs-stone);color:var(--vs-forest)}
@@ -260,6 +267,8 @@ a.vs-stat:hover{box-shadow:var(--vs-shadow);transform:translateY(-2px)}
   /* cabeçalho compacto: logótipo + pesquisa; a navegação passa para a barra de baixo */
   .vs-header .vs-wrap{height:60px;gap:10px}
   .vs-nav{display:none}
+  .vs-search-area{max-width:none}
+  .vs-search-popover{width:min(420px,calc(100vw - 40px))}
   .vs-search{height:42px}
   .vs-search button{padding:0 16px}
   .vs-search button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -400,3 +409,10 @@ a.vs-line-name:hover{color:var(--vs-forest)}
 
 .vs-ok{background:#e1f3e8;color:#1b6a44;border-radius:var(--vs-radius);padding:10px 14px;font-size:14px}
 .vs-field input:disabled{background:var(--vs-stone);color:var(--vs-muted);cursor:not-allowed}
+
+/* ───── género e data de nascimento ───── */
+.vs-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vs-field input[type=date]{min-height:46px;color-scheme:light}
+.vs-field input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.7}
+.vs-field input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+@media(max-width:480px){.vs-two{grid-template-columns:1fr}}

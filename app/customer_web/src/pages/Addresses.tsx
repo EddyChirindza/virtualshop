@@ -9,11 +9,12 @@ const PROVINCES = ['Maputo Cidade', 'Maputo Província', 'Gaza', 'Inhambane', 'S
 const FIELDS: [keyof AddressForm, string, boolean][] = [
   ['label', 'Nome do endereço (ex.: Casa, Trabalho)', true],
   ['street', 'Rua / Avenida', true],
-  ['number', 'Número', false],
+  ['number', 'Número', true],
   ['neighborhood', 'Bairro', true],
   ['city', 'Cidade', true],
+  ['reference', 'Ponto de referência (opcional)', false],
 ];
-type AddressForm = { label: string; street: string; number: string; neighborhood: string; city: string; province: string };
+type AddressForm = { label: string; street: string; number: string; neighborhood: string; city: string; province: string; reference: string };
 
 export default function Addresses() {
   const [list, setList] = useState<Address[]>([]);
@@ -36,6 +37,7 @@ export default function Addresses() {
     const data: AddressForm = {
       label: get('label'), street: get('street'), number: get('number'),
       neighborhood: get('neighborhood'), city: get('city'), province: get('province'),
+      reference: get('reference'),
     };
     setBusy(true); setFormError('');
     try {
@@ -102,10 +104,15 @@ export default function Addresses() {
           <ul className="vs-list">
             {list.map(a => (
               <li key={a.id}>
-                <b>{a.label}</b><br />
+                <b>{a.label}</b>{a.is_default && <small> · Padrão</small>}<br />
                 {a.street} {a.number}, {a.neighborhood}<br />
                 <small>{a.city}, {a.province}</small>
+                {a.reference && <><br /><small>Referência: {a.reference}</small></>}
                 <div className="vs-inline">
+                  {!a.is_default && <button className="vs-link" onClick={async () => {
+                    try { await api.setDefaultAddress(a.id); await load(); }
+                    catch (e) { setError((e as Error).message); setStatus('error'); }
+                  }}>Definir como padrão</button>}
                   <button aria-label="Editar" onClick={() => setEditing(a)}><Pencil size={16} /></button>
                   <button aria-label="Apagar" onClick={() => remove(a)}><Trash2 size={16} /></button>
                 </div>

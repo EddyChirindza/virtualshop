@@ -1,10 +1,12 @@
 // Ajuste as chaves aos valores reais de order.status devolvidos pelo backend.
 const MAP: Record<string, [string, string]> = {
   pending: ['Recebida', 'warn'],
-  paid: ['Paga', 'info'],
-  processing: ['Em preparação', 'info'],
-  shipped: ['Em transporte', 'info'],
-  delivered: ['Entregue', 'ok'],
+  accepted: ['Aceite', 'info'],
+  rejected: ['Rejeitada', 'bad'],
+  preparing: ['Em preparação', 'info'],
+  ready_for_pickup: ['Pronta para levantamento', 'info'],
+  out_for_delivery: ['Em entrega', 'info'],
+  completed: ['Concluída', 'ok'],
   cancelled: ['Cancelada', 'bad'],
   canceled: ['Cancelada', 'bad'],
 };

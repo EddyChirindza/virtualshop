@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_preferences.dart';
@@ -26,11 +25,7 @@ class VirtualShopApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       locale: preferences.locale,
       supportedLocales: const [Locale('en'), Locale('pt')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: preferences.themeMode,

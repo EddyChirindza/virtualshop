@@ -11,6 +11,7 @@ import Favorites from '../pages/Favorites';
 import Addresses from '../pages/Addresses';
 import Profile from '../pages/Profile';
 import Notifications from '../pages/Notifications';
+import PaymentMethods from '../pages/PaymentMethods';
 import NotFound from '../pages/NotFound';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -28,6 +29,7 @@ export default function AppRoutes() {
         <Route path="/encomenda/:id" element={<OrderDetail />} />
         <Route path="/favoritos" element={<Favorites />} />
         <Route path="/enderecos" element={<Addresses />} />
+        <Route path="/metodos-pagamento" element={<PaymentMethods />} />
         <Route path="/perfil" element={<Profile />} />
         <Route path="/notificacoes" element={<Notifications />} />
       </Route>

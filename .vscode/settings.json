@@ -1,3 +1,4 @@
 {
-    "liveServer.settings.multiRootWorkspaceName": "virtualshop"
+    "liveServer.settings.multiRootWorkspaceName": "virtualshop",
+    "cmake.sourceDirectory": "C:/Projetos/Meus_Trabalhos/virtualshop/app/delivery_app/linux"
 }

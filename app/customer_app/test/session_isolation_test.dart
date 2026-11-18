@@ -17,7 +17,7 @@ import 'package:customer_app/features/profile/domain/models/profile_stats.dart';
 import 'package:customer_app/features/profile/presentation/providers/profile_providers.dart';
 import 'package:customer_app/features/search/data/recent_search_repository.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';

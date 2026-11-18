@@ -5,12 +5,10 @@ import Layout from '../components/Layout';
 import { api } from '../services/api';
 import { money } from '../utils/format';
 
-// Ajuste as chaves aos valores reais que o backend devolve em order.status.
-const STEPS: [string, string][] = [
+const ORDER_STEPS: [string, string][] = [
   ['pending', 'Recebida'],
-  ['paid', 'Paga'],
-  ['shipped', 'Em transporte'],
-  ['delivered', 'Entregue'],
+  ['accepted', 'Aceite'],
+  ['preparing', 'Em preparação'],
 ];
 
 export default function OrderDetail() {
@@ -26,8 +24,16 @@ export default function OrderDetail() {
   };
   useEffect(() => { load(); }, [id]);
 
-  const current = STEPS.findIndex(([k]) => k === String(order?.status).toLowerCase());
   const cancelled = ['cancelled', 'canceled'].includes(String(order?.status).toLowerCase());
+  const rejected = String(order?.status).toLowerCase() === 'rejected';
+  const steps: [string, string][] = [
+    ...ORDER_STEPS,
+    order?.deliveryMethod === 'store_pickup'
+      ? ['ready_for_pickup', 'Pronta para levantamento']
+      : ['out_for_delivery', 'Em entrega'],
+    ['completed', 'Concluída'],
+  ];
+  const currentStep = steps.findIndex(([key]) => key === String(order?.status).toLowerCase());
 
   return (
     <Layout>
@@ -50,11 +56,13 @@ export default function OrderDetail() {
 
               <div className="vs-panel">
                 <h3>Estado</h3>
-                {cancelled ? <p><b>Encomenda cancelada</b></p> : current >= 0 ? (
+                {cancelled ? <p><b>Encomenda cancelada</b></p> : rejected ? (
+                  <p><b>Encomenda rejeitada.</b>{order.rejectionReason ? ` Motivo: ${order.rejectionReason}` : ''}</p>
+                ) : currentStep >= 0 ? (
                   <ol className="vs-list">
-                    {STEPS.map(([k, label], i) => (
-                      <li key={k} aria-current={i === current}>
-                        {i <= current ? '✓ ' : '○ '}{i === current ? <b>{label}</b> : label}
+                    {steps.map(([k, label], i) => (
+                      <li key={k} aria-current={i === currentStep}>
+                        {i <= currentStep ? '✓ ' : '○ '}{i === currentStep ? <b>{label}</b> : label}
                       </li>
                     ))}
                   </ol>
@@ -80,6 +88,8 @@ export default function OrderDetail() {
               <h3>Resumo</h3>
               <ul className="vs-list">
                 {order.delivery_fee != null && <li>Entrega <b>{Number(order.delivery_fee) ? money(order.delivery_fee) : 'Grátis'}</b></li>}
+                {order.address && <li>Endereço <b>{[order.address.street, order.address.number, order.address.city].filter(Boolean).join(', ')}</b></li>}
+                {order.paymentMethod && <li>Pagamento <b>{order.paymentMethod.label || order.paymentMethod.type}</b></li>}
                 <li>Total <b>{money(order.total)}</b></li>
               </ul>
             </aside>

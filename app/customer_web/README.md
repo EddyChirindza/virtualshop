@@ -24,6 +24,8 @@ O token de acesso e o refresh token são guardados no armazenamento local do nav
 
 ## Limitações conhecidas da API
 
-- Existe `POST /orders` para checkout e `GET /orders/:id` para consultar uma encomenda, mas não existe endpoint de listagem do histórico.
-- O checkout aceita endereço, cupão e notas, mas não há contrato de gateway ou selecção de método de pagamento.
+- O catálogo suporta pesquisa, categoria, preço, ordenação e paginação (até 50 produtos por pedido), além de secções de populares e novidades.
+- A conta liga perfil, estatísticas, endereços (incluindo endereço padrão), fotografia, alteração de palavra-passe, favoritos, carrinho, notificações e histórico de encomendas.
+- O checkout aceita entrega ao domicílio ou levantamento, método de pagamento guardado, cupão e notas. O código `PROMO10` dá 10% de desconto; a API cobra 50 MT por entrega ao domicílio.
+- Os métodos de pagamento aceitam M-Pesa e Visa, mas o backend usa um processador de demonstração e não realiza cobranças reais.
 - Favoritos e notificações requerem autenticação. Promoções aparecem como notificações quando publicadas pelo backend.

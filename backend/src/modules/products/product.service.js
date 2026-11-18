@@ -143,13 +143,36 @@ async function update(id, fields) {
   return updated;
 }
 
+const BANNER_PRODUCT_CONSTRAINTS = new Set([
+  'banners_product_id_fkey',
+  'banner_products_product_id_fkey',
+]);
+
+async function isLinkedToBanner(productId) {
+  try {
+    const { rows } = await query(
+      `SELECT EXISTS(SELECT 1 FROM banners WHERE product_id = $1)
+              OR EXISTS(SELECT 1 FROM banner_products WHERE product_id = $1) AS linked`,
+      [productId]
+    );
+    return Boolean(rows[0]?.linked);
+  } catch {
+    return false;
+  }
+}
+
 async function remove(id) {
   const product = await getById(id);
   try {
     const result = await query('DELETE FROM products WHERE id = $1 RETURNING id', [id]);
     if (!result.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
   } catch (err) {
-    if (err.code === '23503') throw new ApiError(409, 'Este produto já faz parte de encomendas e não pode ser eliminado.');
+    if (err.code === '23503') {
+      if (BANNER_PRODUCT_CONSTRAINTS.has(err.constraint) || await isLinkedToBanner(id)) {
+        throw new ApiError(409, 'Este produto está associado a um ou mais banners e não pode ser eliminado.');
+      }
+      throw new ApiError(409, 'Este produto já faz parte de encomendas e não pode ser eliminado.');
+    }
     throw err;
   }
   if (product.image_urls.length > 0) {

@@ -6,6 +6,20 @@ import '../../../../core/errors/api_exception.dart';
 import '../../domain/models/profile_address.dart';
 import '../providers/profile_providers.dart';
 
+const _provinces = [
+  'Maputo Cidade',
+  'Maputo Província',
+  'Gaza',
+  'Inhambane',
+  'Sofala',
+  'Manica',
+  'Tete',
+  'Zambézia',
+  'Nampula',
+  'Cabo Delgado',
+  'Niassa',
+];
+
 class AddressFormScreen extends ConsumerStatefulWidget {
   const AddressFormScreen({this.address, super.key});
 
@@ -18,7 +32,7 @@ class AddressFormScreen extends ConsumerStatefulWidget {
 class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _label = TextEditingController();
-  final _province = TextEditingController();
+  String _province = _provinces.first;
   final _city = TextEditingController();
   final _neighborhood = TextEditingController();
   final _street = TextEditingController();
@@ -30,13 +44,17 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
   bool get _editing => widget.address != null;
 
+  bool get _showLegacyProvince =>
+      _editing && _province.isNotEmpty && !_provinces.contains(_province);
+
   @override
   void initState() {
     super.initState();
     final address = widget.address;
     if (address == null) return;
     _label.text = address.label;
-    _province.text = address.province;
+    final province = address.province.trim();
+    if (province.isNotEmpty) _province = province;
     _city.text = address.city;
     _neighborhood.text = address.neighborhood;
     _street.text = address.street;
@@ -48,7 +66,6 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   @override
   void dispose() {
     _label.dispose();
-    _province.dispose();
     _city.dispose();
     _neighborhood.dispose();
     _street.dispose();
@@ -63,7 +80,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
   Map<String, dynamic> _fields() => {
     'label': _label.text.trim(),
-    'province': _province.text.trim(),
+    'province': _province,
     'city': _city.text.trim(),
     'neighborhood': _neighborhood.text.trim(),
     'street': _street.text.trim(),
@@ -178,12 +195,28 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 validator: _required,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _province,
+              DropdownButtonFormField<String>(
+                initialValue: _province,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: appText(context, 'Província', 'Province'),
                 ),
+                items: [
+                  if (_showLegacyProvince)
+                    DropdownMenuItem<String>(
+                      value: _province,
+                      enabled: false,
+                      child: Text(_province),
+                    ),
+                  for (final province in _provinces)
+                    DropdownMenuItem<String>(
+                      value: province,
+                      child: Text(province),
+                    ),
+                ],
                 validator: _required,
+                onChanged: (value) =>
+                    setState(() => _province = value ?? _provinces.first),
               ),
               const SizedBox(height: 12),
               TextFormField(

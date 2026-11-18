@@ -26,6 +26,8 @@ export type Banner = {
     url?: string | null;
     products?: Product[];
   };
+  starts_at: string | null;
+  expires_at: string | null;
   sort_order: number;
 };
 export type CartItem = { id: number; product_id: number; quantity: number; unit_price: number | string; name: string; image_url?: string | null; image_urls?: string[]; stock?: number };

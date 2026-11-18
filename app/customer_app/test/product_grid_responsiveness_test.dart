@@ -6,7 +6,7 @@ import 'package:customer_app/features/auth/widgets/phone_number_field.dart';
 import 'package:customer_app/features/products/models/product.dart';
 import 'package:customer_app/features/products/widgets/product_card.dart';
 import 'package:customer_app/features/products/widgets/product_grid_layout.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';

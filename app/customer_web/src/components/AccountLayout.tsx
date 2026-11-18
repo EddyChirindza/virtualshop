@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
+import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
 import Layout from './Layout';
-import { session } from '../services/api';
+import { api } from '../services/api';
 
 const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
   {
@@ -18,6 +18,7 @@ const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
     links: [
       ['/perfil', 'Dados pessoais', <User size={18} />],
       ['/enderecos', 'Endereços', <MapPin size={18} />],
+      ['/metodos-pagamento', 'Pagamentos', <CreditCard size={18} />],
       ['/notificacoes', 'Notificações', <Bell size={18} />],
     ],
   },
@@ -26,7 +27,18 @@ const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
 // Moldura comum a todas as páginas da conta: menu lateral + conteúdo.
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const nav = useNavigate();
-  const logout = () => { session.clear(); nav('/', { replace: true }); };
+  const logout = async () => {
+    try {
+      await api.logout();
+      nav('/', { replace: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido.';
+      nav('/login', {
+        replace: true,
+        state: { notice: `Sessão terminada neste dispositivo, mas a API não confirmou o logout: ${message}` },
+      });
+    }
+  };
 
   return (
     <Layout>
@@ -40,7 +52,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
               ))}
             </div>
           ))}
-          <button className="vs-acc-out" onClick={logout}><LogOut size={18} /><span>Terminar sessão</span></button>
+          <button className="vs-acc-out" onClick={() => void logout()}><LogOut size={18} /><span>Terminar sessão</span></button>
         </nav>
         <div className="vs-acc-main">{children}</div>
       </div>

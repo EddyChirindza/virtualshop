@@ -1,4 +1,17 @@
-import type { Address, CartItem, Category, Notice, Order, Product, User } from '../types';
+import type {
+  Address,
+  Cart,
+  CartItem,
+  Category,
+  Notice,
+  Order,
+  PaymentMethod,
+  Product,
+  ProductPage,
+  ProductSort,
+  User,
+  UserStats,
+} from '../types';
 
 /* ───────────────────────── Configuração ───────────────────────── */
 
@@ -12,7 +25,6 @@ const REFRESH_KEY = 'vs.refresh';
 
 type TokenPayload = { token?: string; accessToken?: string; refreshToken?: string };
 type AuthPayload = TokenPayload & { user: User };
-type CartResponse = { items: CartItem[]; discount?: number; deliveryFee?: number };
 type NotificationsResponse = { items?: Notice[]; page?: number; totalPages?: number; total?: number };
 
 export type AddressInput = {
@@ -22,12 +34,14 @@ export type AddressInput = {
   neighborhood: string;
   city: string;
   province: string;
+  reference?: string | null;
 };
-export type ProfileInput = { fullName: string; phone: string; email?: string };
+export type ProfileInput = { fullName: string; phone: string; email?: string; birthDate?: string; gender?: string };
 export type CheckoutInput = {
-  addressId: number;
-  payment: 'cash' | 'mpesa' | 'emola';
-  phone?: string;
+  deliveryAddressId: number | null;
+  paymentMethodId: number | null;
+  deliveryMethod: 'home_delivery' | 'store_pickup';
+  couponCode?: string | null;
   notes?: string;
 };
 
@@ -79,7 +93,40 @@ const unwrap = <T>(body: unknown): T => {
 
 /** O backend devolve o perfil em camelCase (fullName, avatarUrl); o site usa snake_case. Aceita os dois. */
 const normalizeUser = (u: any) =>
-  u ? { ...u, full_name: u.full_name ?? u.fullName, avatar_url: u.avatar_url ?? u.avatarUrl ?? null, birth_date: u.birth_date ?? u.birthDate } : u;
+  u ? {
+    ...u,
+    full_name: u.full_name ?? u.fullName,
+    avatar_url: u.avatar_url ?? u.avatarUrl ?? null,
+    birth_date: u.birth_date ?? u.birthDate,
+  } : u;
+
+const normalizeAddress = (address: any): Address => ({
+  ...address,
+  is_default: address.is_default ?? address.isDefault ?? false,
+});
+
+const normalizeCartItem = (item: any): CartItem => ({
+  ...item,
+  product_id: item.product_id ?? item.productId ?? item.product?.id,
+  unit_price: item.unit_price ?? item.unitPrice ?? 0,
+  name: item.name ?? item.product?.name ?? '',
+  image_url: item.image_url ?? item.product?.image ?? null,
+  image_urls: item.image_urls ?? item.product?.image_urls ?? [],
+  stock: item.stock ?? item.product?.stock,
+});
+
+const normalizeCart = (cart: any): Cart => ({
+  ...cart,
+  items: asList(cart?.items).map(normalizeCartItem),
+  deliveryFee: cart?.deliveryFee ?? cart?.delivery_fee ?? 0,
+});
+
+const normalizeOrder = (order: any): Order => ({
+  ...order,
+  created_at: order.created_at ?? order.createdAt,
+  delivery_fee: order.delivery_fee ?? order.deliveryFee,
+  items: asList(order?.items).map(normalizeCartItem),
+});
 
 /** Aceita uma lista directa ou `{ items: [...] }`. */
 const asList = <T>(body: unknown): T[] => {
@@ -163,33 +210,61 @@ export const api = {
   },
 
   /* Catálogo */
-  products: async (q = '', category?: number) => {
-    const params = new URLSearchParams({ limit: '60' });
+  products: async (
+    q = '',
+    category?: number,
+    filters: { minPrice?: number; maxPrice?: number; sort?: ProductSort; page?: number; limit?: number } = {},
+  ): Promise<ProductPage> => {
+    const limit = Math.min(50, Math.max(1, Math.floor(filters.limit ?? 50)));
+    const page = Math.max(1, Math.floor(filters.page ?? 1));
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (q) params.set('q', q);
     if (category) params.set('category', String(category));
-    return fetchData<Product[]>(`/products?${params}`);
+    if (filters.minPrice !== undefined) params.set('minPrice', String(filters.minPrice));
+    if (filters.maxPrice !== undefined) params.set('maxPrice', String(filters.maxPrice));
+    if (filters.sort) params.set('sort', filters.sort);
+    const response = await request<{
+      data?: unknown;
+      page?: number;
+      limit?: number;
+      total?: number;
+      totalPages?: number;
+    }>(`/products?${params}`);
+    return {
+      items: asList<Product>(response.data),
+      page: response.page ?? page,
+      limit: response.limit ?? limit,
+      total: response.total ?? 0,
+      totalPages: response.totalPages ?? 1,
+    };
   },
+  popular: () => fetchData<Product[]>('/products/popular'),
+  newArrivals: () => fetchData<Product[]>('/products/new-arrivals'),
   product: (id: number) => fetchData<Product>(`/products/${id}`),
   categories: () => fetchData<Category[]>('/categories'),
 
   /* Favoritos */
   favorites: async () => asList<Product>(unwrap(await request('/favorites'))),
+  favoriteStatus: async (productId: number) =>
+    fetchData<{ isFavorite: boolean }>(`/favorites/${productId}`),
   favorite: (productId: number, enabled: boolean) =>
     enabled
       ? post('/favorites', { productId })
       : request(`/favorites/${productId}`, { method: 'DELETE' }),
 
   /* Carrinho */
-  cart: () => fetchData<CartResponse>('/cart'),
+  cart: async () => normalizeCart(await fetchData<Cart>('/cart')),
   add: (productId: number, quantity = 1) => post('/cart/items', { productId, quantity }),
   quantity: (id: number, quantity: number) => patch(`/cart/items/${id}`, { quantity }),
   remove: (id: number) => request(`/cart/items/${id}`, { method: 'DELETE' }),
+  clearCart: () => request('/cart', { method: 'DELETE' }),
 
   /* Encomendas */
-  checkout: (input: Partial<CheckoutInput> = {}) =>
-    fetchData<Order>('/orders', { method: 'POST', body: JSON.stringify(input) }),
-  orders: async () => asList<Order>(unwrap(await request('/orders'))),
-  order: (id: number) => fetchData<Order>(`/orders/${id}`),
+  checkout: (input: CheckoutInput) =>
+    fetchData<Order>('/orders', { method: 'POST', body: JSON.stringify(input) }).then(normalizeOrder),
+  orders: async () =>
+    asList<any>(unwrap(await request('/orders'))).map(normalizeOrder),
+  order: async (id: number) => normalizeOrder(await fetchData<Order>(`/orders/${id}`)),
 
   /* Conta */
   profile: async () => normalizeUser(await fetchData<any>('/users/me')) as User & { avatar_url?: string | null },
@@ -216,13 +291,34 @@ export const api = {
   },
   deleteAvatar: () => request('/users/me/avatar', { method: 'DELETE' }),
 
-  addresses: () => fetchData<Address[]>('/users/me/addresses'),
+  stats: () => fetchData<UserStats>('/users/me/stats'),
+  addresses: async () => (await fetchData<Address[]>('/users/me/addresses')).map(normalizeAddress),
   addAddress: (input: AddressInput) => post('/users/me/addresses', input),
   updateAddress: (id: number, input: AddressInput) => patch(`/users/me/addresses/${id}`, input),
+  setDefaultAddress: (id: number) => patch(`/users/me/addresses/${id}/default`, {}),
   deleteAddress: (id: number) => request(`/users/me/addresses/${id}`, { method: 'DELETE' }),
+
+  paymentMethods: () => fetchData<PaymentMethod[]>('/users/me/payment-methods'),
+  addPaymentMethod: (input: Record<string, unknown>) => post('/users/me/payment-methods', input),
+  updatePaymentMethod: (id: number, input: Record<string, unknown>) =>
+    patch(`/users/me/payment-methods/${id}`, input),
+  setDefaultPaymentMethod: (id: number) =>
+    patch(`/users/me/payment-methods/${id}/default`, {}),
+  deletePaymentMethod: (id: number) =>
+    request(`/users/me/payment-methods/${id}`, { method: 'DELETE' }),
 
   notifications: (page = 1) => fetchData<NotificationsResponse>(`/notifications?page=${page}&limit=30`),
   unreadCount: () => fetchData<{ count: number }>('/notifications/unread-count'),
   markRead: (id: number) => patch(`/notifications/${id}/read`, {}),
   markAllRead: () => patch('/notifications/read-all', {}),
+  logout: async () => {
+    try {
+      await request('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify(session.refreshToken ? { refreshToken: session.refreshToken } : {}),
+      });
+    } finally {
+      session.clear();
+    }
+  },
 };

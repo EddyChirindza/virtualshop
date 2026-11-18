@@ -4,7 +4,7 @@ import 'package:customer_app/features/auth/models/user.dart';
 import 'package:customer_app/features/auth/providers/auth_providers.dart';
 import 'package:customer_app/features/products/models/product.dart';
 import 'package:customer_app/features/products/widgets/product_card.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronRight, Heart, MapPin, ShieldAlert, ShoppingCart } from 'lucide-react';
 import AccountLayout from '../components/AccountLayout';
 import { api, imageUrl, session } from '../services/api';
-import type { Address, CartItem } from '../types';
+import type { Address, CartItem, UserStats } from '../types';
 import { money } from '../utils/format';
 import { initials } from '../utils/avatar';
 import { orderStatus } from '../utils/orderStatus';
@@ -14,16 +14,17 @@ export default function Dashboard() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [unread, setUnread] = useState(0);
-  const [favCount, setFavCount] = useState<number | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [orders, setOrders] = useState<any[] | null>(null); // null = indisponível
   const [notices, setNotices] = useState<any[]>([]);
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [error, setError] = useState('');
+  const [partialErrors, setPartialErrors] = useState<string[]>([]);
 
   const load = async () => {
     setStatus('loading');
-    const [u, a, c, n, un, f, o] = await Promise.allSettled([
-      api.profile(), api.addresses(), api.cart(), api.notifications(), api.unreadCount(), api.favorites(), api.orders(),
+    const [u, a, c, n, un, s, o] = await Promise.allSettled([
+      api.profile(), api.addresses(), api.cart(), api.notifications(), api.unreadCount(), api.stats(), api.orders(),
     ]);
     if (u.status === 'rejected') { setError(u.reason?.message || 'Falha ao carregar a conta.'); setStatus('error'); return; }
     setUser(u.value);
@@ -31,11 +32,26 @@ export default function Dashboard() {
     if (c.status === 'fulfilled') setCart(c.value.items || []);
     if (n.status === 'fulfilled') setNotices(((n.value as any).items || []).filter((x: any) => !x.is_read).slice(0, 3));
     if (un.status === 'fulfilled') setUnread(Number(un.value?.count) || 0);
-    if (f.status === 'fulfilled') setFavCount(f.value.length);
+    if (s.status === 'fulfilled') setStats(s.value);
     if (o.status === 'fulfilled') {
       const list = [...o.value].sort((x: any, y: any) => +new Date(y.created_at || 0) - +new Date(x.created_at || 0));
       setOrders(list.slice(0, 3));
     }
+    const failures: string[] = [];
+    for (const [label, result] of [
+      ['endereços', a],
+      ['carrinho', c],
+      ['notificações', n],
+      ['contador de notificações', un],
+      ['estatísticas', s],
+      ['pedidos', o],
+    ] as const) {
+      if (result.status === 'rejected') {
+        const reason = result.reason;
+        failures.push(`${label}: ${reason instanceof Error ? reason.message : String(reason)}`);
+      }
+    }
+    setPartialErrors(failures);
     setStatus('ok');
   };
   useEffect(() => { load(); }, []);
@@ -70,6 +86,11 @@ export default function Dashboard() {
         )}
 
         {status === 'ok' && <>
+          {partialErrors.length > 0 && (
+            <div className="vs-error" role="alert">
+              Alguns dados da conta não carregaram: {partialErrors.join(' · ')}
+            </div>
+          )}
           <section className="vs-acc-hero">
             <div className="vs-avatar" aria-hidden>{user?.avatar_url ? <img src={imageUrl(user.avatar_url)} alt="" /> : initials(name)}</div>
             <div className="vs-acc-who">
@@ -81,10 +102,20 @@ export default function Dashboard() {
 
           <div className="vs-stats">
             <Link className="vs-stat" to="/carrinho"><i><ShoppingCart size={18} /></i><span>No carrinho</span><b>{cartItems}</b></Link>
-            <Link className="vs-stat" to="/favoritos"><i><Heart size={18} /></i><span>Favoritos</span><b>{favCount ?? '—'}</b></Link>
+            <Link className="vs-stat" to="/favoritos"><i><Heart size={18} /></i><span>Favoritos</span><b>{stats?.favoritesCount ?? '—'}</b></Link>
             <Link className="vs-stat" to="/notificacoes"><i><Bell size={18} /></i><span>Avisos por ler</span><b>{unread}</b></Link>
             <Link className="vs-stat" to="/enderecos"><i><MapPin size={18} /></i><span>Endereços</span><b>{addresses.length}</b></Link>
           </div>
+
+          {stats && (
+            <section className="vs-panel" style={{ marginBottom: 16 }}>
+              <div className="vs-panel-head">
+                <h3>Resumo de compras</h3>
+                <Link className="vs-link" to="/pedidos">Ver pedidos</Link>
+              </div>
+              <p>{stats.totalOrders} pedidos · {money(stats.totalSpent)} gastos</p>
+            </section>
+          )}
 
           {cartItems > 0 && (
             <section className="vs-panel vs-cta">

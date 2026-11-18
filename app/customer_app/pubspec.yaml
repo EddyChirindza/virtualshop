@@ -55,6 +55,7 @@ dependencies:
   google_fonts: ^9.0.0
   image_picker: ^1.2.1
   image_cropper: ^12.2.1
+  material_ui: ^1.11.1
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,25 @@ import { initials, toSquareBlob } from '../utils/avatar';
 
 const MAX_FILE = 10 * 1024 * 1024;
 
+// Os valores (1.º item) têm de ser os que o backend aceita em `gender`; o texto (2.º) é o que o cliente vê.
+const GENDERS: [string, string][] = [
+  ['male', 'Masculino'],
+  ['female', 'Feminino'],
+  ['other', 'Outro'],
+  ['prefer_not_to_say', 'Prefiro não dizer'],
+];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** Converte o que o backend envia (YYYY-MM-DD ou data ISO) para o formato do campo de data. */
+const toDateInput = (v: unknown) => {
+  if (!v) return '';
+  const text = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const d = new Date(text);
+  return Number.isNaN(+d) ? '' : fmt(d);
+};
+
 function PasswordField(props: { id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
   const [show, setShow] = useState(false);
   return (
@@ -77,6 +96,8 @@ export default function Profile() {
         phone: get('phone'),
         // o backend não deixa mudar um email que já foi guardado
         ...(!user?.email && email ? { email } : {}),
+        ...(get('gender') ? { gender: get('gender') } : {}),
+        ...(get('birthDate') ? { birthDate: get('birthDate') } : {}),
       });
       setUser((u: any) => ({ ...u, ...updated }));
       setNotice('Dados actualizados.');
@@ -215,6 +236,20 @@ export default function Profile() {
                   <input name="email" type="email" autoComplete="email" defaultValue={user?.email || ''} disabled={!!user?.email} />
                   {user?.email && <small>O email não pode ser alterado depois de guardado.</small>}
                 </label>
+                <div className="vs-two">
+                  <label className="vs-field">Género
+                    <select name="gender" defaultValue={user?.gender ?? ''}>
+                      <option value="">Seleccionar</option>
+                      {GENDERS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      {/* valor já guardado que não está na lista: mantém-no visível */}
+                      {user?.gender && !GENDERS.some(([v]) => v === user.gender) && <option value={user.gender}>{String(user.gender)}</option>}
+                    </select>
+                  </label>
+                  <label className="vs-field">Data de nascimento
+                    <input name="birthDate" type="date" min="1900-01-01" max={fmt(new Date())} autoComplete="bday"
+                      defaultValue={toDateInput(user?.birth_date)} />
+                  </label>
+                </div>
                 <div><button className="vs-btn" disabled={busy}>{busy ? 'A guardar…' : 'Guardar alterações'}</button></div>
               </div>
             </form>

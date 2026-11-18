@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Heart, Minus, Plus, ShoppingBag } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Product } from '../types';
@@ -16,14 +16,25 @@ export default function ProductDetail() {
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [photo, setPhoto] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setStatus('loading');
     try {
-      setProduct(await api.product(Number(id)));
+      const loadedProduct = await api.product(Number(id));
+      setProduct(loadedProduct);
       setStatus('ok');
+      if (session.token) {
+        try {
+          setIsFavorite((await api.favoriteStatus(loadedProduct.id)).isFavorite);
+        } catch (e) {
+          setNotice((e as Error).message);
+        }
+      } else {
+        setIsFavorite(false);
+      }
     } catch (e) {
       setError((e as Error).message);
       setStatus('error');
@@ -51,6 +62,17 @@ export default function ProductDetail() {
       setNotice((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!product) return;
+    if (!session.token) return nav('/login');
+    try {
+      await api.favorite(product.id, !isFavorite);
+      setIsFavorite(value => !value);
+    } catch (e) {
+      setNotice((e as Error).message);
     }
   };
 
@@ -90,6 +112,10 @@ export default function ProductDetail() {
               <p><small>{product.stock ? `${product.stock} em stock` : 'Sem stock'}</small></p>
 
               <div className="vs-inline">
+                <button className="vs-link" aria-pressed={isFavorite} onClick={() => void toggleFavorite()}>
+                  <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+                  {isFavorite ? 'Remover dos favoritos' : 'Guardar nos favoritos'}
+                </button>
                 <button aria-label="Diminuir" disabled={quantity <= 1} onClick={() => setQuantity(q => q - 1)}><Minus size={16} /></button>
                 <b>{quantity}</b>
                 <button aria-label="Aumentar" disabled={quantity >= maxQty} onClick={() => setQuantity(q => q + 1)}><Plus size={16} /></button>

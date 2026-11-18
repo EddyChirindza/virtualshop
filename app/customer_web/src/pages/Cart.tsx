@@ -6,9 +6,6 @@ import { api, imageUrl } from '../services/api';
 import type { CartItem } from '../types';
 import { money } from '../utils/format';
 
-// Mesmo valor do aviso no topo do site.
-const FREE_DELIVERY_FROM = 2000;
-
 // Campos de apresentação que o backend pode enviar junto de cada item do carrinho.
 type Line = CartItem & { name?: string; product_name?: string; image_url?: string };
 
@@ -16,7 +13,6 @@ export default function Cart() {
   const nav = useNavigate();
   const [items, setItems] = useState<Line[]>([]);
   const [discount, setDiscount] = useState(0);
-  const [deliveryFee, setDeliveryFee] = useState(0);
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,7 +23,6 @@ export default function Cart() {
       const c = await api.cart();
       setItems((c.items || []) as Line[]);
       setDiscount(Number(c.discount ?? 0));
-      setDeliveryFee(Number(c.deliveryFee ?? 0));
       setStatus('ok');
     } catch (e) {
       setError((e as Error).message);
@@ -57,15 +52,24 @@ export default function Cart() {
     finally { setBusy(false); }
   };
 
+  const clear = async () => {
+    if (!window.confirm('Remover todos os produtos do carrinho?')) return;
+    setBusy(true);
+    try { await api.clearCart(); await load(); }
+    catch (e) { setNotice((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
   const count = items.reduce((s, i) => s + i.quantity, 0);
   const subtotal = items.reduce((s, i) => s + Number(i.unit_price) * i.quantity, 0);
-  const total = Math.max(subtotal - discount + deliveryFee, 0);
-  const missing = Math.max(FREE_DELIVERY_FROM - subtotal, 0);
-
+  const total = Math.max(subtotal - discount, 0);
   return (
     <Layout>
       <div className="vs-wrap">
-        <h1>Carrinho{status === 'ok' && count > 0 && <small style={{ color: 'var(--vs-muted)', fontWeight: 500 }}> ({count})</small>}</h1>
+        <div className="vs-section-head">
+          <h1>Carrinho{status === 'ok' && count > 0 && <small style={{ color: 'var(--vs-muted)', fontWeight: 500 }}> ({count})</small>}</h1>
+          {status === 'ok' && items.length > 0 && <button className="vs-link" disabled={busy} onClick={() => void clear()}>Esvaziar carrinho</button>}
+        </div>
 
         {status === 'loading' && (
           <div className="vs-split" aria-busy="true" aria-label="A carregar o carrinho">
@@ -94,12 +98,7 @@ export default function Cart() {
           <div className="vs-split">
             <section>
               <div className="vs-free">
-                <span><Truck size={18} />
-                  {missing > 0 ? <>Faltam <b>{money(missing)}</b> para ter entrega grátis</> : <b>Tem entrega grátis nesta compra</b>}
-                </span>
-                <div className="vs-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(Math.round((subtotal / FREE_DELIVERY_FROM) * 100), 100)}>
-                  <i style={{ width: `${Math.min((subtotal / FREE_DELIVERY_FROM) * 100, 100)}%` }} />
-                </div>
+                <span><Truck size={18} />Entrega ao domicílio: <b>{money(50)}</b>. Levantamento na loja grátis.</span>
               </div>
 
               <ul className="vs-cartlist">
@@ -133,8 +132,8 @@ export default function Cart() {
               <ul className="vs-list vs-sum">
                 <li><span>Subtotal ({count} {count === 1 ? 'artigo' : 'artigos'})</span><b>{money(subtotal)}</b></li>
                 {discount > 0 && <li><span>Desconto</span><b>-{money(discount)}</b></li>}
-                <li><span>Entrega</span><b>{deliveryFee ? money(deliveryFee) : 'Grátis'}</b></li>
-                <li className="vs-sum-total"><span>Total</span><b>{money(total)}</b></li>
+                <li><span>Entrega</span><b>Calculada no checkout</b></li>
+                <li className="vs-sum-total"><span>Total parcial</span><b>{money(total)}</b></li>
               </ul>
               {/* O pagamento e o endereço escolhem-se no checkout */}
               <button className="vs-btn vs-block" disabled={busy} onClick={() => nav('/checkout')}>Finalizar compra</button>

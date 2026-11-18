@@ -1,5 +1,6 @@
 import {
   Bell,
+  Image as ImageIcon,
   LayoutDashboard,
   Package,
   Settings,
@@ -35,6 +36,12 @@ export const adminNavItems: AdminNavItem[] = [
     to: '/products',
     description: 'Organiza o catálogo e o inventário da loja.',
     icon: Package,
+  },
+  {
+    label: 'Banners',
+    to: '/banners',
+    description: 'Cria e gere os banners apresentados na loja.',
+    icon: ImageIcon,
   },
   {
     label: 'Categorias',

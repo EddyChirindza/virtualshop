@@ -6,6 +6,7 @@ import { LoginPage } from '../../features/auth/components/LoginPage'
 import { ProtectedRoute } from '../../features/auth/components/ProtectedRoute'
 import { PublicOnlyRoute } from '../../features/auth/components/PublicOnlyRoute'
 import { AdministratorsPage } from '../../features/administrators/pages/AdministratorsPage'
+import { BannersPage } from '../../features/banners/pages/BannersPage'
 import { CategoriesPage } from '../../features/categories/pages/CategoriesPage'
 import { CustomersPage } from '../../features/customers/pages/CustomersPage'
 import { NotificationsPage } from '../../features/notifications/pages/NotificationsPage'
@@ -39,6 +40,7 @@ export function AppRouter() {
             />
             <Route element={<OrdersPage />} path="/orders" />
             <Route element={<ProductsPage />} path="/products" />
+            <Route element={<BannersPage />} path="/banners" />
             <Route element={<CategoriesPage />} path="/categories" />
             <Route element={<CustomersPage />} path="/customers" />
             <Route element={<AdministratorsPage />} path="/administrators" />

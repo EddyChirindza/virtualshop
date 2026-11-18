@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/api/client'
 import {
   adminApi,
   createProductWithOptionalNotification,
+  type BannerFields,
   type ProductFields,
 } from './adminApi'
 
@@ -74,6 +75,35 @@ describe('adminApi', () => {
         created_at: '2026-11-05T10:00:00.000Z',
         last_login_at: null,
       }
+      const banner = {
+        id: 12,
+        name: 'Banner principal',
+        title_pt: 'Promoção',
+        title_en: 'Promotion',
+        subtitle_pt: null,
+        subtitle_en: null,
+        image_url: '/uploads/banners/main.png',
+        mobile_image_url: null,
+        background_color: '#111827',
+        title_color: '#FFFFFF',
+        subtitle_color: '#E5E7EB',
+        button_text_pt: null,
+        button_text_en: null,
+        button_color: null,
+        button_text_color: null,
+        alignment: 'left',
+        overlay_opacity: 0,
+        banner_type: 'promotion',
+        destination_type: 'none',
+        product_id: null,
+        category_id: null,
+        destination_url: null,
+        starts_at: null,
+        expires_at: null,
+        is_active: true,
+        sort_order: 0,
+        products: [],
+      }
       const data = config.url === '/products' && config.method === 'post'
         ? product
         : config.url === '/admin/administrators' && config.method === 'get'
@@ -86,7 +116,19 @@ describe('adminApi', () => {
                 ? { items: [], page: 1, limit: 50, total: 0, totalPages: 0 }
                 : config.url === '/admin/notifications' && config.method === 'post'
                   ? { id: 54, ...JSON.parse(String(config.data)) }
-                  : [
+                  : config.url === '/admin/banners' && config.method === 'get'
+                    ? { items: [banner], page: 1, limit: 20, total: 1, totalPages: 1 }
+                    : (config.url === '/admin/banners' && config.method === 'post') ||
+                        (config.url?.startsWith('/admin/banners/') && config.method === 'get')
+                      ? banner
+                      : config.url?.startsWith('/admin/banners/') && config.method === 'patch'
+                        ? { ...banner, ...JSON.parse(String(config.data)) }
+                        : config.url === '/admin/banners/image' && config.method === 'post'
+                          ? {
+                              image_url: '/uploads/banners/main.png',
+                              mobile_image_url: '/uploads/banners/mobile.png',
+                            }
+                          : [
               {
               id: 3,
               name: 'Café',
@@ -290,6 +332,81 @@ describe('adminApi', () => {
       product_id: 27,
       starts_at: '2026-11-06T08:00:00.000Z',
       expires_at: '2026-11-07T08:00:00.000Z',
+    })
+  })
+
+  const bannerFields: BannerFields = {
+    name: 'Banner principal',
+    title_pt: 'Promoção',
+    title_en: null,
+    subtitle_pt: null,
+    subtitle_en: null,
+    image_url: '/uploads/banners/main.png',
+    mobile_image_url: null,
+    background_color: '#111827',
+    title_color: '#FFFFFF',
+    subtitle_color: '#E5E7EB',
+    button_text_pt: null,
+    button_text_en: null,
+    button_color: null,
+    button_text_color: null,
+    alignment: 'left',
+    overlay_opacity: 0,
+    banner_type: 'promotion',
+    destination_type: 'none',
+    product_id: null,
+    category_id: null,
+    destination_url: null,
+    starts_at: null,
+    expires_at: null,
+    is_active: true,
+    sort_order: 0,
+  }
+
+  it('lists banners from the admin endpoint with pagination', async () => {
+    const result = await adminApi.listBanners({ page: 2, limit: 20 })
+
+    expect(requests[0]).toMatchObject({
+      url: '/admin/banners',
+      method: 'get',
+      params: { page: 2, limit: 20 },
+    })
+    expect(result.items[0]).toMatchObject({ id: 12, name: 'Banner principal' })
+    expect(result).toMatchObject({ page: 1, total: 1, totalPages: 1 })
+  })
+
+  it('creates, updates and deletes banners through the admin endpoints', async () => {
+    await adminApi.createBanner(bannerFields)
+    await adminApi.updateBanner(12, { is_active: false })
+    await adminApi.deleteBanner(12)
+
+    expect(requests.map(({ url, method }) => [url, method])).toEqual([
+      ['/admin/banners', 'post'],
+      ['/admin/banners/12', 'patch'],
+      ['/admin/banners/12', 'delete'],
+    ])
+    expect(JSON.parse(String(requests[0].data))).toMatchObject({
+      name: 'Banner principal',
+      destination_type: 'none',
+    })
+    expect(JSON.parse(String(requests[1].data))).toEqual({ is_active: false })
+  })
+
+  it('uploads banner images as multipart form data', async () => {
+    const image = new File(['image'], 'main.png', { type: 'image/png' })
+    const mobile = new File(['mobile'], 'mobile.webp', { type: 'image/webp' })
+    const result = await adminApi.uploadBannerImages(image, mobile)
+
+    expect(requests[0]).toMatchObject({
+      url: '/admin/banners/image',
+      method: 'post',
+    })
+    const body = requests[0].data as FormData
+    expect(body.get('image')).toMatchObject({ name: 'main.png' })
+    expect(body.get('mobile_image')).toMatchObject({ name: 'mobile.webp' })
+    expect(result).toEqual({
+      image_url: '/uploads/banners/main.png',
+      mobile_image_url: '/uploads/banners/mobile.png',
     })
   })
 })

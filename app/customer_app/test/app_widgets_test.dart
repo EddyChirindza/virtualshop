@@ -43,8 +43,6 @@ void main() {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const PromoBanner(),
-                const SizedBox(height: 24),
                 SectionHeader(
                   title: 'Produtos populares',
                   actionLabel: 'Ver tudo',

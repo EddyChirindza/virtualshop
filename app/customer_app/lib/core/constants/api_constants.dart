@@ -73,6 +73,7 @@ class ApiConstants {
   static const String products = '/products';
   static const String popularProducts = '/products/popular';
   static const String newArrivals = '/products/new-arrivals';
+  static const String banners = '/banners';
 
   // Cart and orders
   static const String cart = '/cart';

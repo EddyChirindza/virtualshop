@@ -62,6 +62,59 @@ export interface PageResult<T> {
   totalPages: number
 }
 
+export type BannerType = 'promotion' | 'category' | 'product' | 'announcement'
+export type BannerDestinationType = 'none' | 'product' | 'category' | 'url' | 'product_list'
+export type BannerAlignment = 'left' | 'center' | 'right'
+
+export interface BannerProductRef {
+  product_id: number
+  sort_order: number
+}
+
+interface BannerCoreFields {
+  name: string
+  title_pt: string
+  title_en: string | null
+  subtitle_pt: string | null
+  subtitle_en: string | null
+  image_url: string
+  mobile_image_url: string | null
+  background_color: string
+  title_color: string
+  subtitle_color: string | null
+  button_text_pt: string | null
+  button_text_en: string | null
+  button_color: string | null
+  button_text_color: string | null
+  alignment: BannerAlignment
+  overlay_opacity: number
+  banner_type: BannerType
+  destination_type: BannerDestinationType
+  product_id: number | null
+  category_id: number | null
+  destination_url: string | null
+  starts_at: string | null
+  expires_at: string | null
+  is_active: boolean
+  sort_order: number
+}
+
+export interface BannerFields extends BannerCoreFields {
+  products?: BannerProductRef[]
+}
+
+export interface Banner extends BannerCoreFields {
+  id: number
+  products: BannerProductRef[]
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BannerImageUpload {
+  image_url: string
+  mobile_image_url: string | null
+}
+
 export interface AdminOrder {
   id: number
   userId: number
@@ -398,6 +451,53 @@ export const adminApi = {
     const response = await apiClient.patch<
       ApiEnvelope<{ id: number; status: 'archived' }>
     >(`/admin/notifications/${id}/archive`)
+    return response.data.data
+  },
+
+  async listBanners(params: { page: number; limit: number }) {
+    const response = await apiClient.get<ApiEnvelope<PageResult<Banner>>>(
+      '/admin/banners',
+      { params },
+    )
+    return response.data.data
+  },
+
+  async getBanner(id: number) {
+    const response = await apiClient.get<ApiEnvelope<Banner>>(
+      `/admin/banners/${id}`,
+    )
+    return response.data.data
+  },
+
+  async createBanner(fields: BannerFields) {
+    const response = await apiClient.post<ApiEnvelope<Banner>>(
+      '/admin/banners',
+      fields,
+    )
+    return response.data.data
+  },
+
+  async updateBanner(id: number, fields: Partial<BannerFields>) {
+    const response = await apiClient.patch<ApiEnvelope<Banner>>(
+      `/admin/banners/${id}`,
+      fields,
+    )
+    return response.data.data
+  },
+
+  async deleteBanner(id: number) {
+    await apiClient.delete(`/admin/banners/${id}`)
+  },
+
+  async uploadBannerImages(image: File, mobileImage?: File | null) {
+    const body = new FormData()
+    body.append('image', image)
+    if (mobileImage) body.append('mobile_image', mobileImage)
+    const response = await apiClient.post<ApiEnvelope<BannerImageUpload>>(
+      '/admin/banners/image',
+      body,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
     return response.data.data
   },
 }

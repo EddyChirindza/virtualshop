@@ -5,6 +5,8 @@ import '../../../core/app_text.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../banners/providers/banner_providers.dart';
+import '../../banners/widgets/banner_carousel.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../categories/screens/category_products_screen.dart';
 import '../../cart/providers/cart_provider.dart';
@@ -37,11 +39,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _refresh() async {
     ref.invalidate(categoryTreeProvider);
+    ref.invalidate(bannersProvider);
     ref.invalidate(popularProductsProvider);
     ref.invalidate(newArrivalsProvider);
     try {
       await Future.wait([
         ref.read(categoryTreeProvider.future),
+        ref.read(bannersProvider.future),
         ref.read(popularProductsProvider.future),
         ref.read(newArrivalsProvider.future),
       ]);
@@ -177,9 +181,7 @@ class _HomeTab extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             _CategoriesRow(),
-            const SizedBox(height: 20),
-            const PromoBanner(),
-            const SizedBox(height: 24),
+            const BannerCarousel(),
             SectionHeader(
               title: appText(context, 'Produtos populares', 'Popular products'),
               actionLabel: appText(context, 'Ver tudo', 'View all'),

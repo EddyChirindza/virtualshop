@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import Home from '../pages/Home';
+import AboutUs from '../pages/AboutUs';
 import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import ProductDetail from '../pages/ProductDetail';
@@ -19,6 +20,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/sobre-nos" element={<AboutUs />} />
       <Route path="/login" element={<Login />} />
       <Route path="/produto/:id" element={<ProductDetail />} />
       <Route element={<ProtectedRoute />}>

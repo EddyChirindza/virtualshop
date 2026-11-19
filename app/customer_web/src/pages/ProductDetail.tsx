@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Heart, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Heart, Minus, Plus, ShoppingBag, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
-import type { Product } from '../types';
+import type { Product, ProductReviews } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
 
@@ -21,6 +21,11 @@ export default function ProductDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reviews, setReviews] = useState<ProductReviews>();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [votingReviewId, setVotingReviewId] = useState<number | null>(null);
 
   const load = async () => {
     setStatus('loading');
@@ -43,6 +48,15 @@ export default function ProductDetail() {
     }
   };
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    api.reviews(product.id).then((data) => {
+      setReviews(data);
+      setRating(data.ownReview?.rating || 0);
+      setComment(data.ownReview?.comment || '');
+    }).catch((e) => setNotice((e as Error).message));
+  }, [product?.id]);
 
   useEffect(() => {
     if (!notice) return;
@@ -75,6 +89,44 @@ export default function ProductDetail() {
       setIsFavorite(value => !value);
     } catch (e) {
       setNotice((e as Error).message);
+    }
+  };
+
+  const saveReview = async () => {
+    if (!product) return;
+    if (!session.token) return nav('/login');
+    if (!rating) {
+      setNotice(t('Escolha uma classificação.'));
+      return;
+    }
+    setReviewBusy(true);
+    try {
+      const data = await api.saveReview(product.id, rating, comment);
+      setReviews(data);
+      setNotice(t('Avaliação guardada.'));
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+
+  const toggleReviewVote = async (reviewId: number, currentVote: 'like' | 'dislike' | null, vote: 'like' | 'dislike') => {
+    if (!product) return;
+    if (!session.token) return nav('/login');
+    setVotingReviewId(reviewId);
+    try {
+      const result = await api.voteReview(product.id, reviewId, currentVote === vote ? null : vote);
+      setReviews(current => current && ({
+        ...current,
+        items: current.items.map(review => review.id === reviewId
+          ? { ...review, ...result }
+          : review),
+      }));
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setVotingReviewId(null);
     }
   };
 
@@ -112,6 +164,17 @@ export default function ProductDetail() {
               <h2>{money(product.price)}</h2>
               {product.description && <p>{product.description}</p>}
               <p><small>{product.stock ? `${product.stock} ${t('em stock')}` : t('Sem stock')}</small></p>
+              {reviews && (
+                <div className="vs-product-rating" aria-label={t('Avaliação do produto')}>
+                  <span className="vs-stars" aria-hidden="true">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <Star key={value} size={16} fill={value <= reviews.average ? 'currentColor' : 'none'} />
+                    ))}
+                  </span>
+                  <strong>{reviews.average.toFixed(1)}</strong>
+                  <small>({reviews.count} {reviews.count === 1 ? t('avaliação') : t('avaliações')})</small>
+                </div>
+              )}
 
               <div className="vs-inline">
                 <button className="vs-link" aria-pressed={isFavorite} onClick={() => void toggleFavorite()}>
@@ -127,6 +190,89 @@ export default function ProductDetail() {
               </div>
             </div>
           </div>
+        )}
+
+        {status === 'ok' && product && (
+          <section className="vs-reviews">
+            <div className="vs-section-head">
+              <h2>{t('Avaliações')}</h2>
+              <span>{reviews?.count || 0} {t('avaliações')}</span>
+            </div>
+
+            <div className="vs-review-form">
+              <h3>{reviews?.ownReview ? t('Editar a minha avaliação') : t('Avaliar este produto')}</h3>
+              <div className="vs-review-stars" role="radiogroup" aria-label={t('Classificação')}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={rating === value}
+                    aria-label={`${value} ${value === 1 ? t('estrela') : t('estrelas')}`}
+                    onClick={() => setRating(value)}
+                  >
+                    <Star size={26} fill={value <= rating ? 'currentColor' : 'none'} />
+                  </button>
+                ))}
+              </div>
+              <label className="vs-field">
+                <span>{t('Comentário')} <small>{t('(opcional)')}</small></span>
+                <textarea
+                  value={comment}
+                  maxLength={1000}
+                  rows={4}
+                  placeholder={t('Conte-nos a sua experiência com este produto')}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+              </label>
+              <button className="vs-btn" disabled={reviewBusy} onClick={() => void saveReview()}>
+                {reviewBusy ? t('A guardar…') : t('Guardar avaliação')}
+              </button>
+            </div>
+
+            <div className="vs-review-column">
+              <h3>{t('Comentários')}</h3>
+              <div className="vs-review-list" aria-label={t('Comentários')} role="region" tabIndex={0}>
+                {reviews?.items.length ? reviews.items.map((review) => (
+                  <article className="vs-review" key={review.id}>
+                    <div className="vs-review-meta">
+                      <strong>{review.isOwn ? t('EU') : review.user.name}</strong>
+                      <span className="vs-stars" aria-label={`${review.rating} ${t('estrelas')}`}>
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <Star key={value} size={14} fill={value <= review.rating ? 'currentColor' : 'none'} />
+                        ))}
+                      </span>
+                    </div>
+                    {review.comment && <p>{review.comment}</p>}
+                    {review.comment && !review.isOwn && (
+                      <div className="vs-review-votes" aria-label={t('Votos no comentário')}>
+                        <button
+                          type="button"
+                          aria-label={`${t('Gostei')} (${review.likeCount})`}
+                          aria-pressed={review.userVote === 'like'}
+                          disabled={votingReviewId === review.id}
+                          onClick={() => void toggleReviewVote(review.id, review.userVote, 'like')}
+                        >
+                          <ThumbsUp size={16} /> {review.likeCount}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${t('Não gostei')} (${review.dislikeCount})`}
+                          aria-pressed={review.userVote === 'dislike'}
+                          disabled={votingReviewId === review.id}
+                          onClick={() => void toggleReviewVote(review.id, review.userVote, 'dislike')}
+                        >
+                          <ThumbsDown size={16} /> {review.dislikeCount}
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                )) : (
+                  <div className="vs-state">{t('Ainda não há avaliações para este produto.')}</div>
+                )}
+              </div>
+            </div>
+          </section>
         )}
       </div>
 

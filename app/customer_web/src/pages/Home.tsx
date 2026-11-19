@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShieldCheck, ShoppingBag, Truck, X, MapPin } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShoppingBag, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { api, imageUrl, session } from '../services/api';
 import type { Banner, Category, Product, ProductSort } from '../types';
@@ -17,9 +17,13 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [isBannerHovered, setIsBannerHovered] = useState(false);
+  const [isBannerFocused, setIsBannerFocused] = useState(false);
   const [bannerError, setBannerError] = useState('');
+  const [clock, setClock] = useState(() => Date.now());
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [category, setCategory] = useState<number>();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState<ProductSort>('relevance');
@@ -104,6 +108,20 @@ export default function Home() {
       });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1 || isBannerHovered || isBannerFocused) return;
+    const timer = window.setTimeout(
+      () => setBannerIndex(index => (index + 1) % banners.length),
+      6000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [bannerIndex, banners.length, isBannerFocused, isBannerHovered]);
 
   useEffect(() => {
     if (!session.token) {
@@ -202,6 +220,25 @@ export default function Home() {
   const bannerTitle = activeBanner?.title[language] || activeBanner?.title.pt || activeBanner?.title.en || t('Destaque');
   const bannerSubtitle = activeBanner?.subtitle[language] || activeBanner?.subtitle.pt || activeBanner?.subtitle.en;
   const bannerButton = activeBanner?.button_text[language] || activeBanner?.button_text.pt || activeBanner?.button_text.en;
+  const expiresAt = activeBanner?.expires_at ? new Date(activeBanner.expires_at).getTime() : NaN;
+  const remainingSeconds = Number.isFinite(expiresAt)
+    ? Math.max(0, Math.floor((expiresAt - clock) / 1000))
+    : null;
+  const countdown = remainingSeconds === null ? null : {
+    days: Math.floor(remainingSeconds / 86400),
+    hours: Math.floor((remainingSeconds % 86400) / 3600),
+    minutes: Math.floor((remainingSeconds % 3600) / 60),
+    seconds: remainingSeconds % 60,
+  };
+  const bannerDateFormatter = new Intl.DateTimeFormat(language === 'pt' ? 'pt-MZ' : 'en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const formatBannerDate = (value: string | null) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : bannerDateFormatter.format(date);
+  };
 
   return (
     <Layout
@@ -221,22 +258,42 @@ export default function Home() {
       <div className="vs-wrap" id="inicio">
         <div className="vs-front">
           <nav className="vs-catside" aria-label={t('Categorias')}>
-          <h3>{t('Categorias')}</h3>
-            <ul>
-              <li><button aria-current={!category} onClick={() => setCategory(undefined)}>{t('Todas as categorias')}</button></li>
-              {categories.map(c => (
-                <li key={c.id}><button aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
-              ))}
-            </ul>
+            <h3>{t('Categorias')}</h3>
+            <button
+              aria-current={!category}
+              aria-expanded={categoriesOpen}
+              aria-controls="vs-category-list"
+              onClick={() => {
+                setCategory(undefined);
+                setCategoriesOpen(open => !open);
+              }}
+            >
+              {t('Todas as categorias')}
+            </button>
+            {categoriesOpen && (
+              <ul className="vs-category-list" id="vs-category-list">
+                {categories.map(c => (
+                  <li key={c.id}><button title={c.name} aria-current={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button></li>
+                ))}
+              </ul>
+            )}
           </nav>
 
           {activeBanner ? (
             <section
-              className={`vs-banner vs-banner--image vs-banner-${bannerAlignment}`}
+              className={`vs-banner vs-banner--image${activeBanner.starts_at || activeBanner.expires_at ? ' vs-banner--timed' : ''} vs-banner-${bannerAlignment}`}
               aria-label={t('Banner promocional')}
               style={{ backgroundColor: activeBanner.style.background_color }}
+              onMouseEnter={() => setIsBannerHovered(true)}
+              onMouseLeave={() => setIsBannerHovered(false)}
+              onFocusCapture={() => setIsBannerFocused(true)}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setIsBannerFocused(false);
+                }
+              }}
             >
-              <picture className="vs-banner-media">
+              <picture key={activeBanner.id} className="vs-banner-media">
                 <source media="(max-width: 768px)" srcSet={imageUrl(activeBanner.mobile_image_url || activeBanner.image_url)} />
                 <img src={imageUrl(activeBanner.image_url)} alt="" />
               </picture>
@@ -252,6 +309,29 @@ export default function Home() {
               <h1 style={{ color: activeBanner.style.title_color }}>{bannerTitle}</h1>
               {bannerSubtitle && (
                 <p style={{ color: activeBanner.style.subtitle_color || undefined }}>{bannerSubtitle}</p>
+              )}
+              {(activeBanner.starts_at || activeBanner.expires_at) && (
+                <div className="vs-banner-timing">
+                  <div className="vs-banner-dates">
+                    {formatBannerDate(activeBanner.starts_at) && (
+                      <span>{t('Início:')} {formatBannerDate(activeBanner.starts_at)}</span>
+                    )}
+                    {formatBannerDate(activeBanner.expires_at) && (
+                      <span>{t('Fim:')} {formatBannerDate(activeBanner.expires_at)}</span>
+                    )}
+                  </div>
+                  {countdown && remainingSeconds !== null && remainingSeconds > 0 && (
+                    <p className="vs-banner-countdown" role="timer">
+                      <strong>{t('Termina em')}:</strong>{' '}
+                      {countdown.days} {t('dias')} {String(countdown.hours).padStart(2, '0')} {t('horas')}{' '}
+                      {String(countdown.minutes).padStart(2, '0')} {t('minutos')}{' '}
+                      {String(countdown.seconds).padStart(2, '0')} {t('segundos')}
+                    </p>
+                  )}
+                  {countdown && remainingSeconds === 0 && (
+                    <p className="vs-banner-countdown">{t('Promoção terminada')}</p>
+                  )}
+                </div>
               )}
               <button
                 className="vs-btn vs-light"
@@ -300,11 +380,6 @@ export default function Home() {
         </div>
         {bannerError && <p className="vs-error" role="alert">{t('Não foi possível carregar os banners:')} {bannerError}</p>}
 
-        <div className="vs-perks">
-          <div className="vs-perk"><i><Truck size={20} /></i><div><b>{t('Entrega ao domicílio')}</b><small>{t('Taxa fixa de 50 MT · levantamento grátis')}</small></div></div>
-          <div className="vs-perk"><i><ShieldCheck size={20} /></i><div><b>{t('Compra segura')}</b><small>{t('Os seus dados protegidos')}</small></div></div>
-          <div className="vs-perk"><i><MapPin size={20} /></i><div><b>{t('Feito em Moçambique')}</b><small>{t('Entregamos em todo o país')}</small></div></div>
-        </div>
       </div>
 
       {status === 'ok' && showFeatured && (popular.length > 0 || newArrivals.length > 0 || featuredError) && (

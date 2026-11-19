@@ -21,6 +21,85 @@ async function getCustomers() {
   }));
 }
 
+async function getProductReviewReport({ page = 1, limit = 50 } = {}) {
+  const offset = (page - 1) * limit;
+  const [summaryResult, productsResult, reviewsResult] = await Promise.all([
+    query(
+      `SELECT COUNT(*)::int AS total,
+              COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average,
+              COUNT(*) FILTER (WHERE rating = 5)::int AS five_stars,
+              COUNT(*) FILTER (WHERE rating = 4)::int AS four_stars,
+              COUNT(*) FILTER (WHERE rating = 3)::int AS three_stars,
+              COUNT(*) FILTER (WHERE rating = 2)::int AS two_stars,
+              COUNT(*) FILTER (WHERE rating = 1)::int AS one_star
+       FROM product_reviews`
+    ),
+    query(
+      `SELECT p.id, p.name, p.image_url,
+              COUNT(r.id)::int AS review_count,
+              ROUND(AVG(r.rating)::numeric, 1) AS average_rating
+       FROM products p
+       JOIN product_reviews r ON r.product_id = p.id
+       GROUP BY p.id
+       ORDER BY review_count DESC, average_rating DESC, p.name ASC`
+    ),
+    query(
+      `SELECT r.id, r.rating, r.comment, r.created_at,
+              p.id AS product_id, p.name AS product_name, p.image_url AS product_image_url,
+              u.id AS user_id, u.full_name AS customer_name
+       FROM product_reviews r
+       JOIN products p ON p.id = r.product_id
+       JOIN users u ON u.id = r.user_id
+       ORDER BY r.created_at DESC, r.id DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    ),
+  ]);
+  const summary = summaryResult.rows[0];
+  const total = Number(summary.total);
+
+  return {
+    summary: {
+      total,
+      average: Number(summary.average),
+      distribution: [
+        { rating: 5, count: Number(summary.five_stars) },
+        { rating: 4, count: Number(summary.four_stars) },
+        { rating: 3, count: Number(summary.three_stars) },
+        { rating: 2, count: Number(summary.two_stars) },
+        { rating: 1, count: Number(summary.one_star) },
+      ],
+      reviewedProducts: productsResult.rows.length,
+    },
+    products: productsResult.rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      image_url: row.image_url,
+      reviewCount: Number(row.review_count),
+      averageRating: Number(row.average_rating),
+    })),
+    reviews: reviewsResult.rows.map((row) => ({
+      id: Number(row.id),
+      rating: Number(row.rating),
+      comment: row.comment,
+      createdAt: row.created_at,
+      product: {
+        id: Number(row.product_id),
+        name: row.product_name,
+        image_url: row.product_image_url,
+      },
+      customer: {
+        id: Number(row.user_id),
+        name: row.customer_name,
+      },
+    })),
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
 async function getDashboard(requestedPeriod = '30d') {
   const period = VALID_PERIODS.has(requestedPeriod) ? requestedPeriod : '30d';
   const days = Number.parseInt(period, 10);
@@ -155,4 +234,4 @@ async function getCustomerDetails(id) {
   };
 }
 
-module.exports = { getDashboard, getCustomers, getCustomerDetails };
+module.exports = { getDashboard, getCustomers, getCustomerDetails, getProductReviewReport };

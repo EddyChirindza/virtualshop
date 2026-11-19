@@ -1,5 +1,6 @@
 const adminService = require('./admin.service');
 const productImageService = require('./product_image.service');
+const { ApiError } = require('../../middlewares/error.middleware');
 
 async function dashboard(req, res, next) {
   try {
@@ -29,4 +30,17 @@ async function uploadProductImage(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { dashboard, customers, customerDetails, uploadProductImage };
+async function productReviews(req, res, next) {
+  try {
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const limit = req.query.limit === undefined ? 50 : Number(req.query.limit);
+    if (!Number.isInteger(page) || page < 1) throw new ApiError(400, 'page deve ser um inteiro maior que zero.');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new ApiError(400, 'limit deve ser um inteiro entre 1 e 100.');
+    }
+    const data = await adminService.getProductReviewReport({ page, limit });
+    res.json({ success: true, message: 'OK', data });
+  } catch (err) { next(err); }
+}
+
+module.exports = { dashboard, customers, customerDetails, uploadProductImage, productReviews };

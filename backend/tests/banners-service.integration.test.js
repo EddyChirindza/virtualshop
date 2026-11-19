@@ -133,8 +133,10 @@ test('serviço de banners usa PostgreSQL real para CRUD, publicação e destinos
     const active = await makeBanner('active', { sort_order: 5 });
     const inactive = await makeBanner('inactive', { is_active: false, sort_order: 0 });
     const future = await makeBanner('future', { starts_at: iso(60 * 60 * 1000), sort_order: 1 });
+    const insideStartsAt = iso(-60 * 60 * 1000);
+    const insideExpiresAt = iso(60 * 60 * 1000);
     const inside = await makeBanner('inside', {
-      starts_at: iso(-60 * 60 * 1000), expires_at: iso(60 * 60 * 1000), sort_order: 5,
+      starts_at: insideStartsAt, expires_at: insideExpiresAt, sort_order: 5,
     });
     const expired = await makeBanner('expired', { expires_at: iso(-60 * 60 * 1000), sort_order: 0 });
     const futureExpiry = await makeBanner('future-expiry', { expires_at: iso(60 * 1000), sort_order: -2 });
@@ -148,6 +150,9 @@ test('serviço de banners usa PostgreSQL real para CRUD, publicação e destinos
     assert.equal(publicIds.includes(expired.id), false, 'expirado não aparece');
     assert.ok(publicIds.includes(futureExpiry.id), 'ainda não expirado aparece');
     assert.equal(publicIds.includes(exactExpiry.id), false, 'expiração no instante atual não aparece');
+    const publicInside = (await service.getPublic()).items.find((item) => item.id === inside.id);
+    assert.equal(new Date(publicInside.starts_at).toISOString(), insideStartsAt);
+    assert.equal(new Date(publicInside.expires_at).toISOString(), insideExpiresAt);
 
     const expectedOrder = [futureExpiry.id, active.id, inside.id];
     const ordered = publicIds.filter((id) => expectedOrder.includes(id));

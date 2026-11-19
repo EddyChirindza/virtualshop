@@ -101,6 +101,8 @@ function toPublicBanner(row, { productsByBanner, productsById, categoriesById })
     button_text: translations(row.button_text_pt, row.button_text_en),
     banner_type: row.banner_type,
     destination,
+    starts_at: row.starts_at,
+    expires_at: row.expires_at,
     sort_order: Number(row.sort_order ?? 0),
   };
 }

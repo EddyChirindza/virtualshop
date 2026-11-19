@@ -46,6 +46,34 @@ export interface Product {
   is_new_arrival: boolean
 }
 
+export interface ProductReviewReport {
+  summary: {
+    total: number
+    average: number
+    reviewedProducts: number
+    distribution: Array<{ rating: number; count: number }>
+  }
+  products: Array<{
+    id: number
+    name: string
+    image_url: string | null
+    reviewCount: number
+    averageRating: number
+  }>
+  reviews: Array<{
+    id: number
+    rating: number
+    comment: string | null
+    createdAt: string
+    product: { id: number; name: string; image_url: string | null }
+    customer: { id: number; name: string }
+  }>
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
 export interface Category {
   id: number
   name: string
@@ -259,6 +287,14 @@ export const adminApi = {
     const response = await apiClient.get<ApiEnvelope<DashboardData>>(
       '/admin/dashboard',
       { params: { period } },
+    )
+    return response.data.data
+  },
+
+  async listProductReviews(params: { page: number; limit: number }) {
+    const response = await apiClient.get<ApiEnvelope<ProductReviewReport>>(
+      '/admin/reviews',
+      { params },
     )
     return response.data.data
   },

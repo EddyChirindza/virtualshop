@@ -10,6 +10,7 @@ import type {
   Product,
   ProductPage,
   ProductSort,
+  ProductReviews,
   User,
   UserStats,
 } from '../types';
@@ -27,6 +28,14 @@ const REFRESH_KEY = 'vs.refresh';
 type TokenPayload = { token?: string; accessToken?: string; refreshToken?: string };
 type AuthPayload = TokenPayload & { user: User };
 type NotificationsResponse = { items?: Notice[]; page?: number; totalPages?: number; total?: number };
+type FavoriteProductData = Partial<Product> & {
+  image?: string | null;
+  categoryName?: string | null;
+};
+type FavoriteData = FavoriteProductData & {
+  productId?: number;
+  product?: FavoriteProductData;
+};
 
 export type AddressInput = {
   label: string;
@@ -128,6 +137,29 @@ const normalizeOrder = (order: any): Order => ({
   delivery_fee: order.delivery_fee ?? order.deliveryFee,
   items: asList(order?.items).map(normalizeCartItem),
 });
+
+const normalizeFavorite = (favorite: FavoriteData): Product => {
+  const product = favorite.product ?? favorite;
+  const id = product.id ?? favorite.productId;
+  if (
+    typeof id !== 'number'
+    || typeof product.name !== 'string'
+    || (typeof product.price !== 'number' && typeof product.price !== 'string')
+    || typeof product.stock !== 'number'
+  ) {
+    throw new Error('A resposta dos favoritos não contém os dados esperados do produto.');
+  }
+
+  return {
+    ...product,
+    id,
+    name: product.name,
+    price: product.price,
+    stock: product.stock,
+    image_url: product.image_url ?? product.image ?? null,
+    category_name: product.category_name ?? product.categoryName ?? undefined,
+  };
+};
 
 /** Aceita uma lista directa ou `{ items: [...] }`. */
 const asList = <T>(body: unknown): T[] => {
@@ -242,11 +274,27 @@ export const api = {
   popular: () => fetchData<Product[]>('/products/popular'),
   newArrivals: () => fetchData<Product[]>('/products/new-arrivals'),
   product: (id: number) => fetchData<Product>(`/products/${id}`),
+  reviews: (productId: number) => fetchData<ProductReviews>(`/products/${productId}/reviews`),
+  saveReview: (productId: number, rating: number, comment?: string) =>
+    fetchData<ProductReviews>(`/products/${productId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment: comment?.trim() || null }),
+    }),
+  voteReview: (
+    productId: number,
+    reviewId: number,
+    vote: 'like' | 'dislike' | null,
+  ) => fetchData<{ likeCount: number; dislikeCount: number; userVote: 'like' | 'dislike' | null }>(
+    `/products/${productId}/reviews/${reviewId}/vote`,
+    vote
+      ? { method: 'POST', body: JSON.stringify({ vote }) }
+      : { method: 'DELETE' },
+  ),
   categories: () => fetchData<Category[]>('/categories'),
   banners: async () => asList<Banner>(await fetchData<{ items?: Banner[] }>('/banners')),
 
   /* Favoritos */
-  favorites: async () => asList<Product>(unwrap(await request('/favorites'))),
+  favorites: async () => asList<FavoriteData>(unwrap(await request('/favorites'))).map(normalizeFavorite),
   favoriteStatus: async (productId: number) =>
     fetchData<{ isFavorite: boolean }>(`/favorites/${productId}`),
   favorite: (productId: number, enabled: boolean) =>

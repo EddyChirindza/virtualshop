@@ -174,6 +174,7 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
         <div className="vs-wrap">
           <div>
             <Link to="/">{t('Loja')}</Link>
+            <Link to="/sobre-nos">{t('Sobre nós')}</Link>
             <Link to="/dashboard">{t('A minha conta')}</Link>
             <Link to="/pedidos">{t('Os meus pedidos')}</Link>
             <Link to="/favoritos">{t('Favoritos')}</Link>

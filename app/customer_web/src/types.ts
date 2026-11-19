@@ -26,6 +26,8 @@ export type Banner = {
     url?: string | null;
     products?: Product[];
   };
+  starts_at: string | null;
+  expires_at: string | null;
   sort_order: number;
 };
 export type CartItem = { id: number; product_id: number; quantity: number; unit_price: number | string; name: string; image_url?: string | null; image_urls?: string[]; stock?: number };
@@ -47,3 +49,21 @@ export type PaymentMethod = {
   isDefault: boolean;
 };
 export type UserStats = { totalOrders: number; totalSpent: number; averageRating: number | null; favoritesCount: number };
+export type ProductReview = {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: number; name: string };
+  isOwn: boolean;
+  likeCount: number;
+  dislikeCount: number;
+  userVote: 'like' | 'dislike' | null;
+};
+export type ProductReviews = {
+  average: number;
+  count: number;
+  ownReview: ProductReview | null;
+  items: ProductReview[];
+};

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Package, ShieldCheck, Truck } from 'lucide-react';
 import { api, session } from '../services/api';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 import PreferenceControls from '../components/PreferenceControls';
 import '../styles/theme.css';
 
@@ -11,9 +12,14 @@ export default function Login() {
   const { t } = usePreferences();
   const nav = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as { from?: string; notice?: string } | null;
   const from = state?.from || '/dashboard';
-  const notice = state?.notice;
+  const notice = state?.notice || (
+    searchParams.get('notice') === 'session-expired'
+      ? t('A sua sessão terminou. Entre novamente para continuar.')
+      : ''
+  );
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -31,7 +37,7 @@ export default function Login() {
       else await api.register(get('name'), get('phone'), get('email'), get('password'));
       nav(from, { replace: true });
     } catch (err) {
-      setError((err as Error).message);
+      setError(customerErrorMessage(err, t));
     } finally {
       setBusy(false);
     }

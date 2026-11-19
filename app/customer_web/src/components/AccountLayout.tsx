@@ -33,11 +33,10 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     try {
       await api.logout();
       nav('/', { replace: true });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('Erro desconhecido.');
+    } catch {
       nav('/login', {
         replace: true,
-        state: { notice: `${t('Sessão terminada neste dispositivo, mas a API não confirmou o logout:')} ${message}` },
+        state: { notice: t('Saímos da sua conta neste dispositivo. Não foi possível confirmar a saída nos outros dispositivos.') },
       });
     }
   };

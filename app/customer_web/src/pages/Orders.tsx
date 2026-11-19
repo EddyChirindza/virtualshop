@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { money } from '../utils/format';
 import { orderStatus } from '../utils/orderStatus';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 export default function Orders() {
   const { t, language } = usePreferences();
@@ -16,7 +17,7 @@ export default function Orders() {
   const load = async () => {
     setStatus('loading');
     try { setOrders(await api.orders()); setStatus('ok'); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
   useEffect(() => { load(); }, []);
 

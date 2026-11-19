@@ -6,6 +6,7 @@ import { api, imageUrl } from '../services/api';
 import type { CartItem } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 // Campos de apresentação que o backend pode enviar junto de cada item do carrinho.
 type Line = CartItem & { name?: string; product_name?: string; image_url?: string };
@@ -27,7 +28,7 @@ export default function Cart() {
       setDiscount(Number(c.discount ?? 0));
       setStatus('ok');
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };
@@ -43,14 +44,14 @@ export default function Cart() {
     if (quantity < 1) return;
     setBusy(true);
     try { await api.quantity(item.id, quantity); await load(); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
     finally { setBusy(false); }
   };
 
   const remove = async (item: Line) => {
     setBusy(true);
     try { await api.remove(item.id); await load(); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
     finally { setBusy(false); }
   };
 
@@ -58,7 +59,7 @@ export default function Cart() {
     if (!window.confirm(t('Remover todos os produtos do carrinho?'))) return;
     setBusy(true);
     try { await api.clearCart(); await load(); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
     finally { setBusy(false); }
   };
 

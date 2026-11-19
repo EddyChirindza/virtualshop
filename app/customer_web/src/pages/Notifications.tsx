@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AccountLayout from '../components/AccountLayout';
 import { api } from '../services/api';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 // O backend envia order_id (estado de encomenda) e/ou product_id (novidades, promoções).
 const target = (n: any): [string, string] | null =>
@@ -31,8 +32,8 @@ export default function Notifications() {
       setTotalPages(r.totalPages || 1);
       setStatus('ok');
     } catch (e) {
-      if (p === 1) { setError((e as Error).message); setStatus('error'); }
-      else setMoreError((e as Error).message);
+      if (p === 1) { setError(customerErrorMessage(e, t)); setStatus('error'); }
+      else setMoreError(customerErrorMessage(e, t));
     } finally {
       setMore(false);
     }
@@ -45,13 +46,16 @@ export default function Notifications() {
     if (n.is_read) return;
     setItems(v => v.map(x => x.id === n.id ? { ...x, is_read: true } : x)); // optimista
     try { await api.markRead(n.id); }
-    catch { setItems(v => v.map(x => x.id === n.id ? { ...x, is_read: false } : x)); }
+    catch (e) {
+      setItems(v => v.map(x => x.id === n.id ? { ...x, is_read: false } : x));
+      setMoreError(customerErrorMessage(e, t));
+    }
   };
 
   const readAll = async () => {
     setBusy(true);
     try { await api.markAllRead(); setItems(v => v.map(x => ({ ...x, is_read: true }))); }
-    catch (e) { setMoreError((e as Error).message); }
+    catch (e) { setMoreError(customerErrorMessage(e, t)); }
     finally { setBusy(false); }
   };
 

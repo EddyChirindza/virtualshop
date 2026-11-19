@@ -6,6 +6,7 @@ import AccountLayout from '../components/AccountLayout';
 import { api } from '../services/api';
 import type { PaymentMethod } from '../types';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 type PaymentType = PaymentMethod['type'];
 
@@ -26,7 +27,7 @@ export default function PaymentMethods() {
       setMethods(await api.paymentMethods());
       setStatus('ok');
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };
@@ -63,7 +64,7 @@ export default function PaymentMethods() {
       closeForm();
       await load();
     } catch (e) {
-      setFormError((e as Error).message);
+      setFormError(customerErrorMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -74,7 +75,7 @@ export default function PaymentMethods() {
       await api.setDefaultPaymentMethod(method.id);
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };
@@ -85,7 +86,7 @@ export default function PaymentMethods() {
       await api.deletePaymentMethod(method.id);
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };

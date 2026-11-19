@@ -172,7 +172,9 @@ const asList = <T>(body: unknown): T[] => {
 const PUBLIC_PATHS = /^\/($|login|produto\/)/;
 function expireSession() {
   session.clear();
-  if (!PUBLIC_PATHS.test(window.location.pathname)) window.location.replace('/login');
+  if (!PUBLIC_PATHS.test(window.location.pathname)) {
+    window.location.replace('/login?notice=session-expired');
+  }
 }
 
 /** Pede um novo token de acesso com o refresh token. Devolve true se renovou. */

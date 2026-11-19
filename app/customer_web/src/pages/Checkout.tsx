@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import type { Address, CartItem, PaymentMethod } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 const HOME_DELIVERY_FEE = 50;
 
@@ -41,7 +42,7 @@ export default function Checkout() {
       setPaymentChoice(defaultMethod ? String(defaultMethod.id) : 'cash');
       setStatus('ok');
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };
@@ -66,7 +67,7 @@ export default function Checkout() {
       });
       nav(order.id ? `/encomenda/${order.id}` : '/pedidos', { replace: true });
     } catch (err) {
-      setFormError((err as Error).message);
+      setFormError(customerErrorMessage(err, t));
     } finally {
       setBusy(false);
     }

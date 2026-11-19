@@ -6,6 +6,7 @@ import AccountLayout from '../components/AccountLayout';
 import { api, imageUrl, session } from '../services/api';
 import { initials, toSquareBlob } from '../utils/avatar';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 const MAX_FILE = 10 * 1024 * 1024;
 
@@ -73,7 +74,7 @@ export default function Profile() {
   const load = async () => {
     setStatus('loading');
     try { setUser(await api.profile()); setStatus('ok'); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
   useEffect(() => { load(); }, []);
 
@@ -102,9 +103,9 @@ export default function Profile() {
         ...(get('birthDate') ? { birthDate: get('birthDate') } : {}),
       });
       setUser((u: any) => ({ ...u, ...updated }));
-      setNotice(t('Dados actualizados.'));
+      setNotice(t('Os dados do seu perfil foram guardados.'));
     } catch (err) {
-      setFormError((err as Error).message);
+      setFormError(customerErrorMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -116,7 +117,7 @@ export default function Profile() {
     e.target.value = '';
     if (!file) return;
     setPhotoError('');
-    if (!file.type.startsWith('image/')) return setPhotoError(t('Escolha um ficheiro de imagem.'));
+    if (!file.type.startsWith('image/')) return setPhotoError(t('Escolha uma imagem JPG, PNG ou WebP.'));
     if (file.size > MAX_FILE) return setPhotoError(t('A imagem é demasiado grande (máximo 10 MB).'));
     try {
       const out = await toSquareBlob(file);
@@ -137,9 +138,9 @@ export default function Profile() {
       const fresh = r?.avatar_url ? { ...user, avatar_url: r.avatar_url } : await api.profile();
       setUser(fresh);
       cancelPhoto();
-      setNotice(t('Fotografia actualizada.'));
+      setNotice(t('A fotografia do seu perfil foi atualizada.'));
     } catch (err) {
-      setPhotoError((err as Error).message);
+      setPhotoError(customerErrorMessage(err, t));
     } finally {
       setBusyPhoto(false);
     }
@@ -148,8 +149,8 @@ export default function Profile() {
   const removePhoto = async () => {
     if (!window.confirm(t('Remover a sua fotografia?'))) return;
     setBusyPhoto(true); setPhotoError('');
-    try { await api.deleteAvatar(); setUser((u: any) => ({ ...u, avatar_url: null })); setNotice(t('Fotografia removida.')); }
-    catch (err) { setPhotoError((err as Error).message); }
+    try { await api.deleteAvatar(); setUser((u: any) => ({ ...u, avatar_url: null })); setNotice(t('A fotografia do seu perfil foi removida.')); }
+    catch (err) { setPhotoError(customerErrorMessage(err, t)); }
     finally { setBusyPhoto(false); }
   };
 
@@ -172,12 +173,12 @@ export default function Profile() {
     try {
       const keptSession = await api.changePassword(current, next);
       setCurrent(''); setNext(''); setConfirm('');
-      if (keptSession) { setNotice(t('Palavra-passe alterada com sucesso.')); return; }
+      if (keptSession) { setNotice(t('A sua palavra-passe foi alterada.')); return; }
       // Por segurança o backend terminou todas as sessões: é preciso entrar de novo.
       session.clear();
-      nav('/login', { replace: true, state: { from: '/perfil', notice: 'Palavra-passe alterada. Entre com a nova palavra-passe.' } });
+      nav('/login', { replace: true, state: { from: '/perfil', notice: t('A sua palavra-passe foi alterada. Entre novamente com a nova palavra-passe.') } });
     } catch (err) {
-      setPassError((err as Error).message);
+      setPassError(customerErrorMessage(err, t));
     } finally {
       setBusyPass(false);
     }

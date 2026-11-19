@@ -19,6 +19,7 @@ const userRoutes = require('./modules/users/users.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const notificationRoutes = require('./modules/notifications/notifications.routes');
 const bannerRoutes = require('./modules/banners/banner.routes');
+const supportRoutes = require('./modules/support/support.routes');
 
 const app = express();
 
@@ -103,6 +104,7 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/banners', bannerRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 
 // ── 404 + erros ────────────────────────────────

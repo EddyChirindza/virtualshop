@@ -53,6 +53,27 @@ test('criação de administrador exige password forte e telefone válido', () =>
   );
 });
 
+test('contas de suporte podem ser criadas sem alargar os perfis aceites', () => {
+  assert.equal(
+    createAdministratorSchema.parse(validAdministrator).role,
+    'admin',
+  );
+  assert.equal(
+    createAdministratorSchema.parse({
+      ...validAdministrator,
+      role: 'support',
+    }).role,
+    'support',
+  );
+  assert.equal(
+    createAdministratorSchema.safeParse({
+      ...validAdministrator,
+      role: 'customer',
+    }).success,
+    false,
+  );
+});
+
 test('actualização exige pelo menos um campo e não aceita password', () => {
   assert.equal(updateAdministratorSchema.safeParse({}).success, false);
   assert.equal(

@@ -180,6 +180,7 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
             <Link to="/pedidos">{t('Os meus pedidos')}</Link>
             <Link to="/favoritos">{t('Favoritos')}</Link>
             <Link to="/perfil">{t('Perfil')}</Link>
+            <Link to="/assistencia">{t('Assistência ao cliente')}</Link>
           </div>
           <div>{t('Feito em Moçambique. © VirtualShop')}</div>
         </div>

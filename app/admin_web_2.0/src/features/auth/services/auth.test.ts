@@ -20,6 +20,10 @@ const adminPayload: AuthPayload = {
   },
   accessToken: 'access-new',
 }
+const supportPayload: AuthPayload = {
+  user: { ...adminPayload.user, role: 'support' },
+  accessToken: 'support-access',
+}
 
 function createSession(
   refresh: () => Promise<AuthPayload> = async () => adminPayload,
@@ -123,6 +127,15 @@ describe('autenticação', () => {
     expect(Object.keys(session)).not.toContain('refreshToken')
   })
 
+  it('restaura a sessão de uma conta de suporte', async () => {
+    const session = createSession(async () => supportPayload)
+
+    const payload = await session.refresh()
+
+    expect(payload?.user).toEqual(supportPayload.user)
+    expect(session.currentAccessToken).toBe('support-access')
+  })
+
   it('aceita resposta de login sem refresh token no corpo', async () => {
     const session = createSession()
     const client = axios.create({
@@ -145,22 +158,40 @@ describe('autenticação', () => {
     expect(session.currentAccessToken).toBe('access-new')
   })
 
-  it('rejeita utilizador que não seja administrador', async () => {
+  it('inicia sessão para uma conta de suporte', async () => {
     const session = createSession()
-    const customer = {
-      ...adminPayload,
-      user: { ...adminPayload.user, role: 'customer' },
-    }
     const client = axios.create({
       adapter: responseAdapter(() => ({
         status: 200,
-        data: loginEnvelope(customer),
+        data: loginEnvelope(supportPayload),
+      })),
+    })
+
+    await expect(
+      new AuthService(client, session).login('support', 'password'),
+    ).resolves.toEqual(supportPayload.user)
+    expect(session.currentAccessToken).toBe('support-access')
+  })
+
+  it('rejeita utilizador que não seja administrador', async () => {
+    const session = createSession()
+    const client = axios.create({
+      adapter: responseAdapter(() => ({
+        status: 200,
+        data: {
+          success: true,
+          message: 'OK',
+          data: {
+            user: { ...adminPayload.user, role: 'customer' },
+            token: adminPayload.accessToken,
+          },
+        },
       })),
     })
 
     await expect(
       new AuthService(client, session).login('customer', 'password'),
-    ).rejects.toThrow('não tem acesso')
+    ).rejects.toThrow('A resposta de autenticação é inválida.')
     expect(session.isAuthenticated).toBe(false)
   })
 

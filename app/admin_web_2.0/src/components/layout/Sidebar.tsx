@@ -1,6 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { adminNavItems } from '../../app/router/adminNavigation'
+import { useAuth } from '../../features/auth/context/useAuth'
 import { cn } from '../../lib/cn'
 import { BrandMark } from '../ui/BrandMark'
 
@@ -19,6 +20,13 @@ export function Sidebar({
   showClose = false,
   onClose,
 }: SidebarProps) {
+  const { user } = useAuth()
+  const visibleNavItems = adminNavItems.filter(
+    item => item.roles
+      ? user && item.roles.includes(user.role)
+      : user?.role === 'admin',
+  )
+
   return (
     <div className="flex h-full flex-col bg-white">
       <div
@@ -34,7 +42,7 @@ export function Sidebar({
               VirtualShop
             </p>
             <p className="truncate text-[11px] font-medium text-muted">
-              Painel administrativo
+                {user?.role === 'support' ? 'Painel de suporte' : 'Painel administrativo'}
             </p>
           </div>
         )}
@@ -85,7 +93,7 @@ export function Sidebar({
           </p>
         )}
         <ul className="space-y-1">
-          {adminNavItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon
             return (
               <li key={item.to}>

@@ -235,10 +235,40 @@ export interface Administrator {
   full_name: string
   phone: string
   email: string | null
-  role: string
+  role: 'admin' | 'support'
   is_active: boolean
   created_at: string
   last_login_at: string | null
+}
+
+export interface SupportConversation {
+  id: number
+  customer_id: number
+  customer_name: string
+  customer_phone: string
+  status: 'bot' | 'waiting' | 'active' | 'closed'
+  assigned_support_id: number | null
+  assigned_support_name: string | null
+  created_at: string
+  updated_at: string
+  last_message_at: string
+  last_message?: string | null
+  last_sender_type?: 'customer' | 'bot' | 'support' | null
+}
+
+export interface SupportMessage {
+  id: number
+  conversation_id: number
+  sender_type: 'customer' | 'bot' | 'support'
+  sender_user_id: number | null
+  body: string
+  handoff_available: boolean
+  created_at: string
+}
+
+export interface SupportConversationDetails {
+  conversation: SupportConversation
+  messages: SupportMessage[]
 }
 
 export interface AdministratorFields {
@@ -246,6 +276,7 @@ export interface AdministratorFields {
   phone: string
   email: string | null
   password: string
+  role?: 'admin' | 'support'
 }
 
 export interface AdministratorUpdateFields {
@@ -464,6 +495,42 @@ export const adminApi = {
     const response = await apiClient.patch<ApiEnvelope<Administrator>>(
       `/admin/administrators/${id}`,
       fields,
+    )
+    return response.data.data
+  },
+
+  async listSupportConversations() {
+    const response = await apiClient.get<ApiEnvelope<SupportConversation[]>>(
+      '/support/agent/conversations',
+    )
+    return response.data.data
+  },
+
+  async getSupportConversation(id: number) {
+    const response = await apiClient.get<ApiEnvelope<SupportConversationDetails>>(
+      `/support/agent/conversations/${id}`,
+    )
+    return response.data.data
+  },
+
+  async claimSupportConversation(id: number) {
+    const response = await apiClient.post<ApiEnvelope<SupportConversationDetails>>(
+      `/support/agent/conversations/${id}/claim`,
+    )
+    return response.data.data
+  },
+
+  async sendSupportMessage(id: number, message: string) {
+    const response = await apiClient.post<ApiEnvelope<SupportConversationDetails>>(
+      `/support/agent/conversations/${id}/messages`,
+      { message },
+    )
+    return response.data.data
+  },
+
+  async closeSupportConversation(id: number) {
+    const response = await apiClient.post<ApiEnvelope<SupportConversationDetails>>(
+      `/support/agent/conversations/${id}/close`,
     )
     return response.data.data
   },

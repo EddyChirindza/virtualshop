@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
+import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, MessageCircle, Package, User } from 'lucide-react';
 import Layout from './Layout';
 import { api } from '../services/api';
 import { usePreferences } from '../preferences';
@@ -21,6 +21,7 @@ const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
       ['/enderecos', 'Endereços', <MapPin size={18} />],
       ['/metodos-pagamento', 'Pagamentos', <CreditCard size={18} />],
       ['/notificacoes', 'Notificações', <Bell size={18} />],
+      ['/assistencia', 'Assistência ao cliente', <MessageCircle size={18} />],
     ],
   },
 ];

@@ -14,6 +14,7 @@ import type {
   User,
   UserStats,
 } from '../types';
+import type { SupportConversationData } from '../types/support';
 
 /* ───────────────────────── Configuração ───────────────────────── */
 
@@ -363,6 +364,17 @@ export const api = {
   unreadCount: () => fetchData<{ count: number }>('/notifications/unread-count'),
   markRead: (id: number) => patch(`/notifications/${id}/read`, {}),
   markAllRead: () => patch('/notifications/read-all', {}),
+  supportConversation: () => fetchData<SupportConversationData>('/support/conversation'),
+  sendSupportMessage: (message: string, language: 'pt' | 'en') =>
+    fetchData<SupportConversationData>('/support/messages', {
+      method: 'POST',
+      body: JSON.stringify({ message, language }),
+    }),
+  requestSupportAgent: () =>
+    fetchData<SupportConversationData>('/support/conversation/request-agent', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
   logout: async () => {
     try {
       await request('/auth/logout', {

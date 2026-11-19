@@ -2,8 +2,13 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { useAuth } from '../context/useAuth'
 import { SessionRecovery } from './SessionRecovery'
+import type { AdminRole } from '../types/auth'
 
-export function ProtectedRoute() {
+interface ProtectedRouteProps {
+  allowedRoles?: readonly AdminRole[]
+}
+
+export function ProtectedRoute({ allowedRoles = ['admin'] }: ProtectedRouteProps) {
   const {
     user,
     sessionStatus,
@@ -25,7 +30,7 @@ export function ProtectedRoute() {
     )
   }
 
-  if (!user || user.role !== 'admin') {
+  if (!user || !allowedRoles.includes(user.role)) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

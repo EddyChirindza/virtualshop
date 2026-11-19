@@ -56,8 +56,9 @@ export function Header({
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  const displayName = user?.full_name?.trim() || 'Administrador'
-  const displayContact = user?.email ?? user?.phone ?? 'Conta administrativa'
+  const roleLabel = user?.role === 'support' ? 'Suporte ao cliente' : 'Administrador'
+  const displayName = user?.full_name?.trim() || roleLabel
+  const displayContact = user?.email ?? user?.phone ?? roleLabel
 
   useEffect(() => {
     if (!profileOpen) return
@@ -151,7 +152,7 @@ export function Header({
                 {displayName}
               </span>
               <span className="block text-[11px] text-muted">
-                Administrador
+                {roleLabel}
               </span>
             </span>
             <ChevronDown

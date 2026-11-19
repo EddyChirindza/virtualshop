@@ -14,7 +14,7 @@ export interface AuthContextValue {
   isInitializing: boolean
   sessionStatus: AuthSessionStatus
   sessionError: string | null
-  login: (identifier: string, password: string) => Promise<void>
+  login: (identifier: string, password: string) => Promise<AdminUser>
   logout: () => Promise<void>
   retrySessionRestore: () => Promise<void>
 }

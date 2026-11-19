@@ -35,6 +35,7 @@ const createAdministratorSchema = z.object({
   phone,
   email,
   password,
+  role: z.enum(['admin', 'support']).optional().default('admin'),
   is_active: z.boolean().optional().default(true),
 });
 

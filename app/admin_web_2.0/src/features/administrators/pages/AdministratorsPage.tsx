@@ -25,6 +25,7 @@ interface AdministratorForm {
   phone: string
   email: string
   password: string
+  role: 'admin' | 'support'
   is_active: boolean
 }
 
@@ -33,6 +34,7 @@ const blankForm: AdministratorForm = {
   phone: '',
   email: '',
   password: '',
+  role: 'admin',
   is_active: true,
 }
 
@@ -73,6 +75,7 @@ export function AdministratorsPage() {
             phone: form.phone,
             email: form.email.trim() || null,
             password: form.password,
+            role: form.role,
           }),
     onSuccess: async (administrator) => {
       await queryClient.invalidateQueries({
@@ -82,7 +85,7 @@ export function AdministratorsPage() {
       setSuccessMessage(
         editing
           ? `Administrador “${administrator.full_name}” actualizado.`
-          : `Administrador “${administrator.full_name}” criado.`,
+          : `${administrator.role === 'support' ? 'Agente de suporte' : 'Administrador'} “${administrator.full_name}” criado.`,
       )
       if (editing?.id === user?.id) await retrySessionRestore()
     },
@@ -120,6 +123,7 @@ export function AdministratorsPage() {
       phone: administrator.phone,
       email: administrator.email ?? '',
       password: '',
+      role: administrator.role,
       is_active: administrator.is_active,
     })
     saveAdministrator.reset()
@@ -197,11 +201,11 @@ export function AdministratorsPage() {
           actions={
             <Button onClick={openCreate} variant="primary">
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Novo administrador
+              Nova conta de equipa
             </Button>
           }
-          description="Gere as contas que podem aceder a este painel administrativo."
-          title="Administradores"
+          description="Cria contas administrativas ou de suporte e gere os seus acessos."
+          title="Contas da equipa"
         >
           {successMessage && (
             <p
@@ -249,6 +253,9 @@ export function AdministratorsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-ink">
                             {administrator.full_name}
+                          </span>
+                          <span className="rounded-full bg-canvas px-2 py-0.5 text-[10px] font-semibold text-muted">
+                            {administrator.role === 'support' ? 'Suporte' : 'Administrador'}
                           </span>
                           {administrator.id === user?.id && (
                             <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-end">
@@ -329,12 +336,12 @@ export function AdministratorsPage() {
               action={
                 <Button onClick={openCreate} variant="primary">
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  Criar administrador
+                  Criar conta de equipa
                 </Button>
               }
               description="Cria contas administrativas para a equipa."
               icon={ShieldCheck}
-              title="Ainda não existem administradores"
+              title="Ainda não existem contas de equipa"
             />
           )}
         </Card>
@@ -357,12 +364,12 @@ export function AdministratorsPage() {
                   className="font-semibold text-ink"
                   id="administrator-form-title"
                 >
-                  {editing ? 'Editar administrador' : 'Novo administrador'}
+                  {editing ? 'Editar conta de equipa' : 'Nova conta de equipa'}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
                   {editing
                     ? 'Actualiza os dados e o estado da conta.'
-                    : 'Cria uma conta com acesso ao painel administrativo.'}
+                    : 'Escolhe se a conta gere a loja ou responde aos clientes.'}
                 </p>
               </div>
               <Button
@@ -420,6 +427,25 @@ export function AdministratorsPage() {
                   value={form.email}
                 />
               </label>
+
+              {!editing && (
+                <label className={labelClassName}>
+                  Perfil de acesso
+                  <select
+                    className={inputClassName}
+                    onChange={(event) =>
+                      setForm({ ...form, role: event.target.value as AdministratorForm['role'] })
+                    }
+                    value={form.role}
+                  >
+                    <option value="admin">Administrador</option>
+                    <option value="support">Suporte ao cliente</option>
+                  </select>
+                  <span className="mt-1 block text-[11px] font-normal text-muted">
+                    O suporte só pode atender conversas; administradores têm acesso total ao painel.
+                  </span>
+                </label>
+              )}
 
               {!editing && (
                 <label className={labelClassName}>
@@ -488,7 +514,7 @@ export function AdministratorsPage() {
                   )}
                   {saveAdministrator.isPending
                     ? 'A guardar...'
-                    : 'Guardar administrador'}
+                    : 'Guardar conta'}
                 </Button>
               </footer>
             </form>

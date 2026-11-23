@@ -6,6 +6,7 @@ import { api, imageUrl } from '../services/api';
 import type { Product } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 export default function Favorites() {
   const { t } = usePreferences();
@@ -17,7 +18,7 @@ export default function Favorites() {
   const load = async () => {
     setStatus('loading');
     try { setProducts(await api.favorites()); setStatus('ok'); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
   useEffect(() => { load(); }, []);
 
@@ -29,11 +30,11 @@ export default function Favorites() {
 
   const unfav = async (id: number) => {
     try { await api.favorite(id, false); setProducts(v => v.filter(p => p.id !== id)); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
   };
   const addToCart = async (p: Product) => {
     try { await api.add(p.id); setNotice(t('Produto adicionado ao carrinho.')); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
   };
 
   return (

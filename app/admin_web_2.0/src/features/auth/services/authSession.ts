@@ -93,7 +93,7 @@ export class AuthSession {
     try {
       const payload = await this.transport.refresh()
       if (generation !== this.generation) return null
-      if (payload.user.role !== 'admin') {
+      if (payload.user.role !== 'admin' && payload.user.role !== 'support') {
         throw new AuthenticationError(
           'A conta já não tem acesso ao painel administrativo.',
         )

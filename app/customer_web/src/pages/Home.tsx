@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Heart, ShoppingBag, X } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -6,6 +6,7 @@ import { api, imageUrl, session } from '../services/api';
 import type { Banner, Category, Product, ProductSort } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 export default function Home() {
   const { t, language } = usePreferences();
@@ -14,6 +15,8 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [popular, setPopular] = useState<Product[]>([]);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
+  const newArrivalsScrollRef = useRef<HTMLDivElement>(null);
+  const [newArrivalsScroll, setNewArrivalsScroll] = useState({ left: false, right: false });
   const [categories, setCategories] = useState<Category[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -39,6 +42,35 @@ export default function Home() {
   const [featuredError, setFeaturedError] = useState('');
   const [notice, setNotice] = useState('');
 
+  const updateNewArrivalsScroll = useCallback((element: HTMLDivElement | null) => {
+    if (!element) {
+      setNewArrivalsScroll({ left: false, right: false });
+      return;
+    }
+
+    const maxScrollLeft = element.scrollWidth - element.clientWidth;
+    setNewArrivalsScroll(previous => {
+      const next = {
+        left: element.scrollLeft > 1,
+        right: element.scrollLeft < maxScrollLeft - 1,
+      };
+      return previous.left === next.left && previous.right === next.right ? previous : next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const element = newArrivalsScrollRef.current;
+    if (!element) {
+      updateNewArrivalsScroll(null);
+      return;
+    }
+
+    const update = () => updateNewArrivalsScroll(element);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [newArrivals.length, status, query, category, minPrice, maxPrice, page, updateNewArrivalsScroll]);
+
   // Vindo de outra página com /?q=termo
   useEffect(() => { setQuery(params.get('q') ?? ''); }, [params]);
 
@@ -60,7 +92,7 @@ export default function Home() {
       setStatus('ok');
     } catch (e) {
       if (!alive.current) return;
-      setError((e as Error).message); setStatus('error');
+      setError(customerErrorMessage(e, t)); setStatus('error');
     }
   };
 
@@ -87,7 +119,7 @@ export default function Home() {
       const failed = results.find(result => result.status === 'rejected');
       setFeaturedError(
         failed?.status === 'rejected'
-          ? failed.reason instanceof Error ? failed.reason.message : String(failed.reason)
+          ? customerErrorMessage(failed.reason, t)
           : '',
       );
     };
@@ -104,7 +136,7 @@ export default function Home() {
         setBannerIndex(0);
       })
       .catch(e => {
-        if (active) setBannerError((e as Error).message);
+        if (active) setBannerError(customerErrorMessage(e, t));
       });
     return () => { active = false; };
   }, []);
@@ -130,7 +162,7 @@ export default function Home() {
     }
     api.favorites()
       .then(items => setFavs(items.map(item => item.id)))
-      .catch(e => setNotice((e as Error).message));
+      .catch(e => setNotice(customerErrorMessage(e, t)));
   }, []);
 
   // O aviso fecha sozinho ao fim de 3,5 segundos.
@@ -155,6 +187,11 @@ export default function Home() {
     setMaxPrice('');
     setSort('relevance');
   };
+  const scrollNewArrivals = (direction: -1 | 1) => {
+    const element = newArrivalsScrollRef.current;
+    if (!element) return;
+    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: 'smooth' });
+  };
 
   const activateBanner = (banner: Banner) => {
     const destination = banner.destination;
@@ -177,14 +214,14 @@ export default function Home() {
   const addToCart = async (p: Product) => {
     if (!session.token) return needLogin();
     try { await api.add(p.id); setNotice(t('Produto adicionado ao carrinho.')); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
   };
 
   const toggleFav = async (id: number) => {
     if (!session.token) return needLogin();
     const on = !favs.includes(id);
     try { await api.favorite(id, on); setFavs(v => on ? [...v, id] : v.filter(x => x !== id)); }
-    catch (e) { setNotice((e as Error).message); }
+    catch (e) { setNotice(customerErrorMessage(e, t)); }
   };
 
   const renderProducts = (items: Product[]) => items.map(p => {
@@ -390,8 +427,40 @@ export default function Home() {
             <div className="vs-grid">{renderProducts(popular)}</div>
           </>}
           {newArrivals.length > 0 && <>
-            <div className="vs-section-head" style={{ marginTop: 28 }}><h2>{t('Novidades')}</h2></div>
-            <div className="vs-grid">{renderProducts(newArrivals)}</div>
+            <div className="vs-section-head vs-new-arrivals-head" style={{ marginTop: 28 }}>
+              <h2>{t('Novidades')}</h2>
+              {(newArrivalsScroll.left || newArrivalsScroll.right) && (
+                <div className="vs-new-arrivals-controls">
+                  <button
+                    type="button"
+                    aria-label={t('Deslizar novidades para a esquerda')}
+                    disabled={!newArrivalsScroll.left}
+                    onClick={() => scrollNewArrivals(-1)}
+                  ><ChevronLeft size={18} /></button>
+                  <button
+                    type="button"
+                    aria-label={t('Deslizar novidades para a direita')}
+                    disabled={!newArrivalsScroll.right}
+                    onClick={() => scrollNewArrivals(1)}
+                  ><ChevronRight size={18} /></button>
+                </div>
+              )}
+            </div>
+            <div
+              className="vs-new-arrivals-scroll"
+              ref={newArrivalsScrollRef}
+              role="region"
+              aria-label={t('Produtos da secção Novidades')}
+              tabIndex={0}
+              onScroll={event => updateNewArrivalsScroll(event.currentTarget)}
+            >
+              <div
+                className="vs-grid vs-grid--new-arrivals"
+                style={{ gridTemplateColumns: `repeat(${Math.min(newArrivals.length, 7)}, 160px)` }}
+              >
+                {renderProducts(newArrivals)}
+              </div>
+            </div>
           </>}
         </section>
       )}
@@ -401,7 +470,7 @@ export default function Home() {
           <h2>{title}</h2>
           <span>{status === 'ok' ? `${total} ${t('produtos')}` : ''}</span>
         </div>
-        <div className="vs-grid">
+        <div className={`vs-grid${!query && !category ? ' vs-grid--most-wanted' : ''}`}>
           {status === 'loading' && <div className="vs-state">{t('A carregar produtos…')}</div>}
           {status === 'error' && (
             <div className="vs-state vs-err">

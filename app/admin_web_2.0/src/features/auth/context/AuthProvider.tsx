@@ -10,7 +10,7 @@ import {
 import { authSession } from '../../../lib/api/client'
 import { getApiErrorMessage } from '../../../lib/api/errors'
 import { authService } from '../services/authService'
-import type { AdminUser } from '../types/auth'
+import { AuthenticationError, type AdminUser } from '../types/auth'
 import {
   AuthContext,
   type AuthSessionStatus,
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const restoredUser = await authService.restoreSession()
       if (sequence !== restoreSequence.current) return
 
-      if (restoredUser?.role === 'admin') {
+      if (restoredUser) {
         setUser(restoredUser)
         setSessionStatus('authenticated')
       } else {
@@ -78,9 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionError(null)
     try {
       const authenticatedUser = await authService.login(identifier, password)
-      if (sequence !== loginSequence.current) return
+      if (sequence !== loginSequence.current) {
+        throw new AuthenticationError('O pedido de autenticação foi cancelado. Tenta novamente.')
+      }
       setUser(authenticatedUser)
       setSessionStatus('authenticated')
+      return authenticatedUser
     } finally {
       if (sequence === loginSequence.current) setIsLoading(false)
     }
@@ -104,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: user?.role === 'admin',
+      isAuthenticated: user !== null,
       isLoading,
       isInitializing: sessionStatus === 'initializing',
       sessionStatus,

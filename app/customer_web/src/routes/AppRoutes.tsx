@@ -13,6 +13,7 @@ import Addresses from '../pages/Addresses';
 import Profile from '../pages/Profile';
 import Notifications from '../pages/Notifications';
 import PaymentMethods from '../pages/PaymentMethods';
+import SupportChat from '../pages/SupportChat';
 import NotFound from '../pages/NotFound';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -34,6 +35,7 @@ export default function AppRoutes() {
         <Route path="/metodos-pagamento" element={<PaymentMethods />} />
         <Route path="/perfil" element={<Profile />} />
         <Route path="/notificacoes" element={<Notifications />} />
+        <Route path="/assistencia" element={<SupportChat />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

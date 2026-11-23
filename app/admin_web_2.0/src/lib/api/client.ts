@@ -33,7 +33,7 @@ export const authSession = new AuthSession({
       { adminOnly: true },
     )
     const payload = parseAuthPayload(response.data)
-    if (payload.user.role !== 'admin') {
+    if (payload.user.role !== 'admin' && payload.user.role !== 'support') {
       throw new Error('A conta já não tem acesso ao painel administrativo.')
     }
     return payload

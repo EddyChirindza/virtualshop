@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { api } from '../services/api';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 const ORDER_STEPS: [string, string][] = [
   ['pending', 'Recebida'],
@@ -22,7 +23,7 @@ export default function OrderDetail() {
   const load = async () => {
     setStatus('loading');
     try { setOrder(await api.order(Number(id))); setStatus('ok'); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
   useEffect(() => { load(); }, [id]);
 

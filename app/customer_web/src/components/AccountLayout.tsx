@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, Package, User } from 'lucide-react';
+import { Bell, CreditCard, Heart, LayoutDashboard, LogOut, MapPin, MessageCircle, Package, User } from 'lucide-react';
 import Layout from './Layout';
 import { api } from '../services/api';
 import { usePreferences } from '../preferences';
@@ -21,6 +21,7 @@ const GROUPS: { title: string; links: [string, string, ReactNode][] }[] = [
       ['/enderecos', 'Endereços', <MapPin size={18} />],
       ['/metodos-pagamento', 'Pagamentos', <CreditCard size={18} />],
       ['/notificacoes', 'Notificações', <Bell size={18} />],
+      ['/assistencia', 'Assistência ao cliente', <MessageCircle size={18} />],
     ],
   },
 ];
@@ -33,11 +34,10 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     try {
       await api.logout();
       nav('/', { replace: true });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('Erro desconhecido.');
+    } catch {
       nav('/login', {
         replace: true,
-        state: { notice: `${t('Sessão terminada neste dispositivo, mas a API não confirmou o logout:')} ${message}` },
+        state: { notice: t('Saímos da sua conta neste dispositivo. Não foi possível confirmar a saída nos outros dispositivos.') },
       });
     }
   };

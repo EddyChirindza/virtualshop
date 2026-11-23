@@ -1,9 +1,11 @@
+export type AdminRole = 'admin' | 'support'
+
 export interface AdminUser {
   id: number
   full_name: string
   phone: string
   email: string | null
-  role: string
+  role: AdminRole
 }
 
 export interface AuthTokens {
@@ -35,7 +37,7 @@ export function parseAdminUser(value: unknown): AdminUser {
     typeof value.full_name !== 'string' ||
     typeof value.phone !== 'string' ||
     (typeof value.email !== 'string' && value.email !== null) ||
-    typeof value.role !== 'string'
+    (value.role !== 'admin' && value.role !== 'support')
   ) {
     throw new AuthenticationError('A resposta de autenticação é inválida.')
   }

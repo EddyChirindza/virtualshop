@@ -94,7 +94,7 @@ async function login({ identifier, password, adminOnly = false }, meta) {
   if (!passwordMatches) {
     throw new ApiError(401, 'Credenciais inválidas.');
   }
-  if (adminOnly && user.role !== 'admin') {
+  if (adminOnly && !['admin', 'support'].includes(user.role)) {
     throw new ApiError(403, 'Acesso negado.');
   }
 
@@ -112,7 +112,7 @@ async function login({ identifier, password, adminOnly = false }, meta) {
     ) {
       throw new ApiError(401, 'Credenciais inválidas.');
     }
-    if (adminOnly && currentUser.role !== 'admin') {
+    if (adminOnly && !['admin', 'support'].includes(currentUser.role)) {
       throw new ApiError(403, 'Acesso negado.');
     }
 
@@ -222,7 +222,7 @@ async function refresh(refreshToken, meta, { adminOnly = false } = {}) {
       await revokeSession(client, session.id);
       return { error: new ApiError(401, 'Sessão inválida. Autentica-te novamente.') };
     }
-    if (adminOnly && row.role !== 'admin') {
+    if (adminOnly && !['admin', 'support'].includes(row.role)) {
       await revokeSession(client, session.id);
       return { error: new ApiError(403, 'Acesso negado.') };
     }

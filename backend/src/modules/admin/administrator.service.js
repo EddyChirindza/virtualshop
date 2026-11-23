@@ -25,7 +25,7 @@ async function listAdministrators() {
   const { rows } = await query(
     `SELECT ${ADMIN_COLUMNS}
      FROM users
-     WHERE role = 'admin'
+     WHERE role IN ('admin', 'support')
      ORDER BY is_active DESC, full_name ASC, id ASC`,
   );
   return rows.map(toAdministrator);
@@ -49,13 +49,14 @@ async function createAdministrator(fields) {
   try {
     const { rows } = await query(
       `INSERT INTO users (full_name, phone, email, password_hash, role, is_active)
-       VALUES ($1, $2, $3, $4, 'admin', $5)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${ADMIN_COLUMNS}`,
       [
         fields.full_name,
         fields.phone,
         fields.email ?? null,
         passwordHash,
+        fields.role ?? 'admin',
         fields.is_active ?? true,
       ],
     );
@@ -79,8 +80,8 @@ async function updateAdministrator(id, fields, actingUserId) {
       [id],
     );
     const target = targetResult.rows[0];
-    if (!target || target.role !== 'admin') {
-      throw new ApiError(404, 'Administrador não encontrado.');
+    if (!target || !['admin', 'support'].includes(target.role)) {
+      throw new ApiError(404, 'Conta de acesso não encontrada.');
     }
 
     const deactivating = fields.is_active === false && target.is_active;

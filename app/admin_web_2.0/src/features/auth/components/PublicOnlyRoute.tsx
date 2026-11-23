@@ -19,10 +19,14 @@ export function PublicOnlyRoute() {
     return <LoadingState label="A recuperar a sessão..." />
   }
 
-  if (user?.role === 'admin') {
+  if (user?.role === 'admin' || user?.role === 'support') {
     const from = (location.state as RedirectState | null)?.from
     const target =
-      from?.pathname && from.pathname !== '/login'
+      user.role === 'support'
+        ? from?.pathname === '/support'
+          ? { pathname: from.pathname, search: from.search, hash: from.hash }
+          : { pathname: '/support' }
+        : from?.pathname && from.pathname !== '/login'
         ? { pathname: from.pathname, search: from.search, hash: from.hash }
         : { pathname: '/dashboard' }
 

@@ -40,11 +40,11 @@ export function LoginPage() {
     event.preventDefault()
     setErrorMessage(null)
     try {
-      await login(identifier, password)
+      const user = await login(identifier, password)
       const pathname =
         from?.pathname && from.pathname !== '/login'
           ? from.pathname
-          : '/dashboard'
+          : user.role === 'support' ? '/support' : '/dashboard'
       navigate(
         { pathname, search: from?.search, hash: from?.hash },
         { replace: true },
@@ -75,7 +75,7 @@ export function LoginPage() {
           <div>
             <p className="text-base font-semibold tracking-tight">VirtualShop</p>
             <p className="text-[11px] font-medium text-white/70">
-              Painel administrativo
+              Painel da equipa
             </p>
           </div>
         </div>
@@ -85,17 +85,17 @@ export function LoginPage() {
             Gestão da loja
           </p>
           <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight xl:text-4xl">
-            Tudo o que precisas para gerir o VirtualShop.
+            Encontra as ferramentas certas para o teu trabalho na VirtualShop.
           </h2>
           <p className="mt-4 text-sm leading-6 text-white/80">
-            Encomendas, catálogo, clientes e equipa administrativa num único
-            espaço, desenhado para o trabalho diário.
+            Acede às áreas disponíveis para o teu perfil e acompanha as tarefas
+            da equipa num único espaço.
           </p>
 
         </div>
 
         <p className="relative z-10 text-xs text-white/60">
-          © VirtualShop · Acesso reservado à equipa administrativa.
+          © VirtualShop · Acesso reservado à equipa.
         </p>
       </aside>
 
@@ -108,7 +108,7 @@ export function LoginPage() {
                 VirtualShop
               </p>
               <p className="text-[11px] font-medium text-muted">
-                Painel administrativo
+                Painel da equipa
               </p>
             </div>
           </div>
@@ -119,13 +119,13 @@ export function LoginPage() {
           >
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-end">
               <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
-              Acesso administrativo
+              Acesso da equipa
             </span>
             <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
               Inicia sessão
             </h1>
             <p className="mt-1.5 text-sm leading-6 text-muted">
-              Usa as tuas credenciais de administrador para aceder ao painel.
+              Usa as tuas credenciais da equipa para aceder ao painel.
             </p>
 
             {successMessage && (

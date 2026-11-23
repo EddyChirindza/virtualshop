@@ -14,6 +14,7 @@ import type {
   User,
   UserStats,
 } from '../types';
+import type { SupportConversationData } from '../types/support';
 
 /* ───────────────────────── Configuração ───────────────────────── */
 
@@ -172,7 +173,9 @@ const asList = <T>(body: unknown): T[] => {
 const PUBLIC_PATHS = /^\/($|login|produto\/)/;
 function expireSession() {
   session.clear();
-  if (!PUBLIC_PATHS.test(window.location.pathname)) window.location.replace('/login');
+  if (!PUBLIC_PATHS.test(window.location.pathname)) {
+    window.location.replace('/login?notice=session-expired');
+  }
 }
 
 /** Pede um novo token de acesso com o refresh token. Devolve true se renovou. */
@@ -361,6 +364,17 @@ export const api = {
   unreadCount: () => fetchData<{ count: number }>('/notifications/unread-count'),
   markRead: (id: number) => patch(`/notifications/${id}/read`, {}),
   markAllRead: () => patch('/notifications/read-all', {}),
+  supportConversation: () => fetchData<SupportConversationData>('/support/conversation'),
+  sendSupportMessage: (message: string, language: 'pt' | 'en') =>
+    fetchData<SupportConversationData>('/support/messages', {
+      method: 'POST',
+      body: JSON.stringify({ message, language }),
+    }),
+  requestSupportAgent: () =>
+    fetchData<SupportConversationData>('/support/conversation/request-agent', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
   logout: async () => {
     try {
       await request('/auth/logout', {

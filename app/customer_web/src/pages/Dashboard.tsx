@@ -8,6 +8,7 @@ import { money } from '../utils/format';
 import { initials } from '../utils/avatar';
 import { orderStatus } from '../utils/orderStatus';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 export default function Dashboard() {
   const { t, language } = usePreferences();
@@ -28,7 +29,7 @@ export default function Dashboard() {
     const [u, a, c, n, un, s, o] = await Promise.allSettled([
       api.profile(), api.addresses(), api.cart(), api.notifications(), api.unreadCount(), api.stats(), api.orders(),
     ]);
-    if (u.status === 'rejected') { setError(u.reason?.message || 'Falha ao carregar a conta.'); setStatus('error'); return; }
+    if (u.status === 'rejected') { setError(customerErrorMessage(u.reason, t)); setStatus('error'); return; }
     setUser(u.value);
     if (a.status === 'fulfilled') setAddresses(a.value);
     if (c.status === 'fulfilled') setCart(c.value.items || []);
@@ -50,7 +51,7 @@ export default function Dashboard() {
     ] as const) {
       if (result.status === 'rejected') {
         const reason = result.reason;
-        failures.push(`${t(label)}: ${reason instanceof Error ? reason.message : String(reason)}`);
+        failures.push(`${t(label)}: ${customerErrorMessage(reason, t)}`);
       }
     }
     setPartialErrors(failures);

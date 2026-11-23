@@ -11,12 +11,14 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import type { AdminRole } from '../../features/auth/types/auth'
 
 export interface AdminNavItem {
   label: string
   to: string
   description: string
   icon: LucideIcon
+  roles?: readonly AdminRole[]
 }
 
 export const adminNavItems: AdminNavItem[] = [
@@ -25,6 +27,13 @@ export const adminNavItems: AdminNavItem[] = [
     to: '/dashboard',
     description: 'Visão geral do estado da loja e da operação.',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'Atendimento',
+    to: '/support',
+    description: 'Responde às conversas encaminhadas pelos clientes.',
+    icon: MessageSquareText,
+    roles: ['admin', 'support'],
   },
   {
     label: 'Encomendas',

@@ -5,6 +5,7 @@ import AccountLayout from '../components/AccountLayout';
 import { api } from '../services/api';
 import type { Address } from '../types';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 const PROVINCES = ['Maputo Cidade', 'Maputo Província', 'Gaza', 'Inhambane', 'Sofala', 'Manica', 'Tete', 'Zambézia', 'Nampula', 'Cabo Delgado', 'Niassa'];
 const FIELDS: [keyof AddressForm, string, boolean][] = [
@@ -28,7 +29,7 @@ export default function Addresses() {
 
   const load = async () => {
     try { setList(await api.addresses()); setStatus('ok'); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
   useEffect(() => { load(); }, []);
 
@@ -48,7 +49,7 @@ export default function Addresses() {
       setEditing(null);
       await load();
     } catch (err) {
-      setFormError((err as Error).message);
+      setFormError(customerErrorMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -57,7 +58,7 @@ export default function Addresses() {
   const remove = async (a: Address) => {
     if (!window.confirm(`${t('Apagar o endereço')} "${a.label}"?`)) return;
     try { await api.deleteAddress(a.id); await load(); }
-    catch (e) { setError((e as Error).message); setStatus('error'); }
+    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
   };
 
   const current: Partial<AddressForm> = editing && editing !== 'new' ? (editing as any) : { province: 'Maputo Cidade' };
@@ -113,7 +114,7 @@ export default function Addresses() {
                 <div className="vs-inline">
                   {!a.is_default && <button className="vs-link" onClick={async () => {
                     try { await api.setDefaultAddress(a.id); await load(); }
-                    catch (e) { setError((e as Error).message); setStatus('error'); }
+                    catch (e) { setError(customerErrorMessage(e, t)); setStatus('error'); }
                   }}>{t('Definir como padrão')}</button>}
                   <button aria-label={t('Editar')} onClick={() => setEditing(a)}><Pencil size={16} /></button>
                   <button aria-label={t('Apagar')} onClick={() => remove(a)}><Trash2 size={16} /></button>

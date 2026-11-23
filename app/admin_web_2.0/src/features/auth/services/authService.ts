@@ -28,7 +28,7 @@ export class AuthService {
     )
     const payload = parseAuthPayload(response.data)
 
-    if (payload.user.role !== 'admin') {
+    if (payload.user.role !== 'admin' && payload.user.role !== 'support') {
       throw new AuthenticationError(
         'Esta conta não tem acesso ao painel administrativo.',
       )
@@ -54,7 +54,7 @@ export class AuthService {
     }
 
     const user = parseAdminUser(response.data.data.user)
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'support') {
       throw new AuthenticationError(
         'Esta conta não tem acesso ao painel administrativo.',
       )

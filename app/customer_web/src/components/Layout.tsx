@@ -5,6 +5,7 @@ import { Bell, Heart, Home, Search, ShoppingCart, SlidersHorizontal, User } from
 import { api, session } from '../services/api';
 import type { ProductSort } from '../types';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 import PreferenceControls from './PreferenceControls';
 import '../styles/theme.css';
 
@@ -78,7 +79,7 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
       const failures = [notifications, cart].filter(result => result.status === 'rejected');
       setHeaderError(failures.length
         ? failures.map(result => result.status === 'rejected'
-          ? result.reason instanceof Error ? result.reason.message : String(result.reason)
+          ? customerErrorMessage(result.reason, t)
           : '').join(' · ')
         : '');
     });
@@ -179,6 +180,7 @@ export default function Layout({ children, query, onQuery, searchFilters }: Prop
             <Link to="/pedidos">{t('Os meus pedidos')}</Link>
             <Link to="/favoritos">{t('Favoritos')}</Link>
             <Link to="/perfil">{t('Perfil')}</Link>
+            <Link to="/assistencia">{t('Assistência ao cliente')}</Link>
           </div>
           <div>{t('Feito em Moçambique. © VirtualShop')}</div>
         </div>

@@ -6,6 +6,7 @@ import { api, imageUrl, session } from '../services/api';
 import type { Product, ProductReviews } from '../types';
 import { money } from '../utils/format';
 import { usePreferences } from '../preferences';
+import { customerErrorMessage } from '../utils/customerMessages';
 
 type ProductWithDetails = Product & { description?: string };
 
@@ -37,13 +38,13 @@ export default function ProductDetail() {
         try {
           setIsFavorite((await api.favoriteStatus(loadedProduct.id)).isFavorite);
         } catch (e) {
-          setNotice((e as Error).message);
+          setNotice(customerErrorMessage(e, t));
         }
       } else {
         setIsFavorite(false);
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError(customerErrorMessage(e, t));
       setStatus('error');
     }
   };
@@ -55,7 +56,7 @@ export default function ProductDetail() {
       setReviews(data);
       setRating(data.ownReview?.rating || 0);
       setComment(data.ownReview?.comment || '');
-    }).catch((e) => setNotice((e as Error).message));
+    }).catch((e) => setNotice(customerErrorMessage(e, t)));
   }, [product?.id]);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function ProductDetail() {
       await api.add(product.id, quantity);
       setNotice(t('Produto adicionado ao carrinho.'));
     } catch (e) {
-      setNotice((e as Error).message);
+      setNotice(customerErrorMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -88,7 +89,7 @@ export default function ProductDetail() {
       await api.favorite(product.id, !isFavorite);
       setIsFavorite(value => !value);
     } catch (e) {
-      setNotice((e as Error).message);
+      setNotice(customerErrorMessage(e, t));
     }
   };
 
@@ -105,7 +106,7 @@ export default function ProductDetail() {
       setReviews(data);
       setNotice(t('Avaliação guardada.'));
     } catch (e) {
-      setNotice((e as Error).message);
+      setNotice(customerErrorMessage(e, t));
     } finally {
       setReviewBusy(false);
     }
@@ -124,7 +125,7 @@ export default function ProductDetail() {
           : review),
       }));
     } catch (e) {
-      setNotice((e as Error).message);
+      setNotice(customerErrorMessage(e, t));
     } finally {
       setVotingReviewId(null);
     }

@@ -5,6 +5,7 @@ import '../../../core/app_text.dart';
 import '../../../core/app_navigation.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/session/session_controller.dart';
 import '../../banners/providers/banner_providers.dart';
 import '../../banners/widgets/banner_carousel.dart';
 import '../../categories/providers/category_providers.dart';
@@ -81,6 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionControllerProvider);
     ref.listen<int?>(homeTabRequestProvider, (previous, next) {
       if (next == null) return;
       _selectTab(next);
@@ -95,9 +97,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final titles = [
       appText(context, 'VirtualShop', 'VirtualShop'),
       appText(context, 'Pesquisar', 'Search'),
-      appText(context, 'Carrinho', 'Cart'),
-      appText(context, 'Pedidos', 'Orders'),
-      appText(context, 'Perfil', 'Profile'),
+      if (!session.isGuest) ...[
+        appText(context, 'Carrinho', 'Cart'),
+        appText(context, 'Pedidos', 'Orders'),
+        appText(context, 'Perfil', 'Profile'),
+      ],
     ];
     final pages = [
       _HomeTab(userName: widget.userName, onRefresh: _refresh),
@@ -105,9 +109,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         key: ValueKey(_searchScreenKey),
         isActive: _selectedIndex == 1,
       ),
-      const CartScreen(),
-      const OrdersScreen(showAppBar: false),
-      const ProfileScreen(),
+      if (!session.isGuest) ...[
+        const CartScreen(),
+        const OrdersScreen(showAppBar: false),
+        const ProfileScreen(),
+      ],
     ];
 
     return Scaffold(
@@ -124,11 +130,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isHome: _selectedIndex == 0,
                   onMenu: () => Scaffold.of(context).openDrawer(),
                   unreadNotificationCount: unreadNotificationCount,
-                  onNotifications: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  ),
+                  onNotifications: session.isGuest
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotificationsScreen(),
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -142,6 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: FloatingBottomNav(
         selectedIndex: _selectedIndex,
         cartItemCount: cartItemCount,
+        isGuest: session.isGuest,
         onSelected: _selectTab,
       ),
     );

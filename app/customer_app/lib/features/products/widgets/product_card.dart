@@ -2,11 +2,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_text.dart';
+import '../../../core/auth_guard.dart';
 import '../../../core/utils/format.dart';
 import '../../../theme/app_theme.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
-import '../../auth/screens/login_screen.dart';
 import '../models/product.dart';
 import 'product_image_carousel.dart';
 
@@ -85,12 +85,11 @@ class ProductCard extends ConsumerWidget {
                                   final controller = ref.read(
                                     favoritesProvider.notifier,
                                   );
-                                  if (!controller.isAuthenticated) {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const LoginScreen(),
-                                      ),
-                                    );
+                                  if (!await requireAuthentication(
+                                    context,
+                                    ref,
+                                    message: 'Inicia sessão ou cria uma conta para guardares os teus produtos favoritos.',
+                                  )) {
                                     return;
                                   }
                                   final changed = await controller
@@ -196,7 +195,14 @@ class ProductCard extends ConsumerWidget {
                           ),
                           onPressed: !canAdd
                               ? null
-                              : () {
+                              : () async {
+                                  if (!await requireAuthentication(
+                                    context,
+                                    ref,
+                                    message: 'Precisas de uma conta para adicionares produtos ao carrinho e realizares compras.',
+                                  )) {
+                                    return;
+                                  }
                                   ref
                                       .read(cartControllerProvider.notifier)
                                       .addProduct(product);

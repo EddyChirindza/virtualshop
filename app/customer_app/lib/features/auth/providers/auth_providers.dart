@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/session/session_controller.dart';
 import '../data/auth_repository.dart';
 import '../models/user.dart';
+
+const _guestModeKey = 'virtualshop_guest_mode';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
@@ -33,7 +36,12 @@ class AuthController extends AsyncNotifier<User?> {
 
     final storage = ref.watch(secureStorageProvider);
     if (!await storage.hasSession()) {
-      ref.read(sessionControllerProvider.notifier).endSession();
+      final preferences = await SharedPreferences.getInstance();
+      if (preferences.getBool(_guestModeKey) == true) {
+        ref.read(sessionControllerProvider.notifier).enterGuestMode();
+      } else {
+        ref.read(sessionControllerProvider.notifier).endSession();
+      }
       return null;
     }
 
@@ -75,6 +83,8 @@ class AuthController extends AsyncNotifier<User?> {
     final user = await ref
         .read(authRepositoryProvider)
         .login(identifier: identifier, password: password);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_guestModeKey);
     ref.read(sessionControllerProvider.notifier).beginSession(user.id);
     state = AsyncData(user);
   }
@@ -94,6 +104,8 @@ class AuthController extends AsyncNotifier<User?> {
           password: password,
           phone: phone,
         );
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_guestModeKey);
     ref.read(sessionControllerProvider.notifier).beginSession(user.id);
     state = AsyncData(user);
   }
@@ -101,6 +113,8 @@ class AuthController extends AsyncNotifier<User?> {
   Future<void> logout() async {
     final repository = ref.read(authRepositoryProvider);
     final storage = ref.read(secureStorageProvider);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_guestModeKey);
     final generation = ref.read(sessionControllerProvider).generation;
     final refreshToken = await storage.getRefreshToken();
     if (ref.read(sessionControllerProvider).generation != generation) return;

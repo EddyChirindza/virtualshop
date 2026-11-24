@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SessionState {
-  const SessionState({this.userId, this.generation = 0});
+  const SessionState({this.userId, this.generation = 0, this.isGuest = false});
 
   final int? userId;
   final int generation;
+  final bool isGuest;
 
   bool get isActive => userId != null;
+  bool get canBrowse => isGuest || isActive;
 
   bool isCurrent(int generation) => this.generation == generation;
 
@@ -15,10 +17,11 @@ class SessionState {
       identical(this, other) ||
       other is SessionState &&
           other.userId == userId &&
-          other.generation == generation;
+          other.generation == generation &&
+          other.isGuest == isGuest;
 
   @override
-  int get hashCode => Object.hash(userId, generation);
+  int get hashCode => Object.hash(userId, generation, isGuest);
 }
 
 class SessionController extends Notifier<SessionState> {
@@ -27,6 +30,17 @@ class SessionController extends Notifier<SessionState> {
 
   void beginSession(int userId) {
     state = SessionState(userId: userId, generation: state.generation + 1);
+  }
+
+  void enterGuestMode() {
+    if (state.isActive) return;
+    if (state.isGuest) return;
+    state = SessionState(isGuest: true, generation: state.generation + 1);
+  }
+
+  void exitGuestMode() {
+    if (!state.isGuest) return;
+    state = SessionState(generation: state.generation + 1);
   }
 
   void endSession({int? expectedGeneration}) {

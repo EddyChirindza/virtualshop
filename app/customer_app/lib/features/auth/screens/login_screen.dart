@@ -1,14 +1,20 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/session/session_controller.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/phone_number_field.dart';
 import 'register_screen.dart';
 
+const _guestModeKey = 'virtualshop_guest_mode';
+
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.reason});
+
+  final String? reason;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -44,6 +50,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             password: _passwordController.text,
           );
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(_guestModeKey);
+      if (mounted && widget.reason != null && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       // Sucesso: o AuthGate (em main.dart) vê o utilizador e troca este
       // ecrã pela Home — não é preciso navegar manualmente.
     } on ApiException catch (e) {
@@ -63,6 +74,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _continueAsGuest() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_guestModeKey, true);
+    ref.read(sessionControllerProvider.notifier).enterGuestMode();
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -97,6 +117,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (widget.reason != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(widget.reason!, textAlign: TextAlign.center),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   PhoneNumberField(
                     controller: _phoneController,
@@ -177,6 +208,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         context,
                         'Não tens conta? Regista-te',
                         'Don’t have an account? Sign up',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: isLoading ? null : _continueAsGuest,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                    child: Text(
+                      appText(
+                        context,
+                        'Continuar como convidado',
+                        'Continue as guest',
                       ),
                     ),
                   ),

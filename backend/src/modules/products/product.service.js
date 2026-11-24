@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────
 // VirtualShop API — Serviço de produtos
 // ─────────────────────────────────────────────
-const { query } = require('../../config/db');
+const { pool, query } = require('../../config/db');
 const { ApiError } = require('../../middlewares/error.middleware');
 const { removeUnreferencedUploadsSafely } = require('../../services/upload_files.service');
 
@@ -180,9 +180,23 @@ async function remove(id) {
   }
 }
 
-async function getReviews(productId, userId) {
+async function getReviews(productId, userId, { page = 1, limit = 20 } = {}) {
   await getById(productId);
-  const { rows } = await query(
+  const offset = (page - 1) * limit;
+  const [countResult, distributionResult, reviewsResult, ownResult] = await Promise.all([
+    query(
+      `SELECT COUNT(*)::int AS count,
+              COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average
+       FROM product_reviews WHERE product_id = $1`,
+      [productId]
+    ),
+    query(
+      `SELECT rating, COUNT(*)::int AS count
+       FROM product_reviews WHERE product_id = $1
+       GROUP BY rating`,
+      [productId]
+    ),
+    query(
     `SELECT r.id, r.rating, r.comment, r.created_at, r.updated_at,
             r.user_id,
             CASE
@@ -197,10 +211,29 @@ async function getReviews(productId, userId) {
      LEFT JOIN product_review_votes v ON v.review_id = r.id
      WHERE r.product_id = $1
      GROUP BY r.id, u.full_name
-     ORDER BY r.updated_at DESC, r.id DESC`,
-    [productId, userId ?? null]
-  );
-  const reviews = rows.map((row) => ({
+     ORDER BY r.updated_at DESC, r.id DESC
+     LIMIT $3 OFFSET $4`,
+      [productId, userId ?? null, limit, offset]
+    ),
+    query(
+      `SELECT r.id, r.rating, r.comment, r.created_at, r.updated_at,
+              r.user_id,
+              CASE
+                WHEN split_part(btrim(u.full_name), ' ', 1) LIKE '%@%' THEN 'Cliente'
+                ELSE split_part(btrim(u.full_name), ' ', 1)
+              END AS first_name,
+              COUNT(v.user_id) FILTER (WHERE v.vote = 'like')::int AS like_count,
+              COUNT(v.user_id) FILTER (WHERE v.vote = 'dislike')::int AS dislike_count,
+              MAX(v.vote) FILTER (WHERE v.user_id = $2) AS user_vote
+       FROM product_reviews r
+       JOIN users u ON u.id = r.user_id
+       LEFT JOIN product_review_votes v ON v.review_id = r.id
+       WHERE r.product_id = $1 AND r.user_id = $2
+       GROUP BY r.id, u.full_name`,
+      [productId, userId ?? null]
+    ),
+  ]);
+  const reviews = reviewsResult.rows.map((row) => ({
     id: Number(row.id),
     rating: Number(row.rating),
     comment: row.comment,
@@ -212,37 +245,98 @@ async function getReviews(productId, userId) {
     dislikeCount: Number(row.dislike_count),
     userVote: row.user_vote || null,
   }));
-  const ownReview = userId
-    ? reviews.find((review) => review.user.id === Number(userId)) || null
-    : null;
-  const average = reviews.length
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-    : 0;
+  const ownRow = userId ? ownResult.rows[0] : null;
+  const ownReview = ownRow ? {
+    id: Number(ownRow.id),
+    rating: Number(ownRow.rating),
+    comment: ownRow.comment,
+    createdAt: ownRow.created_at,
+    updatedAt: ownRow.updated_at,
+    user: { id: Number(ownRow.user_id), name: ownRow.first_name || 'Cliente' },
+    isOwn: true,
+    likeCount: Number(ownRow.like_count),
+    dislikeCount: Number(ownRow.dislike_count),
+    userVote: ownRow.user_vote || null,
+  } : null;
+  const count = Number(countResult.rows[0].count);
+  const countsByRating = new Map(distributionResult.rows.map((row) => [Number(row.rating), Number(row.count)]));
   return {
-    average: Number(average.toFixed(1)),
-    count: reviews.length,
+    average: Number(countResult.rows[0].average),
+    count,
     ownReview,
     items: reviews,
+    distribution: [5, 4, 3, 2, 1].map((rating) => ({ rating, count: countsByRating.get(rating) || 0 })),
+    page,
+    limit,
+    totalPages: Math.ceil(count / limit),
   };
 }
 
 async function saveReview(productId, userId, rating, comment) {
-  await getById(productId);
-  await query(
-    `INSERT INTO product_reviews (product_id, user_id, rating, comment)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (product_id, user_id)
-     DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, updated_at = now()`,
-    [productId, userId, rating, comment]
-  );
-  const { rows } = await query(
-    `UPDATE products
-     SET rating = (SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) FROM product_reviews r WHERE r.product_id = $1),
-         updated_at = now()
-     WHERE id = $1
-     RETURNING rating`,
-    [productId]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const product = await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [productId]);
+    if (!product.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
+    await client.query(
+      `INSERT INTO product_reviews (product_id, user_id, rating, comment)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (product_id, user_id)
+       DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, updated_at = now()`,
+      [productId, userId, rating, comment]
+    );
+    if (!comment) {
+      await client.query(
+        `DELETE FROM product_review_votes
+         WHERE review_id = (
+           SELECT id FROM product_reviews WHERE product_id = $1 AND user_id = $2
+         )`,
+        [productId, userId]
+      );
+    }
+    await client.query(
+      `UPDATE products
+       SET rating = (SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) FROM product_reviews r WHERE r.product_id = $1),
+           updated_at = now()
+       WHERE id = $1`,
+      [productId]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return getReviews(productId, userId);
+}
+
+async function deleteReview(productId, userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const product = await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [productId]);
+    if (!product.rows[0]) throw new ApiError(404, 'Produto não encontrado.');
+    const review = await client.query(
+      'SELECT id FROM product_reviews WHERE product_id = $1 AND user_id = $2 FOR UPDATE',
+      [productId, userId]
+    );
+    if (!review.rows[0]) throw new ApiError(404, 'Avaliação não encontrada.');
+    await client.query('DELETE FROM product_reviews WHERE id = $1', [review.rows[0].id]);
+    await client.query(
+      `UPDATE products
+       SET rating = (SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) FROM product_reviews r WHERE r.product_id = $1),
+           updated_at = now()
+       WHERE id = $1`,
+      [productId]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
   return getReviews(productId, userId);
 }
 
@@ -294,5 +388,5 @@ async function setReviewVote(productId, reviewId, userId, vote) {
 
 module.exports = {
   getPopular, getNewArrivals, getById, getAll, create, update, remove,
-  getReviews, saveReview, setReviewVote,
+  getReviews, saveReview, deleteReview, setReviewVote,
 };

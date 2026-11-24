@@ -1,4 +1,5 @@
-const { query } = require('../../config/db');
+const { pool, query } = require('../../config/db');
+const { ApiError } = require('../../middlewares/error.middleware');
 
 const LOW_STOCK_LIMIT = 5;
 const VALID_PERIODS = new Set(['7d', '30d', '90d']);
@@ -21,9 +22,28 @@ async function getCustomers() {
   }));
 }
 
-async function getProductReviewReport({ page = 1, limit = 50 } = {}) {
+async function getProductReviewReport({ page = 1, limit = 50, rating, productId, q = '' } = {}) {
   const offset = (page - 1) * limit;
-  const [summaryResult, productsResult, reviewsResult] = await Promise.all([
+  const conditions = [];
+  const params = [];
+  if (rating !== undefined) {
+    params.push(rating);
+    conditions.push(`r.rating = $${params.length}`);
+  }
+  if (productId !== undefined) {
+    params.push(productId);
+    conditions.push(`r.product_id = $${params.length}`);
+  }
+  if (q) {
+    params.push(`%${q.replace(/[\\%_]/g, '\\$&')}%`);
+    conditions.push(`(COALESCE(r.comment, '') ILIKE $${params.length} ESCAPE '\\' OR u.full_name ILIKE $${params.length} ESCAPE '\\' OR p.name ILIKE $${params.length} ESCAPE '\\')`);
+  }
+  const filteredWhere = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const reviewParams = [...params];
+  reviewParams.push(limit, offset);
+  const limitParam = `$${reviewParams.length - 1}`;
+  const offsetParam = `$${reviewParams.length}`;
+  const [summaryResult, productsResult, filteredCountResult, reviewsResult] = await Promise.all([
     query(
       `SELECT COUNT(*)::int AS total,
               COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average,
@@ -44,19 +64,28 @@ async function getProductReviewReport({ page = 1, limit = 50 } = {}) {
        ORDER BY review_count DESC, average_rating DESC, p.name ASC`
     ),
     query(
+      `SELECT COUNT(*)::int AS total
+       FROM product_reviews r
+       JOIN products p ON p.id = r.product_id
+       JOIN users u ON u.id = r.user_id
+       ${filteredWhere}`,
+      params
+    ),
+    query(
       `SELECT r.id, r.rating, r.comment, r.created_at,
               p.id AS product_id, p.name AS product_name, p.image_url AS product_image_url,
               u.id AS user_id, u.full_name AS customer_name
        FROM product_reviews r
        JOIN products p ON p.id = r.product_id
        JOIN users u ON u.id = r.user_id
+       ${filteredWhere}
        ORDER BY r.created_at DESC, r.id DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       LIMIT ${limitParam} OFFSET ${offsetParam}`,
+      reviewParams
     ),
   ]);
   const summary = summaryResult.rows[0];
-  const total = Number(summary.total);
+  const total = Number(filteredCountResult.rows[0].total);
 
   return {
     summary: {
@@ -234,4 +263,33 @@ async function getCustomerDetails(id) {
   };
 }
 
-module.exports = { getDashboard, getCustomers, getCustomerDetails, getProductReviewReport };
+async function deleteProductReview(reviewId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const review = await client.query(
+      'SELECT id, product_id FROM product_reviews WHERE id = $1 FOR UPDATE',
+      [reviewId]
+    );
+    if (!review.rows[0]) throw new ApiError(404, 'Avaliação não encontrada.');
+
+    await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [review.rows[0].product_id]);
+    await client.query('DELETE FROM product_reviews WHERE id = $1', [reviewId]);
+    await client.query(
+      `UPDATE products
+       SET rating = (SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0) FROM product_reviews r WHERE r.product_id = $1),
+           updated_at = now()
+       WHERE id = $1`,
+      [review.rows[0].product_id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return getProductReviewReport({ page: 1, limit: 50 });
+}
+
+module.exports = { getDashboard, getCustomers, getCustomerDetails, getProductReviewReport, deleteProductReview };

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_preferences.dart';
 import 'core/constants/api_constants.dart';
+import 'core/session/session_controller.dart';
 import 'features/auth/providers/auth_providers.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -54,6 +55,7 @@ class AuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    final session = ref.watch(sessionControllerProvider);
 
     // Se a sessão terminar (logout ou refresh token recusado) com ecrãs
     // empurrados por cima (detalhe de produto, etc.), volta à raiz para
@@ -70,7 +72,12 @@ class AuthGate extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => const LoginScreen(),
       data: (user) {
-        if (user == null) return const LoginScreen();
+        if (user == null) {
+          if (session.isGuest) {
+            return const HomeScreen(userName: 'Convidado');
+          }
+          return const LoginScreen();
+        }
         return HomeScreen(userName: user.name);
       },
     );

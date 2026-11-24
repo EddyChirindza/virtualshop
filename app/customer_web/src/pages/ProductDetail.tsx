@@ -26,6 +26,9 @@ export default function ProductDetail() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [editingReview, setEditingReview] = useState(false);
+  const [deletingReview, setDeletingReview] = useState(false);
   const [votingReviewId, setVotingReviewId] = useState<number | null>(null);
 
   const load = async () => {
@@ -52,11 +55,14 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!product) return;
+    setReviewLoading(true);
     api.reviews(product.id).then((data) => {
       setReviews(data);
       setRating(data.ownReview?.rating || 0);
       setComment(data.ownReview?.comment || '');
-    }).catch((e) => setNotice(customerErrorMessage(e, t)));
+      setEditingReview(Boolean(data.ownReview));
+    }).catch((e) => setNotice(customerErrorMessage(e, t)))
+      .finally(() => setReviewLoading(false));
   }, [product?.id]);
 
   useEffect(() => {
@@ -104,11 +110,35 @@ export default function ProductDetail() {
     try {
       const data = await api.saveReview(product.id, rating, comment);
       setReviews(data);
+      setEditingReview(true);
       setNotice(t('Avaliação guardada.'));
     } catch (e) {
       setNotice(customerErrorMessage(e, t));
     } finally {
       setReviewBusy(false);
+    }
+  };
+
+  const cancelReviewEdit = () => {
+    setRating(reviews?.ownReview?.rating || 0);
+    setComment(reviews?.ownReview?.comment || '');
+  };
+
+  const deleteReview = async () => {
+    if (!product || !reviews?.ownReview) return;
+    if (!window.confirm(t('Tem a certeza que pretende eliminar a sua avaliação?'))) return;
+    setDeletingReview(true);
+    try {
+      const data = await api.deleteReview(product.id);
+      setReviews(data);
+      setRating(0);
+      setComment('');
+      setEditingReview(false);
+      setNotice(t('Avaliação eliminada.'));
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setDeletingReview(false);
     }
   };
 
@@ -201,7 +231,19 @@ export default function ProductDetail() {
             </div>
 
             <div className="vs-review-form">
-              <h3>{reviews?.ownReview ? t('Editar a minha avaliação') : t('Avaliar este produto')}</h3>
+              <h3>{editingReview && reviews?.ownReview ? t('Editar a minha avaliação') : t('Avaliar este produto')}</h3>
+              {reviewLoading && <div className="vs-state">{t('A carregar avaliações…')}</div>}
+              {reviews?.distribution && reviews.count > 0 && (
+                <div className="vs-rating-distribution" aria-label={t('Distribuição das classificações')}>
+                  {reviews.distribution.map((item) => (
+                    <div key={item.rating}>
+                      <span>{item.rating}★</span>
+                      <div><i style={{ width: `${reviews.count ? (item.count / reviews.count) * 100 : 0}%` }} /></div>
+                      <b>{item.count}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="vs-review-stars" role="radiogroup" aria-label={t('Classificação')}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
@@ -229,6 +271,16 @@ export default function ProductDetail() {
               <button className="vs-btn" disabled={reviewBusy} onClick={() => void saveReview()}>
                 {reviewBusy ? t('A guardar…') : t('Guardar avaliação')}
               </button>
+              {reviews?.ownReview && (
+                <div className="vs-review-actions">
+                  <button type="button" className="vs-link" disabled={deletingReview} onClick={cancelReviewEdit}>
+                    {t('Cancelar')}
+                  </button>
+                  <button type="button" className="vs-link vs-review-delete" disabled={deletingReview} onClick={() => void deleteReview()}>
+                    {deletingReview ? t('A eliminar…') : t('Eliminar avaliação')}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="vs-review-column">

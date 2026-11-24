@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_navigation.dart';
 import '../../../core/app_text.dart';
+import '../../../core/auth_guard.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/error_retry.dart';
 import '../../../theme/app_theme.dart';
@@ -218,6 +220,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionControllerProvider);
+    if (!session.isActive) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(appText(context, 'Finalizar Compra', 'Checkout')),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Precisas de uma conta para finalizar compras no VirtualShop.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => requireAuthentication(
+                    context,
+                    ref,
+                    message: 'Inicia sessão ou cria uma conta para finalizar a tua compra.',
+                  ),
+                  child: Text(appText(context, 'Iniciar sessão', 'Sign in')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final cart = ref.watch(cartControllerProvider);
     final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
     final addressesAsync = ref.watch(profileAddressesProvider);

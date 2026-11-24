@@ -40,11 +40,9 @@ class CartController extends Notifier<CartState> {
     _sessionController = ref.read(sessionControllerProvider.notifier);
     _generation = session.generation;
     final buildId = ++_buildId;
-    _isAuthenticated = authState.valueOrNull != null;
-    _guestBlocked = authState.hasValue && !_isAuthenticated;
-    _repository = _isAuthenticated
-        ? ref.read(remoteCartRepositoryProvider)
-        : ref.read(localCartRepositoryProvider);
+    _isAuthenticated = authState.valueOrNull != null && session.isActive;
+    _guestBlocked = !_isAuthenticated;
+    _repository = ref.read(remoteCartRepositoryProvider);
     _loadFromStorage(generation: _generation, buildId: buildId);
     return CartState(
       errorMessage: _guestBlocked

@@ -10,6 +10,7 @@ router.get('/new-arrivals', controller.newArrivals);
 router.post('/', requireAuth, requireRole('admin'), controller.create);
 router.get('/:id/reviews', optionalAuth, controller.reviews);
 router.post('/:id/reviews', requireAuth, controller.saveReview);
+router.delete('/:id/reviews', requireAuth, controller.removeReview);
 router.post('/:id/reviews/:reviewId/vote', requireAuth, requireRole('customer'), controller.voteReview);
 router.delete('/:id/reviews/:reviewId/vote', requireAuth, requireRole('customer'), controller.removeReviewVote);
 router.get('/:id', controller.detail);

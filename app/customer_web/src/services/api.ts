@@ -283,6 +283,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rating, comment: comment?.trim() || null }),
     }),
+  deleteReview: (productId: number) =>
+    fetchData<ProductReviews>(`/products/${productId}/reviews`, { method: 'DELETE' }),
   voteReview: (
     productId: number,
     reviewId: number,

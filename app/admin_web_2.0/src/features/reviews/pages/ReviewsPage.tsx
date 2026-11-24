@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleAlert, MessageSquareText, Package, Star } from 'lucide-react'
+import { CircleAlert, MessageSquareText, Package, Search, Star, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -11,13 +11,31 @@ const pageSize = 50
 
 export function ReviewsPage() {
   const [page, setPage] = useState(1)
+  const [rating, setRating] = useState<number | undefined>()
+  const [productId, setProductId] = useState<number | undefined>()
+  const [query, setQuery] = useState('')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const report = useQuery({
-    queryKey: ['admin', 'product-reviews', page],
-    queryFn: () => adminApi.listProductReviews({ page, limit: pageSize }),
+    queryKey: ['admin', 'product-reviews', page, rating, productId, query],
+    queryFn: () => adminApi.listProductReviews({ page, limit: pageSize, rating, productId, q: query || undefined }),
   })
 
   const data = report.data
   const average = data?.summary.average ?? 0
+  const deleteReview = async (reviewId: number) => {
+    if (!window.confirm('Eliminar esta avaliação? Os votos associados também serão removidos.')) return
+    setDeletingId(reviewId)
+    setDeleteError('')
+    try {
+      await adminApi.deleteProductReview(reviewId)
+      await report.refetch()
+    } catch (error) {
+      setDeleteError(getApiErrorMessage(error))
+    } finally {
+      setDeletingId(null)
+    }
+  }
   const dateFormat = new Intl.DateTimeFormat('pt-MZ', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -31,6 +49,64 @@ export function ReviewsPage() {
           {getApiErrorMessage(report.error)}
         </p>
       )}
+      {deleteError && (
+        <p className="flex items-center gap-2 rounded-xl bg-danger-surface px-3.5 py-3 text-sm text-danger" role="alert">
+          <CircleAlert aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {deleteError}
+        </p>
+      )}
+
+      <Card description="Filtre as avaliações por classificação, produto ou texto." title="Filtros">
+        <div className="grid gap-3 md:grid-cols-3">
+          <label className="grid gap-1 text-sm text-muted">
+            Classificação
+            <select
+              className="rounded-lg border border-line bg-white px-3 py-2 text-ink"
+              value={rating ?? ''}
+              onChange={(event) => {
+                setPage(1)
+                setRating(event.target.value ? Number(event.target.value) : undefined)
+              }}
+            >
+              <option value="">Todas</option>
+              {[5, 4, 3, 2, 1].map((value) => (
+                <option key={value} value={value}>{value} estrelas</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-muted">
+            Produto
+            <select
+              className="rounded-lg border border-line bg-white px-3 py-2 text-ink"
+              value={productId ?? ''}
+              onChange={(event) => {
+                setPage(1)
+                setProductId(event.target.value ? Number(event.target.value) : undefined)
+              }}
+            >
+              <option value="">Todos</option>
+              {data?.products.map((product) => (
+                <option key={product.id} value={product.id}>{product.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-muted">
+            Pesquisa
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-white px-3">
+              <Search aria-hidden="true" className="h-4 w-4 text-muted" />
+              <input
+                className="min-w-0 flex-1 py-2 text-ink outline-none"
+                value={query}
+                placeholder="Cliente, produto ou comentário"
+                onChange={(event) => {
+                  setPage(1)
+                  setQuery(event.target.value)
+                }}
+              />
+            </div>
+          </label>
+        </div>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
@@ -159,6 +235,7 @@ export function ReviewsPage() {
                     <th className="px-4 py-3 text-right font-semibold">Classificação</th>
                     <th className="px-4 py-3 font-semibold">Comentário</th>
                     <th className="px-4 py-3 text-right font-semibold">Data</th>
+                    <th className="px-4 py-3 text-right font-semibold">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -177,6 +254,17 @@ export function ReviewsPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-muted">
                         {dateFormat.format(new Date(review.createdAt))}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-lg border border-danger px-2.5 py-1.5 text-xs text-danger disabled:opacity-50"
+                          disabled={deletingId === review.id}
+                          onClick={() => void deleteReview(review.id)}
+                        >
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                          {deletingId === review.id ? 'A eliminar...' : 'Eliminar'}
+                        </button>
                       </td>
                     </tr>
                   ))}

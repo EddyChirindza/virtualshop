@@ -322,11 +322,15 @@ export const adminApi = {
     return response.data.data
   },
 
-  async listProductReviews(params: { page: number; limit: number }) {
+  async listProductReviews(params: { page: number; limit: number; rating?: number; productId?: number; q?: string }) {
     const response = await apiClient.get<ApiEnvelope<ProductReviewReport>>(
       '/admin/reviews',
       { params },
     )
+    return response.data.data
+  },
+  async deleteProductReview(reviewId: number) {
+    const response = await apiClient.delete<ApiEnvelope<ProductReviewReport>>(`/admin/reviews/${reviewId}`)
     return response.data.data
   },
 

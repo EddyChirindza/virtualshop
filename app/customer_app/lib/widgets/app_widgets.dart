@@ -331,12 +331,14 @@ class FloatingBottomNav extends StatelessWidget {
     required this.selectedIndex,
     required this.cartItemCount,
     required this.onSelected,
+    this.isGuest = false,
     super.key,
   });
 
   final int selectedIndex;
   final int cartItemCount;
   final ValueChanged<int> onSelected;
+  final bool isGuest;
 
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Início', 'Home'),
@@ -360,7 +362,7 @@ class FloatingBottomNav extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          for (var index = 0; index < _items.length; index++)
+          for (var index = 0; index < (isGuest ? 2 : _items.length); index++)
             _NavItem(
               index: index,
               item: _items[index],

@@ -66,4 +66,8 @@ export type ProductReviews = {
   count: number;
   ownReview: ProductReview | null;
   items: ProductReview[];
+  distribution?: Array<{ rating: number; count: number }>;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 };

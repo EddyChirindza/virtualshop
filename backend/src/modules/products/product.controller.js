@@ -56,7 +56,11 @@ async function remove(req, res, next) {
 
 async function reviews(req, res, next) {
   try {
-    const data = await productService.getReviews(parseId(req.params.id), req.user?.id);
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 20);
+    if (!Number.isInteger(page) || page < 1) throw new ApiError(400, 'page deve ser um inteiro maior que zero.');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new ApiError(400, 'limit deve ser um inteiro entre 1 e 100.');
+    const data = await productService.getReviews(parseId(req.params.id), req.user?.id, { page, limit });
     res.json({ success: true, message: 'OK', data });
   } catch (err) { next(err); }
 }
@@ -104,7 +108,14 @@ async function removeReviewVote(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function removeReview(req, res, next) {
+  try {
+    const data = await productService.deleteReview(parseId(req.params.id), req.user.id);
+    res.json({ success: true, message: 'Avaliação eliminada.', data });
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   popular, newArrivals, detail, list, create, update, remove,
-  reviews, saveReview, voteReview, removeReviewVote,
+  reviews, saveReview, removeReview, voteReview, removeReviewVote,
 };

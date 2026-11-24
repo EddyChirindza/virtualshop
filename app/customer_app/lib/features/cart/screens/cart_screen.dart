@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_navigation.dart';
 import '../../../core/app_text.dart';
+import '../../../core/auth_guard.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/utils/format.dart';
 import '../../products/widgets/product_image.dart';
@@ -251,7 +252,14 @@ class CartScreen extends ConsumerWidget {
                     child: FilledButton(
                       onPressed: cart.isUpdating
                           ? null
-                          : () {
+                          : () async {
+                              if (!await requireAuthentication(
+                                context,
+                                ref,
+                                message: 'Precisas de uma conta para finalizar a compra no VirtualShop.',
+                              )) {
+                                return;
+                              }
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
                                   builder: (_) => const CheckoutScreen(),

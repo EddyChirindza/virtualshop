@@ -5,13 +5,15 @@ import '../../../core/app_text.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/widgets/error_retry.dart';
+import '../../../core/auth_guard.dart';
+import '../../../core/session/session_controller.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../cart/screens/cart_screen.dart';
-import '../../auth/screens/login_screen.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../models/product.dart';
 import '../providers/product_providers.dart';
 import '../widgets/product_image_carousel.dart';
+import '../widgets/product_reviews_section.dart';
 
 class ProductDetailScreen extends ConsumerWidget {
   const ProductDetailScreen({super.key, required this.productId});
@@ -60,6 +62,14 @@ class ProductDetailScreen extends ConsumerWidget {
           quantity: quantity,
           addAllowed: addAllowed,
           onAdd: () {
+            if (!ref.read(sessionControllerProvider).isActive) {
+              requireAuthentication(
+                context,
+                ref,
+                message: 'Precisas de uma conta para realizar compras no VirtualShop. Inicia sessão ou cria uma conta para adicionares produtos ao carrinho.',
+              );
+              return;
+            }
             final added = ref
                 .read(cartControllerProvider.notifier)
                 .addProduct(p);
@@ -78,6 +88,14 @@ class ProductDetailScreen extends ConsumerWidget {
             }
           },
           onBuyNow: () {
+            if (!ref.read(sessionControllerProvider).isActive) {
+              requireAuthentication(
+                context,
+                ref,
+                message: 'Precisas de uma conta para realizar compras no VirtualShop. Inicia sessão ou cria uma conta para continuares.',
+              );
+              return;
+            }
             if (quantity == 0) {
               final added = ref
                   .read(cartControllerProvider.notifier)
@@ -113,9 +131,11 @@ class ProductDetailScreen extends ConsumerWidget {
           isFavorite: isFavorite,
           onToggleFavorite: () async {
             final controller = ref.read(favoritesProvider.notifier);
-            if (!controller.isAuthenticated) {
-              await Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+            if (!await requireAuthentication(
+              context,
+              ref,
+              message: 'Inicia sessão ou cria uma conta para guardares os teus produtos favoritos.',
+            )) {
               return;
             }
             final changed = await controller.toggleFavorite(p);
@@ -350,6 +370,10 @@ class _ProductDetailBody extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(product.description!, style: theme.textTheme.bodyLarge),
               ],
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+              ProductReviewsSection(productId: product.id),
             ],
           ),
         ),
